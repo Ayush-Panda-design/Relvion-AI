@@ -2,12 +2,6 @@ import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI, type FunctionDeclaration } from '@google/generative-ai';
 import { AnthropicProvider } from '@corsair-dev/mcp';
 import { corsair } from '@/server/corsair';
-import {
-  mockEmails,
-  mockEvents,
-  mockAnalytics,
-  mockContacts,
-} from '@/lib/mockData';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -49,49 +43,10 @@ function nextApiKey(keys: string[]): string {
   return key;
 }
 
-// ─── Mock data tool ───────────────────────────────────────────────────────────
-// Exposed as a real Gemini-callable tool so the model can query it naturally
-// when Corsair is unavailable or returns empty results.
-
-type MockDataset = 'emails' | 'events' | 'analytics' | 'contacts' | 'all';
-
-function getMockData(dataset: MockDataset): unknown {
-  switch (dataset) {
-    case 'emails':    return mockEmails;
-    case 'events':    return mockEvents;
-    case 'analytics': return mockAnalytics;
-    case 'contacts':  return mockContacts;
-    case 'all':
-    default:
-      return { emails: mockEmails, events: mockEvents, analytics: mockAnalytics, contacts: mockContacts };
-  }
-}
-
-const MOCK_TOOL_DECLARATION: FunctionDeclaration = {
-  name: 'get_mock_data',
-  description: `Returns local mock/demo data for the Relvion app when live Gmail or Calendar
-data is unavailable (e.g. Corsair not connected, API quota exhausted, or empty results).
-Use this as a fallback to still give the user a useful answer.
-Available datasets: "emails" (inbox messages), "events" (calendar events),
-"analytics" (email stats), "contacts" (frequent contacts), "all" (everything).`,
-  parameters: {
-    type: 'object',
-    properties: {
-      dataset: {
-        type: 'string',
-        enum: ['emails', 'events', 'analytics', 'contacts', 'all'],
-        description: 'Which mock dataset to retrieve.',
-      },
-    },
-    required: ['dataset'],
-  },
-};
-
 // ─── System prompt ────────────────────────────────────────────────────────────
 
 const SYSTEM_PROMPT = `You are the Relvion AI Assistant inside a Superhuman-style email client.
-You have access to the user's Gmail and Google Calendar via Corsair tools, and local mock/demo
-data via the get_mock_data tool.
+You have access to the user's live Gmail and Google Calendar via Corsair tools.
 
 TOOLS AVAILABLE:
 - list_operations: List all available Corsair API operations.
@@ -105,16 +60,11 @@ TOOLS AVAILABLE:
     const events = await corsair.googlecalendar.db.events.search({});
     return events;
 - corsair_setup: Check Corsair configuration status.
-- get_mock_data: Retrieve local demo data (emails, events, analytics, contacts).
-  Use this when Corsair tools are unavailable or return empty results.
 
 STRATEGY:
-1. Always try Corsair first for live data (run_script with the appropriate corsair query).
-2. If run_script returns an error, empty array, or null → immediately call get_mock_data
-   with the relevant dataset as a fallback.
-3. Parse all results and give the user a clear, concise answer.
-4. Never tell the user you cannot access data — always use get_mock_data as a last resort.
-5. When using mock data, mention it is demo data so the user is aware.`;
+1. Always use Corsair (run_script) to fetch real live data.
+2. Parse all results and give the user a clear, concise answer.
+3. If no data is found, simply tell the user their account has no matching data.`;
 
 // ─── Module-level singletons (built once, reused across requests) ─────────────
 
@@ -133,31 +83,18 @@ function getTools() {
       console.log('[Agent] Corsair tools loaded:', corsairTools.map(t => t.name));
 
       // Corsair tool declarations (cleaned for Gemini)
-      const corsairDeclarations: FunctionDeclaration[] = corsairTools.map(t => ({
+      const geminiDeclarations: FunctionDeclaration[] = corsairTools.map(t => ({
         name: t.name,
         description: t.description ?? '',
         parameters: cleanSchema(t.input_schema),
       }));
 
-      // Combined declarations: Corsair + mock data tool
-      const geminiDeclarations: FunctionDeclaration[] = [
-        ...corsairDeclarations,
-        MOCK_TOOL_DECLARATION,
-      ];
-
-      // Handler map: Corsair handlers + mock data handler
+      // Handler map: Corsair handlers
       const handlerMap = new Map<string, (args: unknown) => Promise<unknown> | unknown>();
 
       for (const t of corsairTools) {
         handlerMap.set(t.name, t.handler);
       }
-
-      // Mock data handler — synchronous, wrapped to match async interface
-      handlerMap.set('get_mock_data', (args: unknown) => {
-        const { dataset = 'all' } = (args ?? {}) as { dataset?: MockDataset };
-        console.log(`[Agent] get_mock_data called with dataset="${dataset}"`);
-        return Promise.resolve(getMockData(dataset));
-      });
 
       return { geminiDeclarations, handlerMap };
     })();

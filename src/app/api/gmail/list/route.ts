@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { corsair } from '@/server/corsair';
-import { mockEmails } from '@/lib/mockData';
 
 // Folder → Gmail label mapping
 const FOLDER_LABELS: Record<string, string> = {
@@ -74,11 +73,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ emails });
   } catch (e: any) {
-    console.error('[gmail/list] API fetch failed, using mock data:', e.message);
+    console.error('[gmail/list] API fetch failed:', e.message);
+    return NextResponse.json({ emails: [] });
   }
-
-  // Fall back to mock data filtered by folder
-  const label = FOLDER_LABELS[folder];
-  const filtered = mockEmails.filter(e => label ? e.labelIds.includes(label) : true);
-  return NextResponse.json({ emails: filtered.length ? filtered : mockEmails });
 }
