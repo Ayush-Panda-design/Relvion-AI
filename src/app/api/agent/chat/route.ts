@@ -50,21 +50,24 @@ You have access to the user's live Gmail and Google Calendar via Corsair tools.
 
 TOOLS AVAILABLE:
 - list_operations: List all available Corsair API operations.
-  Filter by plugin ('gmail', 'googlecalendar') and type ('api', 'db', 'webhooks').
-- get_schema: Get the schema for a specific Corsair operation path
-  e.g. 'gmail.db.messages.search'.
-- run_script: Execute JavaScript with \`corsair\` in scope. Examples:
-    const msgs = await corsair.gmail.db.messages.search({});
-    return msgs;
+- get_schema: Get the schema for a specific Corsair operation path.
+- run_script: Execute JavaScript with \`corsair\` in scope.
 
-    const events = await corsair.googlecalendar.db.events.search({});
-    return events;
-- corsair_setup: Check Corsair configuration status.
+CRITICAL: ALWAYS use run_script to read emails and calendar events.
+Example for fetching recent emails:
+call: run_script({
+  script: "const msgs = await corsair.gmail.api.messages.list({ maxResults: 5 }); const details = await Promise.all(msgs.messages.map(m => corsair.gmail.api.messages.get({ id: m.id }))); return details;"
+})
+
+Example for fetching calendar events:
+call: run_script({
+  script: "return await corsair.googlecalendar.api.events.list({ maxResults: 5, timeMin: new Date().toISOString() });"
+})
 
 STRATEGY:
-1. Always use Corsair (run_script) to fetch real live data.
+1. Always use run_script to fetch real live data. Do not say "I cannot read emails" — use run_script!
 2. Parse all results and give the user a clear, concise answer.
-3. If no data is found, simply tell the user their account has no matching data.`;
+3. If a tool call fails, report the error to the user rather than failing silently.`;
 
 // ─── Module-level singletons (built once, reused across requests) ─────────────
 
@@ -80,7 +83,10 @@ function getTools() {
       const provider = new AnthropicProvider();
       const corsairTools: CorsairTool[] = provider.build({ corsair }) as unknown as CorsairTool[];
 
-      console.log('[Agent] Corsair tools loaded:', corsairTools.map(t => t.name));
+      console.log('[Agent] Validating Corsair tools:');
+      for (const t of corsairTools) {
+        console.log(`  [✓] ${t.name}`);
+      }
 
       // Corsair tool declarations (cleaned for Gemini)
       const geminiDeclarations: FunctionDeclaration[] = corsairTools.map(t => ({

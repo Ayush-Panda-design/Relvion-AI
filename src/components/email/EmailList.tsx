@@ -21,11 +21,12 @@ export function EmailList({ folder }: { folder: string }) {
     setLoading(true);
     try {
       const res = await fetch(`/api/gmail/list?folder=${folder}`);
+      if (!res.ok) throw new Error('Failed to load emails');
       const data = await res.json();
       const fetched: any[] = data.emails || [];
       setEmails(fetched);
 
-      // Trigger embedding ingestion in background
+      // Trigger embedding ingestion in background (non-blocking)
       if (fetched.length > 0) {
         fetch('/api/gmail/embed', {
           method: 'POST',
@@ -34,7 +35,7 @@ export function EmailList({ folder }: { folder: string }) {
         }).catch(() => {});
       }
 
-      // Triage each email for priority (async, non-blocking, sequential processing)
+      // Triage each email sequentially (100ms spacing to respect rate limits)
       setTriaging(new Set(fetched.map((e: any) => e.id)));
       const triageEmails = async () => {
         for (const email of fetched) {
@@ -50,24 +51,25 @@ export function EmailList({ folder }: { folder: string }) {
             });
             if (res.ok) {
               const { priority } = await res.json();
-              setEmails(prev => prev.map(e => e.id === email.id ? { ...e, priority } : e));
+              setEmails(prev =>
+                prev.map(e => (e.id === email.id ? { ...e, priority } : e))
+              );
             }
-          } catch (err) {
-            console.error('Failed to triage email:', email.id, err);
+          } catch {
+            // Non-fatal
           } finally {
             setTriaging(prev => {
-              const nextTriaging = new Set(prev);
-              nextTriaging.delete(email.id);
-              return nextTriaging;
+              const next = new Set(prev);
+              next.delete(email.id);
+              return next;
             });
           }
-          // Brief sleep of 100ms to stay within rate limits and stagger requests
           await new Promise(resolve => setTimeout(resolve, 100));
         }
       };
       triageEmails();
     } catch (e) {
-      console.error(e);
+      toast.error('Failed to load emails. Check your connection.');
     } finally {
       setLoading(false);
     }
@@ -77,23 +79,70 @@ export function EmailList({ folder }: { folder: string }) {
     fetchEmails();
   }, [fetchEmails]);
 
-  // Keyboard shortcuts for email detail
+  // SSE subscription — auto-refresh when new email arrives or is deleted
+  useEffect(() => {
+    const es = new EventSource('/api/events');
+    es.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        if (
+          msg.type === 'EMAIL_RECEIVED' ||
+          msg.type === 'EMAIL_UPDATED' ||
+          msg.type === 'EMAIL_DELETED'
+        ) {
+          fetchEmails();
+        }
+      } catch {}
+    };
+    es.onerror = () => {
+      // SSE connection dropped — will auto-reconnect; no user action needed
+    };
+    return () => es.close();
+  }, [fetchEmails]);
+
+  // Keyboard shortcuts for email detail view
   useEffect(() => {
     if (!selectedEmail) return;
     const handler = async (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-      if (e.key === 'Escape') { setSelectedEmail(null); return; }
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement
+      )
+        return;
+      if (e.key === 'Escape') {
+        setSelectedEmail(null);
+        return;
+      }
       if (e.key === 'e') {
-        // Archive
-        const res = await fetch('/api/gmail/action', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({id: selectedEmail.id, action: 'archive'}) });
-        if (res.ok) { toast.success('Archived'); setSelectedEmail(null); fetchEmails(); }
+        const res = await fetch('/api/gmail/action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: selectedEmail.id, action: 'archive' }),
+        });
+        if (res.ok) {
+          toast.success('Archived');
+          setSelectedEmail(null);
+          fetchEmails();
+        }
       }
       if (e.key === '#') {
-        const res = await fetch('/api/gmail/action', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({id: selectedEmail.id, action: 'trash'}) });
-        if (res.ok) { toast.success('Moved to trash'); setSelectedEmail(null); fetchEmails(); }
+        const res = await fetch('/api/gmail/action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: selectedEmail.id, action: 'trash' }),
+        });
+        if (res.ok) {
+          toast.success('Moved to trash');
+          setSelectedEmail(null);
+          fetchEmails();
+        }
       }
       if (e.key === 's') {
-        const res = await fetch('/api/gmail/action', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({id: selectedEmail.id, action: 'star'}) });
+        const res = await fetch('/api/gmail/action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: selectedEmail.id, action: 'star' }),
+        });
         if (res.ok) toast.success('Starred');
       }
     };
@@ -101,13 +150,17 @@ export function EmailList({ folder }: { folder: string }) {
     return () => window.removeEventListener('keydown', handler);
   }, [selectedEmail, fetchEmails]);
 
-  const filtered = filter === 'ALL' ? emails : emails.filter(e => e.priority === filter);
+  const filtered =
+    filter === 'ALL' ? emails : emails.filter(e => e.priority === filter);
 
   if (loading) {
     return (
       <div className="p-4 space-y-2">
-        {[1,2,3,4,5].map(i => (
-          <div key={i} className="animate-pulse flex items-center p-4 bg-[#1a2235] rounded-xl gap-4">
+        {[1, 2, 3, 4, 5].map(i => (
+          <div
+            key={i}
+            className="animate-pulse flex items-center p-4 bg-[#1a2235] rounded-xl gap-4"
+          >
             <div className="w-10 h-10 bg-[#1e293b] rounded-full" />
             <div className="flex-1 space-y-2">
               <div className="h-4 bg-[#1e293b] rounded w-1/4" />
@@ -122,7 +175,11 @@ export function EmailList({ folder }: { folder: string }) {
   return (
     <div className={`flex h-full ${selectedEmail ? '' : ''}`}>
       {/* Email List Panel */}
-      <div className={`${selectedEmail ? 'w-1/2' : 'w-full'} flex flex-col border-r border-[#1e293b] overflow-hidden`}>
+      <div
+        className={`${
+          selectedEmail ? 'w-1/2' : 'w-full'
+        } flex flex-col border-r border-[#1e293b] overflow-hidden`}
+      >
         {/* Toolbar */}
         <div className="flex items-center gap-2 px-4 py-3 border-b border-[#1e293b] bg-[#0a0f1e] shrink-0">
           <div className="flex gap-1 bg-[#1a2235] rounded-xl p-1">
@@ -131,7 +188,9 @@ export function EmailList({ folder }: { folder: string }) {
                 key={f}
                 onClick={() => setFilter(f)}
                 className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
-                  filter === f ? 'bg-[#c9a84c] text-[#0a0f1e]' : 'text-slate-400 hover:text-slate-200'
+                  filter === f
+                    ? 'bg-[#c9a84c] text-[#0a0f1e]'
+                    : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
                 {f}
@@ -139,8 +198,14 @@ export function EmailList({ folder }: { folder: string }) {
             ))}
           </div>
           <div className="ml-auto flex items-center gap-2">
-            <span className="text-xs text-slate-500">{filtered.length} emails</span>
-            <button onClick={fetchEmails} className="p-1.5 hover:bg-[#1a2235] rounded-lg text-slate-400 hover:text-slate-200 transition-colors" title="Refresh">
+            <span className="text-xs text-slate-500">
+              {filtered.length} emails
+            </span>
+            <button
+              onClick={fetchEmails}
+              className="p-1.5 hover:bg-[#1a2235] rounded-lg text-slate-400 hover:text-slate-200 transition-colors"
+              title="Refresh"
+            >
               <RefreshCw size={14} />
             </button>
           </div>
@@ -162,7 +227,9 @@ export function EmailList({ folder }: { folder: string }) {
                   key={email.id}
                   onClick={() => setSelectedEmail(isSelected ? null : email)}
                   className={`flex items-start p-4 cursor-pointer border-b border-[#1e293b] transition-all group hover:bg-[#1a2235] ${
-                    isSelected ? 'bg-[#1a2235] border-l-2 border-l-[#c9a84c]' : ''
+                    isSelected
+                      ? 'bg-[#1a2235] border-l-2 border-l-[#c9a84c]'
+                      : ''
                   }`}
                 >
                   {/* Avatar */}
@@ -177,14 +244,25 @@ export function EmailList({ folder }: { folder: string }) {
                       </span>
                       <div className="flex items-center gap-2 shrink-0">
                         {isTriaging ? (
-                          <span className="text-xs text-slate-600 animate-pulse">Analyzing…</span>
+                          <span className="text-xs text-slate-600 animate-pulse">
+                            Analyzing…
+                          </span>
                         ) : email.priority ? (
-                          <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full border ${PRIORITY_COLORS[email.priority] || ''}`}>
+                          <span
+                            className={`text-xs font-semibold px-1.5 py-0.5 rounded-full border ${
+                              PRIORITY_COLORS[email.priority] || ''
+                            }`}
+                          >
                             {email.priority}
                           </span>
                         ) : null}
                         <span className="text-xs text-slate-500">
-                          {email.data?.date ? new Date(email.data.date).toLocaleDateString(undefined, { month:'short', day:'numeric' }) : ''}
+                          {email.data?.date
+                            ? new Date(email.data.date).toLocaleDateString(
+                                undefined,
+                                { month: 'short', day: 'numeric' }
+                              )
+                            : ''}
                         </span>
                       </div>
                     </div>
@@ -199,21 +277,57 @@ export function EmailList({ folder }: { folder: string }) {
                   {/* Hover actions */}
                   <div className="hidden group-hover:flex items-center gap-1 ml-2 shrink-0">
                     <button
-                      onClick={e => { e.stopPropagation(); fetch('/api/gmail/action', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({id: email.id, action:'archive'})}).then(() => { toast.success('Archived'); fetchEmails(); }); }}
+                      onClick={e => {
+                        e.stopPropagation();
+                        fetch('/api/gmail/action', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            id: email.id,
+                            action: 'archive',
+                          }),
+                        }).then(() => {
+                          toast.success('Archived');
+                          fetchEmails();
+                        });
+                      }}
                       className="p-1 hover:bg-[#0a0f1e] rounded text-slate-500 hover:text-slate-200"
                       title="Archive"
                     >
                       <Archive size={14} />
                     </button>
                     <button
-                      onClick={e => { e.stopPropagation(); fetch('/api/gmail/action', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({id: email.id, action:'trash'})}).then(() => { toast.success('Trashed'); fetchEmails(); }); }}
+                      onClick={e => {
+                        e.stopPropagation();
+                        fetch('/api/gmail/action', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            id: email.id,
+                            action: 'trash',
+                          }),
+                        }).then(() => {
+                          toast.success('Trashed');
+                          fetchEmails();
+                        });
+                      }}
                       className="p-1 hover:bg-[#0a0f1e] rounded text-slate-500 hover:text-red-400"
                       title="Trash"
                     >
                       <Trash2 size={14} />
                     </button>
                     <button
-                      onClick={e => { e.stopPropagation(); fetch('/api/gmail/action', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({id: email.id, action:'star'})}).then(() => toast.success('Starred')); }}
+                      onClick={e => {
+                        e.stopPropagation();
+                        fetch('/api/gmail/action', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            id: email.id,
+                            action: 'star',
+                          }),
+                        }).then(() => toast.success('Starred'));
+                      }}
                       className="p-1 hover:bg-[#0a0f1e] rounded text-slate-500 hover:text-[#c9a84c]"
                       title="Star"
                     >

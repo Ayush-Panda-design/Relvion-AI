@@ -19,7 +19,6 @@ export function CalendarView() {
   const [today] = useState(new Date());
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
-  // Create form state
   const [form, setForm] = useState({
     summary: '',
     description: '',
@@ -33,16 +32,33 @@ export function CalendarView() {
     setLoading(true);
     try {
       const res = await fetch('/api/calendar/list');
+      if (!res.ok) throw new Error('Calendar fetch failed');
       const data = await res.json();
       setEvents(data.events || []);
-    } catch (e) {
-      console.error(e);
+    } catch {
+      toast.error('Failed to load calendar events.');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { fetchEvents(); }, []);
+  useEffect(() => {
+    fetchEvents();
+  }, []);
+
+  // SSE subscription — auto-refresh when calendar events change
+  useEffect(() => {
+    const es = new EventSource('/api/events');
+    es.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        if (msg.type === 'CALENDAR_UPDATED') {
+          fetchEvents();
+        }
+      } catch {}
+    };
+    return () => es.close();
+  }, []);
 
   const createEvent = async () => {
     if (!form.summary || !form.startDateTime || !form.endDateTime) {
@@ -57,8 +73,12 @@ export function CalendarView() {
         body: JSON.stringify(form),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      toast.success('Event created! Invite emails sent.' + (form.attendees ? '' : ''));
+      if (!res.ok) throw new Error(data.error || 'Failed to create event');
+      toast.success(
+        form.attendees
+          ? 'Event created! Invite emails sent.'
+          : 'Event created!'
+      );
       setShowCreate(false);
       setForm({ summary: '', description: '', startDateTime: '', endDateTime: '', attendees: '' });
       fetchEvents();
@@ -69,21 +89,19 @@ export function CalendarView() {
     }
   };
 
-  // Calendar grid helpers
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth();
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const monthName = currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' });
 
-  const getEventsForDay = (day: number) => {
-    return events.filter(e => {
+  const getEventsForDay = (day: number) =>
+    events.filter(e => {
       const ds = e.start?.dateTime || e.start?.date;
       if (!ds) return false;
       const d = new Date(ds);
       return d.getFullYear() === year && d.getMonth() === month && d.getDate() === day;
     });
-  };
 
   return (
     <div className="flex h-full overflow-hidden">
@@ -92,19 +110,32 @@ export function CalendarView() {
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#1e293b] bg-[#0a0f1e] shrink-0">
           <div className="flex items-center gap-4">
-            <button onClick={() => setCurrentMonth(new Date(year, month - 1))} className="p-1.5 hover:bg-[#1a2235] rounded-lg text-slate-400">
+            <button
+              onClick={() => setCurrentMonth(new Date(year, month - 1))}
+              className="p-1.5 hover:bg-[#1a2235] rounded-lg text-slate-400"
+            >
               <ChevronLeft size={18} />
             </button>
             <h2 className="text-lg font-bold text-slate-100">{monthName}</h2>
-            <button onClick={() => setCurrentMonth(new Date(year, month + 1))} className="p-1.5 hover:bg-[#1a2235] rounded-lg text-slate-400">
+            <button
+              onClick={() => setCurrentMonth(new Date(year, month + 1))}
+              className="p-1.5 hover:bg-[#1a2235] rounded-lg text-slate-400"
+            >
               <ChevronRight size={18} />
             </button>
-            <button onClick={() => setCurrentMonth(new Date())} className="px-2 py-1 text-xs text-slate-400 hover:text-slate-200 border border-[#1e293b] rounded-lg">
+            <button
+              onClick={() => setCurrentMonth(new Date())}
+              className="px-2 py-1 text-xs text-slate-400 hover:text-slate-200 border border-[#1e293b] rounded-lg"
+            >
               Today
             </button>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={fetchEvents} className="p-1.5 hover:bg-[#1a2235] rounded-lg text-slate-400" title="Refresh">
+            <button
+              onClick={fetchEvents}
+              className="p-1.5 hover:bg-[#1a2235] rounded-lg text-slate-400"
+              title="Refresh"
+            >
               <RefreshCw size={14} />
             </button>
             <button
@@ -119,22 +150,25 @@ export function CalendarView() {
         {/* Day headers */}
         <div className="grid grid-cols-7 border-b border-[#1e293b] bg-[#0a0f1e] shrink-0">
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
-            <div key={d} className="text-center text-xs font-semibold text-slate-500 py-2">{d}</div>
+            <div key={d} className="text-center text-xs font-semibold text-slate-500 py-2">
+              {d}
+            </div>
           ))}
         </div>
 
         {/* Calendar Grid */}
         <div className="flex-1 overflow-auto">
           <div className="grid grid-cols-7 min-h-full">
-            {/* Empty cells before month start */}
             {Array.from({ length: firstDay }).map((_, i) => (
               <div key={`empty-${i}`} className="border-r border-b border-[#1e293b] bg-[#080d1b] min-h-[100px]" />
             ))}
-            {/* Day cells */}
             {Array.from({ length: daysInMonth }).map((_, i) => {
               const day = i + 1;
               const dayEvents = getEventsForDay(day);
-              const isToday = today.getFullYear() === year && today.getMonth() === month && today.getDate() === day;
+              const isToday =
+                today.getFullYear() === year &&
+                today.getMonth() === month &&
+                today.getDate() === day;
               return (
                 <div
                   key={day}
@@ -143,19 +177,24 @@ export function CalendarView() {
                   }`}
                   onClick={() => {
                     const pad = (n: number) => String(n).padStart(2, '0');
-                    const ds = `${year}-${pad(month+1)}-${pad(day)}T09:00`;
-                    const de = `${year}-${pad(month+1)}-${pad(day)}T10:00`;
+                    const ds = `${year}-${pad(month + 1)}-${pad(day)}T09:00`;
+                    const de = `${year}-${pad(month + 1)}-${pad(day)}T10:00`;
                     setForm(f => ({ ...f, startDateTime: ds, endDateTime: de }));
                     setShowCreate(true);
                   }}
                 >
-                  <div className={`text-sm font-semibold mb-1 w-6 h-6 flex items-center justify-center rounded-full ${
-                    isToday ? 'bg-[#c9a84c] text-[#0a0f1e]' : 'text-slate-400'
-                  }`}>
+                  <div
+                    className={`text-sm font-semibold mb-1 w-6 h-6 flex items-center justify-center rounded-full ${
+                      isToday ? 'bg-[#c9a84c] text-[#0a0f1e]' : 'text-slate-400'
+                    }`}
+                  >
                     {day}
                   </div>
                   {dayEvents.slice(0, 3).map(e => (
-                    <div key={e.id} className="text-xs bg-[#c9a84c]/20 text-[#c9a84c] rounded px-1 py-0.5 mb-0.5 truncate">
+                    <div
+                      key={e.id}
+                      className="text-xs bg-[#c9a84c]/20 text-[#c9a84c] rounded px-1 py-0.5 mb-0.5 truncate"
+                    >
                       {e.summary || '(no title)'}
                     </div>
                   ))}
@@ -177,22 +216,30 @@ export function CalendarView() {
         <div className="flex-1 overflow-y-auto p-3 space-y-2">
           {loading ? (
             <div className="animate-pulse space-y-2">
-              {[1,2,3].map(i => <div key={i} className="h-16 bg-[#1a2235] rounded-xl" />)}
+              {[1, 2, 3].map(i => (
+                <div key={i} className="h-16 bg-[#1a2235] rounded-xl" />
+              ))}
             </div>
           ) : events.length === 0 ? (
-            <div className="text-center text-slate-500 text-sm pt-8">No upcoming events</div>
+            <div className="text-center text-slate-500 text-sm pt-8">
+              No upcoming events
+            </div>
           ) : (
             events.map(e => {
               const startStr = e.start?.dateTime || e.start?.date;
               const start = startStr ? new Date(startStr) : null;
               return (
                 <div key={e.id} className="bg-[#1a2235] border border-[#1e293b] rounded-xl p-3">
-                  <div className="font-semibold text-slate-200 text-sm truncate">{e.summary || '(no title)'}</div>
+                  <div className="font-semibold text-slate-200 text-sm truncate">
+                    {e.summary || '(no title)'}
+                  </div>
                   {start && (
                     <div className="flex items-center gap-1 text-xs text-slate-400 mt-1">
                       <Clock size={12} />
-                      {start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} {' '}
-                      {e.start?.dateTime ? start.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : 'All day'}
+                      {start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}{' '}
+                      {e.start?.dateTime
+                        ? start.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+                        : 'All day'}
                     </div>
                   )}
                   {e.attendees && e.attendees.length > 0 && (
@@ -214,7 +261,12 @@ export function CalendarView() {
           <div className="bg-[#0d1425] border border-[#1e293b] rounded-2xl w-full max-w-md shadow-2xl">
             <div className="flex items-center justify-between px-6 py-4 border-b border-[#1e293b]">
               <h3 className="font-bold text-slate-100">New Event</h3>
-              <button onClick={() => setShowCreate(false)} className="text-slate-400 hover:text-slate-200">✕</button>
+              <button
+                onClick={() => setShowCreate(false)}
+                className="text-slate-400 hover:text-slate-200 transition-colors"
+              >
+                ✕
+              </button>
             </div>
             <div className="p-6 space-y-4">
               <div>
@@ -247,21 +299,23 @@ export function CalendarView() {
                 </div>
               </div>
               <div>
-                <label className="text-xs text-slate-400 mb-1 block">Attendees (comma-separated emails)</label>
+                <label className="text-xs text-slate-400 mb-1 block">
+                  Attendees (comma-separated emails)
+                </label>
                 <input
                   className="w-full bg-[#1a2235] border border-[#1e293b] rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#c9a84c]"
-                  placeholder="friend@corsair.dev, colleague@example.com"
+                  placeholder="friend@example.com, colleague@example.com"
                   value={form.attendees}
                   onChange={e => setForm(f => ({ ...f, attendees: e.target.value }))}
                 />
-                <p className="text-xs text-slate-600 mt-1">Invite emails will be sent via Gmail</p>
+                <p className="text-xs text-slate-600 mt-1">Invite emails sent via Gmail</p>
               </div>
               <div>
                 <label className="text-xs text-slate-400 mb-1 block">Description</label>
                 <textarea
                   className="w-full bg-[#1a2235] border border-[#1e293b] rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#c9a84c] resize-none"
                   rows={2}
-                  placeholder="Optional details..."
+                  placeholder="Optional details…"
                   value={form.description}
                   onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
                 />

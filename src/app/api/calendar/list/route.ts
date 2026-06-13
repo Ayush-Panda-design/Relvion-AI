@@ -16,6 +16,6 @@ export async function GET() {
     return NextResponse.json({ events });
   } catch (e: any) {
     console.error('[calendar/list] API fetch failed:', e.message);
-    return NextResponse.json({ events: [] });
+    return NextResponse.json({ events: [], error: e.message || 'Failed to fetch calendar events' });
   }
 }

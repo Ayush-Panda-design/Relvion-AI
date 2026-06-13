@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
+import { broadcastEvent } from '@/lib/eventBus';
 
-// Real calendar webhook handler — logs and acknowledges
+// Calendar webhook handler — logs event details and emits SSE broadcast
 export async function POST(req: Request) {
   try {
     const payload = await req.json();
@@ -17,9 +18,16 @@ export async function POST(req: Request) {
       console.log('[webhook/calendar] received:', JSON.stringify(payload).slice(0, 200));
     }
 
-    return NextResponse.json({ success: true, message: 'Calendar webhook processed' });
+    // Broadcast realtime SSE event so the Calendar UI refreshes automatically
+    broadcastEvent('CALENDAR_UPDATED', {
+      eventId: event?.id,
+      summary: event?.summary,
+      status: event?.status,
+    });
+
+    return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error('[webhook/calendar] error:', error.message);
-    return NextResponse.json({ success: false }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Calendar webhook failed' }, { status: 500 });
   }
 }

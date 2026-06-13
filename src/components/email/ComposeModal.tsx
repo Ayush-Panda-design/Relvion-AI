@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { X, Send, Minimize2, Paperclip } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 interface ComposeModalProps {
   onClose: () => void;
@@ -14,7 +15,7 @@ export function ComposeModal({ onClose }: ComposeModalProps) {
 
   const handleSend = async () => {
     if (!to || !subject || !body) {
-      alert('Please fill in all fields (To, Subject, Body)');
+      toast.error('Please fill in all fields (To, Subject, Body)');
       return;
     }
 
@@ -29,11 +30,11 @@ export function ComposeModal({ onClose }: ComposeModalProps) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to send email');
 
-      alert('Email sent successfully!');
+      toast.success('Email sent successfully!');
       onClose();
     } catch (error: any) {
       console.error('Send error:', error);
-      alert(error.message);
+      toast.error(error.message);
     } finally {
       setIsSending(false);
     }

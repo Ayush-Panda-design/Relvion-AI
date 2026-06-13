@@ -14,24 +14,36 @@ export const corsair = createCorsair({
           before: async (ctx, payload) => {
             return { ctx, args: payload };
           },
-          after: async (ctx, response, passToAfter) => {
+          after: async (ctx, response) => {
             const type = response.data?.type;
-            // "messageReceived" | "messageDeleted" | "messageLabelChanged"
-
-            if (type === 'messageDeleted') return;
+            if (type === 'messageDeleted') {
+              // Broadcast deletion so inbox removes the email
+              try {
+                const { broadcastEvent } = await import('@/lib/eventBus');
+                broadcastEvent('EMAIL_DELETED', { emailId: response.data?.message?.id });
+              } catch {}
+              return;
+            }
 
             const labelIds: string[] = response.data?.message?.labelIds ?? [];
             const msg = response.data?.message;
 
-            // Classify by labelIds
-            if (labelIds.includes('DRAFT')) {
-              console.log('Draft saved/updated');
+            if (labelIds.includes('INBOX')) {
+              // New email or thread reply received — run full processing pipeline
+              try {
+                const { processIncomingMessage } = await import(
+                  '@/server/services/gmailWebhookProcessor'
+                );
+                if (msg) {
+                  await processIncomingMessage(msg);
+                }
+              } catch (e: any) {
+                console.error('[corsair/gmail hook] processIncomingMessage failed:', e?.message);
+              }
+            } else if (labelIds.includes('DRAFT')) {
+              console.log('[corsair/gmail] Draft saved/updated');
             } else if (labelIds.includes('SENT') && !labelIds.includes('INBOX')) {
-              console.log('Email sent');
-            } else if (labelIds.includes('INBOX')) {
-              // Thread reply: messageId !== threadId
-              const isReply = msg?.id !== msg?.threadId;
-              console.log(isReply ? 'Thread reply received' : 'New email received');
+              console.log('[corsair/gmail] Email sent');
             }
           },
         },
@@ -41,7 +53,19 @@ export const corsair = createCorsair({
       webhookHooks: {
         eventChanged: {
           after: async (ctx, response) => {
-            console.log('Calendar event changed:', response.data?.event);
+            const event = response.data?.event;
+            console.log('[corsair/calendar] event changed:', event?.summary);
+
+            try {
+              const { broadcastEvent } = await import('@/lib/eventBus');
+              broadcastEvent('CALENDAR_UPDATED', {
+                eventId: event?.id,
+                summary: event?.summary,
+                status: event?.status,
+              });
+            } catch (e: any) {
+              console.error('[corsair/calendar hook] SSE broadcast failed:', e?.message);
+            }
           },
         },
       },

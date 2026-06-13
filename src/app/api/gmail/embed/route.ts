@@ -7,6 +7,7 @@ const db = new Pool({ connectionString: process.env.DATABASE_URL });
 
 // Called after fetching emails — embeds them into pgvector for fast search
 export async function POST(req: Request) {
+  let embedded = 0;
   try {
     const { emails } = await req.json();
     if (!emails?.length || !process.env.GEMINI_API_KEY) {
@@ -14,7 +15,6 @@ export async function POST(req: Request) {
     }
 
     const model = genAI.getGenerativeModel({ model: 'text-embedding-004' });
-    let embedded = 0;
 
     for (const email of emails) {
       try {
@@ -43,6 +43,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ embedded });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ embedded, error: error.message }, { status: 200 });
   }
 }

@@ -37,8 +37,7 @@ export async function GET(req: Request) {
     const messageIds: string[] = (listRes?.messages || []).map((m: any) => m.id);
 
     if (messageIds.length === 0) {
-      // No real emails → fall back to mock data
-      throw new Error('No messages from API');
+      return NextResponse.json({ emails: [] });
     }
 
     // Fetch full message details in parallel (batched to 5)
@@ -74,6 +73,6 @@ export async function GET(req: Request) {
     return NextResponse.json({ emails });
   } catch (e: any) {
     console.error('[gmail/list] API fetch failed:', e.message);
-    return NextResponse.json({ emails: [] });
+    return NextResponse.json({ emails: [], error: e.message || 'Failed to fetch emails' }, { status: 200 });
   }
 }
