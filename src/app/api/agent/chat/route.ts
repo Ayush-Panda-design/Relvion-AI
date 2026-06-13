@@ -78,7 +78,7 @@ function getTools() {
     toolsReady = (async () => {
       // AnthropicProvider.build() is synchronous per Corsair docs
       const provider = new AnthropicProvider();
-      const corsairTools: CorsairTool[] = provider.build({ corsair }) as CorsairTool[];
+      const corsairTools: CorsairTool[] = provider.build({ corsair }) as unknown as CorsairTool[];
 
       console.log('[Agent] Corsair tools loaded:', corsairTools.map(t => t.name));
 
@@ -86,7 +86,7 @@ function getTools() {
       const geminiDeclarations: FunctionDeclaration[] = corsairTools.map(t => ({
         name: t.name,
         description: t.description ?? '',
-        parameters: cleanSchema(t.input_schema),
+        parameters: cleanSchema(t.input_schema) as any,
       }));
 
       // Handler map: Corsair handlers

@@ -1,33 +1,33 @@
 'use client';
+import { useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
-import { AgentPanel } from '../agent/AgentPanel';
-import { CommandPalette } from '../ui/CommandPalette';
-import { ComposeModal } from '../email/ComposeModal';
-import { useState } from 'react';
+import { AgentPanel } from '@/components/agent/AgentPanel';
+import { ComposeModal } from '@/components/email/ComposeModal';
+import { CommandPalette } from '@/components/ui/CommandPalette';
+import { useRouter } from 'next/navigation';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [activeFolder, setActiveFolder] = useState('inbox');
-  const [isComposeOpen, setIsComposeOpen] = useState(false);
+  const [showCompose, setShowCompose] = useState(false);
+  const router = useRouter();
+
+  const handleFolderChange = (folder: string) => {
+    setActiveFolder(folder);
+    if (folder === 'calendar') router.push('/');
+    else router.push('/');
+  };
 
   return (
     <div className="flex h-screen w-full bg-[#0a0f1e] overflow-hidden text-slate-100 font-sans">
-      <Sidebar 
-        activeFolder={activeFolder} 
-        onFolderChange={setActiveFolder} 
-        onComposeClick={() => setIsComposeOpen(true)}
-      />
-      
+      <Sidebar activeFolder={activeFolder} onFolderChange={handleFolderChange} onComposeClick={() => setShowCompose(true)} />
       <div className="flex-1 flex flex-col min-w-0">
         <TopBar />
-        <main className="flex-1 overflow-auto relative">
-          {children}
-        </main>
+        <main className="flex-1 overflow-auto">{children}</main>
       </div>
-
       <AgentPanel />
-      <CommandPalette />
-      {isComposeOpen && <ComposeModal onClose={() => setIsComposeOpen(false)} />}
+      {showCompose && <ComposeModal onClose={() => setShowCompose(false)} />}
+      <CommandPalette onFolderChange={handleFolderChange} onComposeClick={() => setShowCompose(true)} />
     </div>
   );
 }

@@ -1,16 +1,29 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { localTriage } from '@/server/triage';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 export async function POST(req: Request) {
+  let subject = '';
+  let body = '';
+  let sender = '';
+
   try {
-    const { subject, body, sender } = await req.json();
+    const json = await req.json();
+    subject = json.subject || '';
+    body = json.body || '';
+    sender = json.sender || '';
+  } catch (err) {
+    return NextResponse.json({ priority: 'FYI', error: 'Invalid request body' }, { status: 400 });
+  }
 
-    if (!process.env.GEMINI_API_KEY) {
-      return NextResponse.json({ priority: 'FYI', source: 'mock' });
-    }
+  if (!process.env.GEMINI_API_KEY) {
+    const priority = localTriage(subject, body, sender);
+    return NextResponse.json({ priority, fallback: true });
+  }
 
+  try {
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const prompt = `Classify this email as URGENT, IMPORTANT, or FYI.
 URGENT: needs reply within hours, deadlines, emergencies
@@ -30,9 +43,19 @@ Body: ${body.substring(0, 500)}`;
     if (responseText.includes('URGENT')) priority = 'URGENT';
     else if (responseText.includes('IMPORTANT')) priority = 'IMPORTANT';
 
-    return NextResponse.json({ priority });
-  } catch (error) {
-    console.error('Triage error:', error);
-    return NextResponse.json({ priority: 'FYI', error: 'Failed to triage' }, { status: 500 });
+    return NextResponse.json({ priority, fallback: false });
+  } catch (error: any) {
+    const errorMsg = error?.message || '';
+    const isQuotaError = error?.status === 429 || errorMsg.includes('Quota exceeded') || errorMsg.includes('429');
+    
+    if (isQuotaError) {
+      console.warn(`[Triage] Gemini API rate limit/quota reached (429). Falling back to local heuristic rules.`);
+    } else {
+      console.error('[Triage] Gemini API error, falling back to local rules:', errorMsg || error);
+    }
+
+    const priority = localTriage(subject, body, sender);
+    return NextResponse.json({ priority, fallback: true });
   }
 }
+
