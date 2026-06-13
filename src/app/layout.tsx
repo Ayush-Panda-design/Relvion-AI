@@ -20,13 +20,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.className} h-full antialiased dark`}>
-      <body className="min-h-full flex flex-col bg-[#0a0f1e] text-slate-100 overflow-hidden">
+      <body className="min-h-full flex flex-col bg-[#FFF9C4] text-red-900 overflow-hidden">
         {children}
         <Toaster position="bottom-right" toastOptions={{
           style: {
-            background: '#1a2235',
+            background: '#FFEE58',
             color: '#f1f5f9',
-            border: '1px solid #1e293b'
+            border: '1px solid #FBC02D'
           }
         }} />
       </body>

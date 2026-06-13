@@ -9,12 +9,7 @@ interface CorsairTool {
   name: string;
   description?: string;
   input_schema: Record<string, unknown>;
-  handler: (args: unknown) => Promise<unknown>;
-}
-
-interface ToolResult {
-  content?: Array<{ text?: string }>;
-  [key: string]: unknown;
+  run: (args: unknown) => Promise<string>;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -56,24 +51,35 @@ TOOLS AVAILABLE:
 CRITICAL: ALWAYS use run_script to read emails and calendar events.
 Example for fetching recent emails:
 call: run_script({
-  script: "const msgs = await corsair.gmail.api.messages.list({ maxResults: 5 }); const details = await Promise.all(msgs.messages.map(m => corsair.gmail.api.messages.get({ id: m.id }))); return details;"
+  code: "const msgs = await corsair.gmail.api.messages.list({ maxResults: 5 }); const details = await Promise.all(msgs.messages.map(m => corsair.gmail.api.messages.get({ id: m.id }))); return details;"
 })
 
 Example for fetching calendar events:
 call: run_script({
-  script: "return await corsair.googlecalendar.api.events.list({ maxResults: 5, timeMin: new Date().toISOString() });"
+  code: "return await corsair.googlecalendar.api.events.getMany({ maxResults: 5, timeMin: new Date().toISOString(), singleEvents: true, orderBy: 'startTime' });"
+})
+
+Example for CREATING a calendar event (note: top-level key is "event", NOT "resource"):
+call: run_script({
+  code: "return await corsair.googlecalendar.api.events.create({ calendarId: 'primary', event: { summary: 'Edinform', start: { dateTime: '2026-06-24T19:00:00+05:30', timeZone: 'Asia/Kolkata' }, end: { dateTime: '2026-06-24T20:00:00+05:30', timeZone: 'Asia/Kolkata' }, attendees: [{ email: 'aryan@gmail.com' }, { email: 'pooja@gmail.com' }] }, sendUpdates: 'all' });"
+})
+
+Example for SENDING an email:
+call: run_script({
+  code: "const raw = Buffer.from('To: friend@example.com\\r\\nSubject: Hello\\r\\n\\r\\nBody text here').toString('base64url'); return await corsair.gmail.api.messages.send({ raw });"
 })
 
 STRATEGY:
 1. Always use run_script to fetch real live data. Do not say "I cannot read emails" — use run_script!
 2. Parse all results and give the user a clear, concise answer.
-3. If a tool call fails, report the error to the user rather than failing silently.`;
+3. If a tool call fails, report the error to the user rather than failing silently.
+4. After creating/updating/sending something (event, email), check the run_script result for an "error" or "isError" field. Only tell the user it succeeded if the result contains a real object/ID with no error. If there's an error, explain it and try to fix the request — never claim success on a failed call.`;
 
 // ─── Module-level singletons (built once, reused across requests) ─────────────
 
 let toolsReady: Promise<{
   geminiDeclarations: FunctionDeclaration[];
-  handlerMap: Map<string, (args: unknown) => Promise<unknown> | unknown>;
+  handlerMap: Map<string, (args: unknown) => Promise<string>>;
 }> | null = null;
 
 function getTools() {
@@ -96,10 +102,10 @@ function getTools() {
       }));
 
       // Handler map: Corsair handlers
-      const handlerMap = new Map<string, (args: unknown) => Promise<unknown> | unknown>();
+      const handlerMap = new Map<string, (args: unknown) => Promise<string>>();
 
       for (const t of corsairTools) {
-        handlerMap.set(t.name, t.handler);
+        handlerMap.set(t.name, t.run);
       }
 
       return { geminiDeclarations, handlerMap };
@@ -126,11 +132,7 @@ function cleanSchema(obj: unknown): unknown {
 // ─── Tool result extractor ────────────────────────────────────────────────────
 
 function extractToolText(result: unknown): string {
-  // Corsair wraps results in { content: [{ text: "..." }] }
-  const r = result as ToolResult | null;
-  const text = r?.content?.[0]?.text;
-  if (typeof text === 'string') return text;
-  // Mock data (and anything else) comes back as a plain object
+  if (typeof result === 'string') return result;
   return JSON.stringify(result) ?? 'null';
 }
 
@@ -226,8 +228,15 @@ export async function POST(req: Request) {
 
   // ── 2. Parse request ─────────────────────────────────────────────────────────
   let message: string;
+  let history: { role: string; parts: { text: string }[] }[] = [];
   try {
-    ({ message } = await req.json());
+    const body = await req.json();
+    message = body.message;
+    if (Array.isArray(body.history)) {
+      const h = body.history as { role: string; parts: { text: string }[] }[];
+      const firstUser = h.findIndex(m => m.role === 'user');
+      history = firstUser >= 0 ? h.slice(firstUser) : [];
+    }
     if (!message?.trim()) {
       return NextResponse.json({ reply: 'Please send a non-empty message.' }, { status: 400 });
     }
@@ -237,7 +246,7 @@ export async function POST(req: Request) {
 
   // ── 3. Load tools (cached singleton) ─────────────────────────────────────────
   let geminiDeclarations: FunctionDeclaration[];
-  let handlerMap: Map<string, (args: unknown) => Promise<unknown> | unknown>;
+  let handlerMap: Map<string, (args: unknown) => Promise<string>>;
 
   try {
     ({ geminiDeclarations, handlerMap } = await getTools());
@@ -264,7 +273,7 @@ export async function POST(req: Request) {
     };
 
     let model = makeModel(nextApiKey(apiKeys));
-    let chat = model.startChat();
+    let chat = model.startChat({ history });
     console.log(`[Agent] Using key pool of ${apiKeys.length} key(s)`);
 
     // On 429: immediately rotate to next key. On 503: short wait.
@@ -287,7 +296,7 @@ export async function POST(req: Request) {
             console.warn(`[Agent] ${label} — 429, rotating to key #${keyIndex} of ${apiKeys.length}`);
             currentKeyIdx = keyIndex;
             model = makeModel(newKey);
-            chat = model.startChat();
+            chat = model.startChat({ history });
           } else {
             const waitMs = is503 ? (attempt + 1) * 5_000 : (attempt + 1) * 10_000;
             console.warn(`[Agent] ${label} — ${is429 ? '429' : '503'} attempt ${attempt + 1}, waiting ${waitMs / 1000}s…`);
@@ -339,6 +348,22 @@ export async function POST(req: Request) {
           : raw;
         console.log(`[Agent] ${call.name} result: ${raw.length} chars`);
         responseObj = { result: truncated };
+
+        // If a run_script call succeeded and looks like it mutated calendar/gmail,
+        // broadcast an SSE event so the UI refreshes immediately (don't rely on
+        // Google push webhooks / ngrok being configured).
+        if (call.name === 'run_script' && !raw.includes('"isError"') && !raw.includes('"error"')) {
+          const code = String((call.args as any)?.code ?? '');
+          try {
+            const { broadcastEvent } = await import('@/lib/eventBus');
+            if (/googlecalendar\.api\.events\.(create|update|delete)/.test(code)) {
+              broadcastEvent('CALENDAR_UPDATED', {});
+            }
+            if (/gmail\.api\.messages\.(send|modify|delete|trash)/.test(code)) {
+              broadcastEvent('EMAIL_UPDATED', {});
+            }
+          } catch {}
+        }
       } catch (toolErr: unknown) {
         const errMsg = (toolErr as Error)?.message ?? 'Tool execution failed';
         console.error(`[Agent] Tool error (${call.name}):`, errMsg);

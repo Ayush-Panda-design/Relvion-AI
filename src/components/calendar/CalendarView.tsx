@@ -108,24 +108,24 @@ export function CalendarView() {
       {/* Main Calendar */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#1e293b] bg-[#0a0f1e] shrink-0">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#FBC02D] bg-[#FFF9C4] shrink-0">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setCurrentMonth(new Date(year, month - 1))}
-              className="p-1.5 hover:bg-[#1a2235] rounded-lg text-slate-400"
+              className="p-1.5 hover:bg-[#FFEE58] rounded-lg text-green-900"
             >
               <ChevronLeft size={18} />
             </button>
-            <h2 className="text-lg font-bold text-slate-100">{monthName}</h2>
+            <h2 className="text-lg font-bold text-red-900">{monthName}</h2>
             <button
               onClick={() => setCurrentMonth(new Date(year, month + 1))}
-              className="p-1.5 hover:bg-[#1a2235] rounded-lg text-slate-400"
+              className="p-1.5 hover:bg-[#FFEE58] rounded-lg text-green-900"
             >
               <ChevronRight size={18} />
             </button>
             <button
               onClick={() => setCurrentMonth(new Date())}
-              className="px-2 py-1 text-xs text-slate-400 hover:text-slate-200 border border-[#1e293b] rounded-lg"
+              className="px-2 py-1 text-xs text-green-900 hover:text-red-800 border border-[#FBC02D] rounded-lg"
             >
               Today
             </button>
@@ -133,14 +133,14 @@ export function CalendarView() {
           <div className="flex items-center gap-2">
             <button
               onClick={fetchEvents}
-              className="p-1.5 hover:bg-[#1a2235] rounded-lg text-slate-400"
+              className="p-1.5 hover:bg-[#FFEE58] rounded-lg text-green-900"
               title="Refresh"
             >
               <RefreshCw size={14} />
             </button>
             <button
               onClick={() => setShowCreate(true)}
-              className="flex items-center gap-2 bg-[#c9a84c] hover:bg-[#d4b55c] text-[#0a0f1e] font-semibold py-2 px-4 rounded-xl text-sm transition-all"
+              className="flex items-center gap-2 bg-[#D32F2F] hover:bg-[#C62828] text-[#FFF9C4] font-semibold py-2 px-4 rounded-xl text-sm transition-all"
             >
               <Plus size={16} /> New Event
             </button>
@@ -148,9 +148,9 @@ export function CalendarView() {
         </div>
 
         {/* Day headers */}
-        <div className="grid grid-cols-7 border-b border-[#1e293b] bg-[#0a0f1e] shrink-0">
+        <div className="grid grid-cols-7 border-b border-[#FBC02D] bg-[#FFF9C4] shrink-0">
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
-            <div key={d} className="text-center text-xs font-semibold text-slate-500 py-2">
+            <div key={d} className="text-center text-xs font-semibold text-green-800 py-2">
               {d}
             </div>
           ))}
@@ -160,7 +160,7 @@ export function CalendarView() {
         <div className="flex-1 overflow-auto">
           <div className="grid grid-cols-7 min-h-full">
             {Array.from({ length: firstDay }).map((_, i) => (
-              <div key={`empty-${i}`} className="border-r border-b border-[#1e293b] bg-[#080d1b] min-h-[100px]" />
+              <div key={`empty-${i}`} className="border-r border-b border-[#FBC02D] bg-[#FFFDE7] min-h-[100px]" />
             ))}
             {Array.from({ length: daysInMonth }).map((_, i) => {
               const day = i + 1;
@@ -172,8 +172,8 @@ export function CalendarView() {
               return (
                 <div
                   key={day}
-                  className={`border-r border-b border-[#1e293b] min-h-[100px] p-1.5 cursor-pointer hover:bg-[#1a2235] transition-colors ${
-                    isToday ? 'bg-[#1a2235]' : ''
+                  className={`border-r border-b border-[#FBC02D] min-h-[100px] p-1.5 cursor-pointer hover:bg-[#FFEE58] transition-colors ${
+                    isToday ? 'bg-[#FFEE58]' : ''
                   }`}
                   onClick={() => {
                     const pad = (n: number) => String(n).padStart(2, '0');
@@ -185,7 +185,7 @@ export function CalendarView() {
                 >
                   <div
                     className={`text-sm font-semibold mb-1 w-6 h-6 flex items-center justify-center rounded-full ${
-                      isToday ? 'bg-[#c9a84c] text-[#0a0f1e]' : 'text-slate-400'
+                      isToday ? 'bg-[#D32F2F] text-[#FFF9C4]' : 'text-green-900'
                     }`}
                   >
                     {day}
@@ -193,13 +193,13 @@ export function CalendarView() {
                   {dayEvents.slice(0, 3).map(e => (
                     <div
                       key={e.id}
-                      className="text-xs bg-[#c9a84c]/20 text-[#c9a84c] rounded px-1 py-0.5 mb-0.5 truncate"
+                      className="text-xs bg-[#D32F2F]/20 text-[#D32F2F] rounded px-1 py-0.5 mb-0.5 truncate"
                     >
                       {e.summary || '(no title)'}
                     </div>
                   ))}
                   {dayEvents.length > 3 && (
-                    <div className="text-xs text-slate-600">+{dayEvents.length - 3} more</div>
+                    <div className="text-xs text-green-700">+{dayEvents.length - 3} more</div>
                   )}
                 </div>
               );
@@ -209,19 +209,19 @@ export function CalendarView() {
       </div>
 
       {/* Upcoming Events Sidebar */}
-      <div className="w-72 border-l border-[#1e293b] bg-[#0d1425] flex flex-col overflow-hidden shrink-0">
-        <div className="px-4 py-3 border-b border-[#1e293b] font-semibold text-slate-200 text-sm">
+      <div className="w-72 border-l border-[#FBC02D] bg-[#FFF59D] flex flex-col overflow-hidden shrink-0">
+        <div className="px-4 py-3 border-b border-[#FBC02D] font-semibold text-red-800 text-sm">
           Upcoming Events
         </div>
         <div className="flex-1 overflow-y-auto p-3 space-y-2">
           {loading ? (
             <div className="animate-pulse space-y-2">
               {[1, 2, 3].map(i => (
-                <div key={i} className="h-16 bg-[#1a2235] rounded-xl" />
+                <div key={i} className="h-16 bg-[#FFEE58] rounded-xl" />
               ))}
             </div>
           ) : events.length === 0 ? (
-            <div className="text-center text-slate-500 text-sm pt-8">
+            <div className="text-center text-green-800 text-sm pt-8">
               No upcoming events
             </div>
           ) : (
@@ -229,12 +229,12 @@ export function CalendarView() {
               const startStr = e.start?.dateTime || e.start?.date;
               const start = startStr ? new Date(startStr) : null;
               return (
-                <div key={e.id} className="bg-[#1a2235] border border-[#1e293b] rounded-xl p-3">
-                  <div className="font-semibold text-slate-200 text-sm truncate">
+                <div key={e.id} className="bg-[#FFEE58] border border-[#FBC02D] rounded-xl p-3">
+                  <div className="font-semibold text-red-800 text-sm truncate">
                     {e.summary || '(no title)'}
                   </div>
                   {start && (
-                    <div className="flex items-center gap-1 text-xs text-slate-400 mt-1">
+                    <div className="flex items-center gap-1 text-xs text-green-900 mt-1">
                       <Clock size={12} />
                       {start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}{' '}
                       {e.start?.dateTime
@@ -243,7 +243,7 @@ export function CalendarView() {
                     </div>
                   )}
                   {e.attendees && e.attendees.length > 0 && (
-                    <div className="flex items-center gap-1 text-xs text-slate-500 mt-1">
+                    <div className="flex items-center gap-1 text-xs text-green-800 mt-1">
                       <Users size={12} />
                       {e.attendees.length} attendee{e.attendees.length > 1 ? 's' : ''}
                     </div>
@@ -257,22 +257,22 @@ export function CalendarView() {
 
       {/* Create Event Modal */}
       {showCreate && (
-        <div className="fixed inset-0 z-50 bg-[#0a0f1e]/80 backdrop-blur-sm flex items-center justify-center px-4">
-          <div className="bg-[#0d1425] border border-[#1e293b] rounded-2xl w-full max-w-md shadow-2xl">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-[#1e293b]">
-              <h3 className="font-bold text-slate-100">New Event</h3>
+        <div className="fixed inset-0 z-50 bg-[#FFF9C4]/80 backdrop-blur-sm flex items-center justify-center px-4">
+          <div className="bg-[#FFF59D] border border-[#FBC02D] rounded-2xl w-full max-w-md shadow-2xl">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[#FBC02D]">
+              <h3 className="font-bold text-red-900">New Event</h3>
               <button
                 onClick={() => setShowCreate(false)}
-                className="text-slate-400 hover:text-slate-200 transition-colors"
+                className="text-green-900 hover:text-red-800 transition-colors"
               >
                 ✕
               </button>
             </div>
             <div className="p-6 space-y-4">
               <div>
-                <label className="text-xs text-slate-400 mb-1 block">Title *</label>
+                <label className="text-xs text-green-900 mb-1 block">Title *</label>
                 <input
-                  className="w-full bg-[#1a2235] border border-[#1e293b] rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#c9a84c]"
+                  className="w-full bg-[#FFEE58] border border-[#FBC02D] rounded-xl px-3 py-2 text-sm text-red-800 focus:outline-none focus:ring-1 focus:ring-[#D32F2F]"
                   placeholder="Meeting title"
                   value={form.summary}
                   onChange={e => setForm(f => ({ ...f, summary: e.target.value }))}
@@ -280,40 +280,40 @@ export function CalendarView() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs text-slate-400 mb-1 block">Start *</label>
+                  <label className="text-xs text-green-900 mb-1 block">Start *</label>
                   <input
                     type="datetime-local"
-                    className="w-full bg-[#1a2235] border border-[#1e293b] rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#c9a84c]"
+                    className="w-full bg-[#FFEE58] border border-[#FBC02D] rounded-xl px-3 py-2 text-sm text-red-800 focus:outline-none focus:ring-1 focus:ring-[#D32F2F]"
                     value={form.startDateTime}
                     onChange={e => setForm(f => ({ ...f, startDateTime: e.target.value }))}
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-slate-400 mb-1 block">End *</label>
+                  <label className="text-xs text-green-900 mb-1 block">End *</label>
                   <input
                     type="datetime-local"
-                    className="w-full bg-[#1a2235] border border-[#1e293b] rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#c9a84c]"
+                    className="w-full bg-[#FFEE58] border border-[#FBC02D] rounded-xl px-3 py-2 text-sm text-red-800 focus:outline-none focus:ring-1 focus:ring-[#D32F2F]"
                     value={form.endDateTime}
                     onChange={e => setForm(f => ({ ...f, endDateTime: e.target.value }))}
                   />
                 </div>
               </div>
               <div>
-                <label className="text-xs text-slate-400 mb-1 block">
+                <label className="text-xs text-green-900 mb-1 block">
                   Attendees (comma-separated emails)
                 </label>
                 <input
-                  className="w-full bg-[#1a2235] border border-[#1e293b] rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#c9a84c]"
+                  className="w-full bg-[#FFEE58] border border-[#FBC02D] rounded-xl px-3 py-2 text-sm text-red-800 focus:outline-none focus:ring-1 focus:ring-[#D32F2F]"
                   placeholder="friend@example.com, colleague@example.com"
                   value={form.attendees}
                   onChange={e => setForm(f => ({ ...f, attendees: e.target.value }))}
                 />
-                <p className="text-xs text-slate-600 mt-1">Invite emails sent via Gmail</p>
+                <p className="text-xs text-green-700 mt-1">Invite emails sent via Gmail</p>
               </div>
               <div>
-                <label className="text-xs text-slate-400 mb-1 block">Description</label>
+                <label className="text-xs text-green-900 mb-1 block">Description</label>
                 <textarea
-                  className="w-full bg-[#1a2235] border border-[#1e293b] rounded-xl px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-[#c9a84c] resize-none"
+                  className="w-full bg-[#FFEE58] border border-[#FBC02D] rounded-xl px-3 py-2 text-sm text-red-800 focus:outline-none focus:ring-1 focus:ring-[#D32F2F] resize-none"
                   rows={2}
                   placeholder="Optional details…"
                   value={form.description}
@@ -323,7 +323,7 @@ export function CalendarView() {
               <button
                 onClick={createEvent}
                 disabled={creating}
-                className="w-full bg-[#c9a84c] hover:bg-[#d4b55c] text-[#0a0f1e] font-semibold py-2.5 rounded-xl transition-all disabled:opacity-50"
+                className="w-full bg-[#D32F2F] hover:bg-[#C62828] text-[#FFF9C4] font-semibold py-2.5 rounded-xl transition-all disabled:opacity-50"
               >
                 {creating ? 'Creating…' : 'Create Event & Send Invites'}
               </button>

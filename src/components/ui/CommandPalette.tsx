@@ -75,36 +75,36 @@ export function CommandPalette({ onFolderChange, onComposeClick }: CommandPalett
 
   const typeColors: Record<string, string> = {
     Navigation: 'text-blue-400 bg-blue-400/10',
-    Action: 'text-[#c9a84c] bg-[#c9a84c]/10',
+    Action: 'text-[#D32F2F] bg-[#D32F2F]/10',
   };
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-[#0a0f1e]/80 backdrop-blur-sm flex justify-center items-start pt-[10vh] px-4"
+      className="fixed inset-0 z-50 bg-[#FFF9C4]/80 backdrop-blur-sm flex justify-center items-start pt-[10vh] px-4"
       onClick={() => setOpen(false)}
     >
       <div
-        className="w-full max-w-2xl bg-[#111827] border border-[#1e293b] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+        className="w-full max-w-2xl bg-[#FFF176] border border-[#FBC02D] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
         onClick={e => e.stopPropagation()}
       >
         {/* Search input */}
-        <div className="flex items-center px-4 py-3 border-b border-[#1e293b]">
-          <Search size={18} className="text-slate-500 mr-3 shrink-0" />
+        <div className="flex items-center px-4 py-3 border-b border-[#FBC02D]">
+          <Search size={18} className="text-green-800 mr-3 shrink-0" />
           <input
             ref={inputRef}
-            className="flex-1 bg-transparent text-slate-100 placeholder-slate-500 text-base focus:outline-none"
+            className="flex-1 bg-transparent text-red-900 placeholder-slate-500 text-base focus:outline-none"
             placeholder="Search commands…"
             value={query}
             onChange={e => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
           />
-          <kbd className="text-xs text-slate-500 border border-[#1e293b] rounded px-1.5 py-0.5 bg-[#0a0f1e]">esc</kbd>
+          <kbd className="text-xs text-green-800 border border-[#FBC02D] rounded px-1.5 py-0.5 bg-[#FFF9C4]">esc</kbd>
         </div>
 
         {/* Results */}
         <div className="max-h-96 overflow-y-auto py-2">
           {filtered.length === 0 ? (
-            <div className="text-center text-slate-500 text-sm py-8">No matching commands</div>
+            <div className="text-center text-green-800 text-sm py-8">No matching commands</div>
           ) : (
             filtered.map((action, i) => (
               <button
@@ -112,23 +112,23 @@ export function CommandPalette({ onFolderChange, onComposeClick }: CommandPalett
                 onClick={action.action}
                 onMouseEnter={() => setSelected(i)}
                 className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
-                  selected === i ? 'bg-[#1a2235]' : ''
+                  selected === i ? 'bg-[#FFEE58]' : ''
                 }`}
               >
-                <div className={`p-1.5 rounded-lg ${selected === i ? 'bg-[#c9a84c]/20 text-[#c9a84c]' : 'bg-[#1e293b] text-slate-400'}`}>
+                <div className={`p-1.5 rounded-lg ${selected === i ? 'bg-[#D32F2F]/20 text-[#D32F2F]' : 'bg-[#FBC02D] text-green-900'}`}>
                   <action.icon size={16} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-slate-200">{action.title}</div>
-                  {action.subtitle && <div className="text-xs text-slate-500">{action.subtitle}</div>}
+                  <div className="text-sm font-medium text-red-800">{action.title}</div>
+                  {action.subtitle && <div className="text-xs text-green-800">{action.subtitle}</div>}
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   {action.shortcut && (
-                    <span className="text-xs text-slate-600 border border-[#1e293b] rounded px-1.5 py-0.5 bg-[#0a0f1e]">
+                    <span className="text-xs text-green-700 border border-[#FBC02D] rounded px-1.5 py-0.5 bg-[#FFF9C4]">
                       {action.shortcut}
                     </span>
                   )}
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${typeColors[action.type] || 'text-slate-500 bg-slate-500/10'}`}>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${typeColors[action.type] || 'text-green-800 bg-slate-500/10'}`}>
                     {action.type}
                   </span>
                 </div>
@@ -137,11 +137,11 @@ export function CommandPalette({ onFolderChange, onComposeClick }: CommandPalett
           )}
         </div>
 
-        <div className="px-4 py-2 border-t border-[#1e293b] flex items-center gap-4 text-xs text-slate-600">
-          <span><kbd className="border border-[#1e293b] rounded px-1">↑↓</kbd> Navigate</span>
-          <span><kbd className="border border-[#1e293b] rounded px-1">↵</kbd> Select</span>
-          <span><kbd className="border border-[#1e293b] rounded px-1">esc</kbd> Close</span>
-          <span className="ml-auto"><kbd className="border border-[#1e293b] rounded px-1">⌘K</kbd> Toggle</span>
+        <div className="px-4 py-2 border-t border-[#FBC02D] flex items-center gap-4 text-xs text-green-700">
+          <span><kbd className="border border-[#FBC02D] rounded px-1">↑↓</kbd> Navigate</span>
+          <span><kbd className="border border-[#FBC02D] rounded px-1">↵</kbd> Select</span>
+          <span><kbd className="border border-[#FBC02D] rounded px-1">esc</kbd> Close</span>
+          <span className="ml-auto"><kbd className="border border-[#FBC02D] rounded px-1">⌘K</kbd> Toggle</span>
         </div>
       </div>
     </div>

@@ -5,9 +5,9 @@ export async function GET() {
   try {
     const d = new Date();
     // Fetch upcoming events from Google Calendar via Corsair
-    const listRes = await (corsair as any).googlecalendar.api.events.list({
+    const listRes = await (corsair as any).googlecalendar.api.events.getMany({
       timeMin: d.toISOString(),
-      maxResults: 10,
+      maxResults: 50,
       singleEvents: true,
       orderBy: 'startTime',
     });

@@ -47,14 +47,14 @@ export function Sidebar({
   ];
 
   return (
-    <aside className="w-[220px] bg-[#0d1425] border-r border-[#1e293b] flex flex-col h-screen">
+    <aside className="w-[220px] bg-[#FFF59D] border-r border-[#FBC02D] flex flex-col h-screen">
       <div className="p-4 flex items-center gap-2">
-        <div className="text-[#c9a84c]">
+        <div className="text-[#D32F2F]">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
             <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
           </svg>
         </div>
-        <h1 className="font-bold text-lg text-slate-100 tracking-tight">Relvion AI</h1>
+        <h1 className="font-bold text-lg text-red-900 tracking-tight">Relvion AI</h1>
       </div>
 
       <div className="px-4 pb-4">
@@ -62,7 +62,7 @@ export function Sidebar({
           onClick={() => {
             if (onComposeClick) onComposeClick();
           }}
-          className="w-full bg-[#c9a84c] hover:bg-[#d4b55c] text-[#0a0f1e] font-semibold py-2.5 rounded-xl transition-all shadow-[0_0_15px_rgba(201,168,76,0.3)] hover:shadow-[0_0_25px_rgba(201,168,76,0.5)] flex items-center justify-center gap-2"
+          className="w-full bg-[#D32F2F] hover:bg-[#C62828] text-[#FFF9C4] font-semibold py-2.5 rounded-xl transition-all shadow-[0_0_15px_rgba(201,168,76,0.3)] hover:shadow-[0_0_25px_rgba(201,168,76,0.5)] flex items-center justify-center gap-2"
         >
           <span className="text-lg leading-none mb-0.5">+</span> Compose
         </button>
@@ -70,7 +70,7 @@ export function Sidebar({
 
       <div className="flex-1 overflow-y-auto px-3 py-2 space-y-6">
         <div>
-          <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 px-3">
+          <h2 className="text-xs font-semibold text-green-800 uppercase tracking-wider mb-2 px-3">
             Mail
           </h2>
           <div className="space-y-0.5">
@@ -80,18 +80,18 @@ export function Sidebar({
                 onClick={() => onFolderChange(f.name)}
                 className={`w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all ${
                   activeFolder === f.name
-                    ? 'bg-[#1a2235] text-slate-100 shadow-[0_0_10px_rgba(201,168,76,0.1)]'
-                    : 'text-slate-400 hover:bg-[#1a2235] hover:text-slate-200'
+                    ? 'bg-[#FFEE58] text-red-900 shadow-[0_0_10px_rgba(201,168,76,0.1)]'
+                    : 'text-green-900 hover:bg-[#FFEE58] hover:text-red-800'
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <f.icon size={18} className={activeFolder === f.name ? 'text-[#c9a84c]' : ''} />
+                  <f.icon size={18} className={activeFolder === f.name ? 'text-[#D32F2F]' : ''} />
                   <span className="text-sm font-medium">{f.label}</span>
                 </div>
                 {f.count > 0 && (
                   <span
                     className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${
-                      f.name === 'inbox' ? 'bg-[#c9a84c] text-[#0a0f1e]' : 'bg-[#1e293b]'
+                      f.name === 'inbox' ? 'bg-[#D32F2F] text-[#FFF9C4]' : 'bg-[#FBC02D]'
                     }`}
                   >
                     {f.count}
@@ -103,7 +103,7 @@ export function Sidebar({
         </div>
 
         <div>
-          <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 px-3">
+          <h2 className="text-xs font-semibold text-green-800 uppercase tracking-wider mb-2 px-3">
             Calendar
           </h2>
           <div className="space-y-0.5">
@@ -111,31 +111,31 @@ export function Sidebar({
               onClick={() => onFolderChange('calendar')}
               className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all ${
                 activeFolder === 'calendar'
-                  ? 'bg-[#1a2235] text-slate-100 shadow-[0_0_10px_rgba(201,168,76,0.1)]'
-                  : 'text-slate-400 hover:bg-[#1a2235] hover:text-slate-200'
+                  ? 'bg-[#FFEE58] text-red-900 shadow-[0_0_10px_rgba(201,168,76,0.1)]'
+                  : 'text-green-900 hover:bg-[#FFEE58] hover:text-red-800'
               }`}
             >
-              <Calendar size={18} className={activeFolder === 'calendar' ? 'text-[#c9a84c]' : ''} />
+              <Calendar size={18} className={activeFolder === 'calendar' ? 'text-[#D32F2F]' : ''} />
               <span className="text-sm font-medium">Calendar</span>
             </button>
           </div>
         </div>
 
         <div>
-          <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 px-3">
+          <h2 className="text-xs font-semibold text-green-800 uppercase tracking-wider mb-2 px-3">
             Other
           </h2>
           <div className="space-y-0.5">
             <Link
               href="/analytics"
-              className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-slate-400 hover:bg-[#1a2235] hover:text-slate-200 transition-all"
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-green-900 hover:bg-[#FFEE58] hover:text-red-800 transition-all"
             >
               <BarChart2 size={18} />
               <span className="text-sm font-medium">Analytics</span>
             </Link>
             <Link
               href="/settings"
-              className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-slate-400 hover:bg-[#1a2235] hover:text-slate-200 transition-all"
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-green-900 hover:bg-[#FFEE58] hover:text-red-800 transition-all"
             >
               <Settings size={18} />
               <span className="text-sm font-medium">Settings</span>
@@ -144,16 +144,16 @@ export function Sidebar({
         </div>
       </div>
 
-      <div className="p-4 border-t border-[#1e293b]">
+      <div className="p-4 border-t border-[#FBC02D]">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-[#1a2235] flex items-center justify-center font-semibold text-sm border border-[#c9a84c] uppercase">
+          <div className="w-8 h-8 rounded-full bg-[#FFEE58] flex items-center justify-center font-semibold text-sm border border-[#D32F2F] uppercase">
             {profile?.name ? profile.name.charAt(0) : 'U'}
           </div>
           <div className="flex flex-col min-w-0">
-            <span className="text-sm font-medium text-slate-200 truncate">
+            <span className="text-sm font-medium text-red-800 truncate">
               {profile?.name || 'User'}
             </span>
-            <span className="text-xs text-slate-500 truncate">
+            <span className="text-xs text-green-800 truncate">
               {profile?.email || 'user@example.com'}
             </span>
           </div>

@@ -19,7 +19,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="flex h-screen w-full bg-[#0a0f1e] overflow-hidden text-slate-100 font-sans">
+    <div className="flex h-screen w-full bg-[#FFF9C4] overflow-hidden text-red-900 font-sans">
       <Sidebar activeFolder={activeFolder} onFolderChange={handleFolderChange} onComposeClick={() => setShowCompose(true)} />
       <div className="flex-1 flex flex-col min-w-0">
         <TopBar />
