@@ -9,6 +9,7 @@ const db = new Pool({ connectionString: process.env.DATABASE_URL });
 export const corsair = createCorsair({
   plugins: [
     gmail({
+      authType: 'oauth_2',
       webhookHooks: {
         messageChanged: {
           before: async (ctx, payload) => {
@@ -50,9 +51,10 @@ export const corsair = createCorsair({
       },
     }),
     googlecalendar({
+      authType: 'oauth_2',
       webhookHooks: {
-        eventChanged: {
-          after: async (ctx, response) => {
+        onEventChanged: {
+          after: async (ctx: any, response: any) => {
             const event = response.data?.event;
             console.log('[corsair/calendar] event changed:', event?.summary);
 

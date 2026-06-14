@@ -28,8 +28,14 @@ export async function GET(req: Request) {
       redirectUri: REDIRECT_URI,
     });
 
+    // Append email and profile scopes to get the id_token in the token exchange
+    const urlObj = new URL(gmailResult.url);
+    const existingScopes = urlObj.searchParams.get('scope') || '';
+    urlObj.searchParams.set('scope', `${existingScopes} email profile`);
+    const finalUrl = urlObj.toString();
+
     // Store temp tenant id in a short-lived cookie so callback can retrieve it
-    const res = NextResponse.redirect(gmailResult.url);
+    const res = NextResponse.redirect(finalUrl);
     res.cookies.set('oauth_state', gmailResult.state, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',

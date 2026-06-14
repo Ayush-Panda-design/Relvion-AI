@@ -8,7 +8,12 @@ export async function GET() {
   const corsair = corsairForTenant(session.tenantId);
 
   try {
-    const profile = await (corsair as any).gmail.api.users.getProfile({ userId: 'me' });
+    const accessToken = await (corsair as any).gmail.keys.get_access_token?.();
+    const res = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/profile', {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    const profile = await res.json();
+
     return NextResponse.json({
       email: profile?.emailAddress || '',
       messagesTotal: profile?.messagesTotal || 0,

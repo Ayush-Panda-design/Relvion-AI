@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { processOAuthCallback } from 'corsair/oauth';
 import { corsair } from '@/server/corsair';
 import { createSessionToken, verifySessionToken, COOKIE_NAME } from '@/lib/auth/session';
@@ -24,10 +25,9 @@ export async function GET(req: Request) {
   }
 
   // Retrieve the pending session to know which tenant to configure
-  const pendingCookie = req.headers.get('cookie')
-    ?.split(';')
-    .find(c => c.trim().startsWith('pending_session='))
-    ?.split('=')[1];
+  const cookieStore = await cookies();
+  const pendingCookie = cookieStore.get('pending_session')?.value;
+  console.log('[calendar/callback] pendingCookie is:', pendingCookie);
 
   if (!pendingCookie) {
     return NextResponse.redirect(`${APP_URL}/signin?error=missing_pending_session`);

@@ -49,18 +49,51 @@ export async function createSessionToken(payload: SessionPayload): Promise<strin
 
 export async function verifySessionToken(token: string): Promise<SessionPayload | null> {
   try {
-    const [dataB64, sig] = token.split('.');
-    if (!dataB64 || !sig) return null;
-    
+    const dotIndex = token.lastIndexOf('.');
+    if (dotIndex === -1) {
+      console.warn('[verifySessionToken] No dot found in token');
+      return null;
+    }
+    const dataB64 = token.slice(0, dotIndex);
+    const sig = token.slice(dotIndex + 1);
+    if (!dataB64 || !sig) {
+      console.warn('[verifySessionToken] Missing dataB64 or sig');
+      return null;
+    }
+
     const expectedSig = await sign(dataB64);
-    // Timing safe comparison not strictly needed since we use HMAC and compare base64 string, 
-    // but doing simple string comparison is fine for this context.
-    if (sig !== expectedSig) return null;
-    
+    if (sig !== expectedSig) {
+      console.warn('[verifySessionToken] Signature mismatch');
+      return null;
+    }
+
     const jsonStr = base64urlDecode(dataB64);
-    return JSON.parse(jsonStr) as SessionPayload;
-  } catch (err) {
-    console.error('Session verify error', err);
+    let parsed;
+    try {
+      parsed = JSON.parse(jsonStr);
+      
+      // Validate it's a proper SessionPayload (not a Corsair state token etc.)
+      if (
+        typeof parsed === 'object' &&
+        parsed !== null &&
+        (typeof parsed.userId === 'string' || typeof parsed.userId === 'number') &&
+        typeof parsed.tenantId === 'string' &&
+        typeof parsed.email === 'string'
+      ) {
+        return {
+          ...parsed,
+          userId: String(parsed.userId)
+        } as SessionPayload;
+      }
+    } catch (e: any) {
+      console.warn(`[verifySessionToken] JSON parse error on string: ${jsonStr}`);
+      throw e;
+    }
+    
+    console.warn(`[verifySessionToken] SessionPayload shape mismatch:`, parsed);
+    return null;
+  } catch (e: any) {
+    console.warn(`[verifySessionToken] Outer catch triggered:`, e?.message || e);
     return null;
   }
 }
