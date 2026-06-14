@@ -1,7 +1,13 @@
 import { NextResponse } from 'next/server';
-import { corsair } from '@/server/corsair';
+import { getSession } from '@/lib/auth/getSession';
+import { corsairForTenant } from '@/lib/auth/corsairForTenant';
+import { logActivity } from '@/lib/activityLog';
 
 export async function POST(req: Request) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const corsair = corsairForTenant(session.tenantId);
+
   try {
     const { summary, description, startDateTime, endDateTime, attendees } = await req.json();
 
@@ -9,7 +15,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const eventBody: any = {
+    const event: Record<string, unknown> = {
       summary,
       description: description || '',
       start: { dateTime: startDateTime, timeZone: 'UTC' },
@@ -17,42 +23,24 @@ export async function POST(req: Request) {
     };
 
     if (attendees && attendees.length > 0) {
-      eventBody.attendees = attendees
+      event.attendees = attendees
         .split(',')
         .map((e: string) => e.trim())
         .filter(Boolean)
         .map((email: string) => ({ email }));
     }
 
-    const result = await (corsair as any).googlecalendar.api.events.insert({
+    const result = await corsair.googlecalendar.api.events.create({
       calendarId: 'primary',
-      ...eventBody,
+      event,
+      sendUpdates: event.attendees ? 'all' : 'none',
     });
 
-    // Also send invite emails via Gmail if attendees exist
-    if (eventBody.attendees?.length) {
-      for (const attendee of eventBody.attendees) {
-        const emailBody = [
-          'From: me',
-          `To: ${attendee.email}`,
-          `Subject: Invitation: ${summary}`,
-          'Content-Type: text/plain; charset="UTF-8"',
-          '',
-          `You have been invited to: ${summary}`,
-          description ? `\nDetails: ${description}` : '',
-          `\nWhen: ${new Date(startDateTime).toLocaleString()} - ${new Date(endDateTime).toLocaleString()} UTC`,
-          '\nSee your Google Calendar for more details.',
-        ].join('\r\n');
-
-        const encoded = Buffer.from(emailBody)
-          .toString('base64')
-          .replace(/\+/g, '-')
-          .replace(/\//g, '_')
-          .replace(/=+$/, '');
-
-        await (corsair as any).gmail.api.messages.send({ raw: encoded }).catch(console.error);
-      }
-    }
+    await logActivity('calendar_created', {
+      eventId: result?.id,
+      summary,
+      attendeeCount: Array.isArray(event.attendees) ? event.attendees.length : 0,
+    });
 
     return NextResponse.json({ success: true, event: result });
   } catch (error: any) {

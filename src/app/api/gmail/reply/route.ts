@@ -1,32 +1,40 @@
 import { NextResponse } from 'next/server';
-import { corsair } from '@/server/corsair';
+import { getSession } from '@/lib/auth/getSession';
+import { corsairForTenant } from '@/lib/auth/corsairForTenant';
+import { encodeRawEmail } from '@/lib/gmail/encodeMessage';
+import { logActivity } from '@/lib/activityLog';
 
 export async function POST(req: Request) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const corsair = corsairForTenant(session.tenantId);
+
   try {
-    const { to, subject, body, threadId } = await req.json();
+    const { threadId, messageId, to, subject, body } = await req.json();
+
     if (!to || !subject || !body) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
     }
 
-    const messageParts = [
-      'From: me',
-      `To: ${to}`,
-      `Subject: ${subject.startsWith('Re:') ? subject : 'Re: ' + subject}`,
-      'Content-Type: text/plain; charset="UTF-8"',
-      ...(threadId ? [`In-Reply-To: ${threadId}`, `References: ${threadId}`] : []),
-      '',
+    const replySubject = subject.startsWith('Re:') ? subject : `Re: ${subject}`;
+    const encodedEmail = encodeRawEmail({
+      to,
+      subject: replySubject,
       body,
-    ];
+      inReplyTo: threadId,
+      references: threadId,
+    });
 
-    const encodedEmail = Buffer.from(messageParts.join('\r\n'))
-      .toString('base64')
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=+$/, '');
-
-    const result = await (corsair as any).gmail.api.messages.send({
+    const result = await corsair.gmail.api.messages.send({
       raw: encodedEmail,
       ...(threadId ? { threadId } : {}),
+    });
+
+    await logActivity('email_replied', {
+      messageId: result?.id,
+      threadId: threadId || result?.threadId,
+      to,
+      subject: replySubject,
     });
 
     return NextResponse.json({ success: true, result });

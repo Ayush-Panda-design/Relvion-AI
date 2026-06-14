@@ -1,18 +1,25 @@
 import { NextResponse } from 'next/server';
 import { Pool } from 'pg';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { corsair } from '@/server/corsair';
+import { getSession } from '@/lib/auth/getSession';
+import { corsairForTenant } from '@/lib/auth/corsairForTenant';
+
 
 const db = new Pool({ connectionString: process.env.DATABASE_URL });
 
 export async function GET(req: Request) {
   try {
+    const session = await getSession();
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const corsair = corsairForTenant(session.tenantId);
+
     const { searchParams } = new URL(req.url);
     const query = searchParams.get('q');
     
     if (!query) {
       return NextResponse.json({ results: [] });
     }
+
 
     if (!process.env.GEMINI_API_KEY) {
       // Fallback directly to Gmail DB if AI is unconfigured

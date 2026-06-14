@@ -23,22 +23,42 @@ export function EmailDetail({
   const [isActing, setIsActing] = useState(false);
   const [fullBody, setFullBody] = useState<FullBody | null>(null);
   const [bodyLoading, setBodyLoading] = useState(false);
+  // Enriched header data from full message fetch
+  const [fullMeta, setFullMeta] = useState<{
+    from?: string;
+    fromEmail?: string;
+    subject?: string;
+  } | null>(null);
 
-  // Fetch full message body when email is selected
+  // Fetch full message body + headers when email is selected
   useEffect(() => {
     if (!email?.id) return;
     setFullBody(null);
+    setFullMeta(null);
     setBodyLoading(true);
 
     fetch(`/api/gmail/message/${email.id}`)
       .then(r => r.json())
       .then(data => {
-        if (data.body) {
-          setFullBody(data.body);
+        if (data.body) setFullBody(data.body);
+        // Capture enriched header data (real email address, full subject)
+        if (data.from || data.subject) {
+          // Extract the email address from the full From header
+          const rawFrom: string = data.from || '';
+          const addrMatch = rawFrom.match(/<([^>]+)>/);
+          const fromEmail = addrMatch ? addrMatch[1].trim() : rawFrom.trim();
+          const displayName = rawFrom.includes('<')
+            ? rawFrom.replace(/<[^>]+>/, '').trim()
+            : rawFrom.trim();
+          setFullMeta({
+            from: displayName || fromEmail,
+            fromEmail,
+            subject: data.subject,
+          });
         }
       })
       .catch(() => {
-        // Non-fatal — fall back to snippet
+        // Non-fatal — fall back to list metadata
       })
       .finally(() => setBodyLoading(false));
   }, [email?.id]);
@@ -79,12 +99,25 @@ export function EmailDetail({
     if (!replyBody.trim()) return;
     setIsSending(true);
     try {
+      // Prefer the real email address from the full message fetch (fullMeta),
+      // then fall back to the fromEmail set by the list route, then the raw from
+      const replyTo =
+        fullMeta?.fromEmail ||
+        email.data?.fromEmail ||
+        email.data?.from ||
+        '';
+      if (!replyTo || replyTo === 'Unknown Sender') {
+        toast.error('Cannot reply: sender email address is unknown.');
+        return;
+      }
+      const replySubject =
+        fullMeta?.subject || email.data?.subject || '(no subject)';
       const res = await fetch('/api/gmail/reply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          to: email.data?.from,
-          subject: email.data?.subject,
+          to: replyTo,
+          subject: replySubject,
           body: replyBody,
           threadId: email.threadId,
         }),
@@ -100,6 +133,7 @@ export function EmailDetail({
       setIsSending(false);
     }
   };
+
 
   // Render body content: prefer full HTML → plain text → snippet
   const renderBody = () => {
@@ -190,18 +224,23 @@ export function EmailDetail({
       {/* Email Content */}
       <div className="flex-1 overflow-y-auto p-6">
         <h1 className="text-xl font-bold text-red-900 mb-4">
-          {email.data?.subject || '(no subject)'}
+          {fullMeta?.subject || email.data?.subject || '(no subject)'}
         </h1>
 
         <div className="flex items-start gap-4 mb-6">
           <div className="w-10 h-10 rounded-full bg-[#FFEE58] border border-[#D32F2F] flex items-center justify-center font-bold text-[#D32F2F] text-sm shrink-0">
-            {(email.data?.from || 'U').charAt(0).toUpperCase()}
+            {(fullMeta?.from || email.data?.from || 'U').charAt(0).toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-semibold text-red-800">
-                {email.data?.from || 'Unknown'}
+                {fullMeta?.from || email.data?.from || 'Unknown'}
               </span>
+              {(fullMeta?.fromEmail || email.data?.fromEmail) && (
+                <span className="text-green-700 text-xs">
+                  &lt;{fullMeta?.fromEmail || email.data?.fromEmail}&gt;
+                </span>
+              )}
               <span className="text-green-800 text-xs">to me</span>
             </div>
             <div className="text-xs text-green-800 mt-0.5">
@@ -232,7 +271,12 @@ export function EmailDetail({
         <div className="border-t border-[#FBC02D] p-4 bg-[#FFF9C4] shrink-0">
           <div className="text-xs text-green-800 mb-2">
             Replying to{' '}
-            <span className="text-red-700">{email.data?.from}</span>
+            <span className="text-red-700">
+              {fullMeta?.from || email.data?.from || 'sender'}
+              {(fullMeta?.fromEmail || email.data?.fromEmail) && (
+                <> ({fullMeta?.fromEmail || email.data?.fromEmail})</>
+              )}
+            </span>
           </div>
           <textarea
             value={replyBody}

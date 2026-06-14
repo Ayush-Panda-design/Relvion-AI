@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
-import { corsair } from '@/server/corsair';
+import { getSession } from '@/lib/auth/getSession';
+import { corsairForTenant } from '@/lib/auth/corsairForTenant';
 import { extractBody } from '@/lib/gmail/extractBody';
+
 
 export async function GET(
   _req: Request,
@@ -10,6 +12,10 @@ export async function GET(
   if (!id) {
     return NextResponse.json({ error: 'Missing message id' }, { status: 400 });
   }
+
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const corsair = corsairForTenant(session.tenantId);
 
   try {
     const msg = await (corsair as any).gmail.api.messages.get({

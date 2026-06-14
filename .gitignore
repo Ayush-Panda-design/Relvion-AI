@@ -1,8 +1,36 @@
+# Dependencies
 node_modules/
+
+# Next.js
 .next/
-.env.local
+out/
+
+# Environment
 .env
-*.local
-.DS_Store
+.env.local
+.env.*.local
+
+# Build / cache
 dist/
 build/
+*.tsbuildinfo
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.log
+
+# IDE
+.idea/
+.vscode/
+
+# Debug
+npm-debug.log*
+pnpm-debug.log*
+
+# Vercel
+.vercel
+
+# Generated artifacts (not part of submission)
+portfolio-ratings/
+generated-readmes/

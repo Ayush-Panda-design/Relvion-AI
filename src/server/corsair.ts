@@ -73,5 +73,5 @@ export const corsair = createCorsair({
   ],
   database: db,
   kek: process.env.CORSAIR_KEK!,
-  multiTenancy: false,
+  multiTenancy: true,
 });

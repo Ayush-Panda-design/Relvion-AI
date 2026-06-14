@@ -1,12 +1,19 @@
 import { NextResponse } from 'next/server';
-import { corsair } from '@/server/corsair';
+import { getSession } from '@/lib/auth/getSession';
+import { corsairForTenant } from '@/lib/auth/corsairForTenant';
 
-export async function GET() {
+export async function GET(req: Request) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const corsair = corsairForTenant(session.tenantId);
+
   try {
-    const d = new Date();
+    const { searchParams } = new URL(req.url);
+    const timeMin = searchParams.get('timeMin') || new Date().toISOString();
+
     // Fetch upcoming events from Google Calendar via Corsair
-    const listRes = await (corsair as any).googlecalendar.api.events.getMany({
-      timeMin: d.toISOString(),
+    const listRes = await corsair.googlecalendar.api.events.getMany({
+      timeMin,
       maxResults: 50,
       singleEvents: true,
       orderBy: 'startTime',

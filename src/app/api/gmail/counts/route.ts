@@ -1,18 +1,23 @@
 import { NextResponse } from 'next/server';
-import { corsair } from '@/server/corsair';
+import { getSession } from '@/lib/auth/getSession';
+import { corsairForTenant } from '@/lib/auth/corsairForTenant';
 
 // Cache counts for 60s to avoid hammering Gmail on every sidebar render
 let cachedCounts: Record<string, number> | null = null;
 let cacheExpiry = 0;
 
 export async function GET() {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const corsair = corsairForTenant(session.tenantId);
+
   const now = Date.now();
   if (cachedCounts && now < cacheExpiry) {
     return NextResponse.json(cachedCounts);
   }
 
   try {
-    const labelsRes = await (corsair as any).gmail.api.labels.list({ userId: 'me' });
+    const labelsRes = await corsair.gmail.api.labels.list({ userId: 'me' });
     const labels: any[] = labelsRes?.labels || [];
 
     const wantedIds: Record<string, string> = {

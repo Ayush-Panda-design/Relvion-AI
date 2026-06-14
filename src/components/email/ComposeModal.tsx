@@ -1,17 +1,44 @@
 'use client';
 import { useState } from 'react';
-import { X, Send, Minimize2, Paperclip } from 'lucide-react';
+import { X, Send, Minimize2, Paperclip, Save } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface ComposeModalProps {
   onClose: () => void;
+  draftId?: string;
 }
 
-export function ComposeModal({ onClose }: ComposeModalProps) {
+export function ComposeModal({ onClose, draftId: initialDraftId }: ComposeModalProps) {
   const [to, setTo] = useState('');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
+  const [draftId, setDraftId] = useState(initialDraftId);
   const [isSending, setIsSending] = useState(false);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
+
+  const handleSaveDraft = async () => {
+    if (!to && !subject && !body) {
+      toast.error('Add some content before saving a draft');
+      return;
+    }
+
+    setIsSavingDraft(true);
+    try {
+      const res = await fetch('/api/gmail/draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to, subject, body, draftId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to save draft');
+      if (data.draft?.id) setDraftId(data.draft.id);
+      toast.success('Draft saved');
+    } catch (error: any) {
+      toast.error(error.message);
+    } finally {
+      setIsSavingDraft(false);
+    }
+  };
 
   const handleSend = async () => {
     if (!to || !subject || !body) {
@@ -101,6 +128,14 @@ export function ComposeModal({ onClose }: ComposeModalProps) {
                 <Send size={14} /> Send
               </>
             )}
+          </button>
+          <button
+            onClick={handleSaveDraft}
+            disabled={isSavingDraft}
+            className="bg-[#FFEE58] hover:bg-[#FFF176] text-red-800 font-semibold py-1.5 px-4 rounded-lg transition-all flex items-center gap-2 border border-[#FBC02D] disabled:opacity-50"
+          >
+            <Save size={14} />
+            {isSavingDraft ? 'Saving…' : 'Draft'}
           </button>
           <button className="text-green-900 hover:text-red-800 transition-colors p-1.5 rounded-md hover:bg-[#FFEE58]">
             <Paperclip size={18} />

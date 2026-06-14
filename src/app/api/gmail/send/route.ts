@@ -1,35 +1,36 @@
 import { NextResponse } from 'next/server';
-import { corsair } from '@/server/corsair';
+import { getSession } from '@/lib/auth/getSession';
+import { corsairForTenant } from '@/lib/auth/corsairForTenant';
+import { encodeRawEmail } from '@/lib/gmail/encodeMessage';
+import { logActivity } from '@/lib/activityLog';
 
 export async function POST(req: Request) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const corsair = corsairForTenant(session.tenantId);
+
   try {
     const { to, subject, body } = await req.json();
+
+    const session = await getSession();
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const corsair = corsairForTenant(session.tenantId);
 
     if (!to || !subject || !body) {
       return NextResponse.json({ error: 'Missing to, subject, or body' }, { status: 400 });
     }
 
-    // Build RFC 2822 email message
-    const messageParts = [
-      'From: me',
-      `To: ${to}`,
-      `Subject: ${subject}`,
-      'Content-Type: text/plain; charset="UTF-8"',
-      '',
-      body,
-    ];
-    const messageStr = messageParts.join('\r\n');
+    const encodedEmail = encodeRawEmail({ to, subject, body });
 
-    // Base64url encode it (required by Gmail API)
-    const encodedEmail = Buffer.from(messageStr)
-      .toString('base64')
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=+$/, '');
-
-    // Send using Corsair's Gmail API plugin
     const result = await corsair.gmail.api.messages.send({
       raw: encodedEmail,
+    });
+
+    await logActivity('email_sent', {
+      messageId: result?.id,
+      threadId: result?.threadId,
+      to,
+      subject,
     });
 
     return NextResponse.json({ success: true, result });

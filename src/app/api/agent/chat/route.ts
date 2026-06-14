@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI, type FunctionDeclaration } from '@google/generative-ai';
 import { AnthropicProvider } from '@corsair-dev/mcp';
-import { corsair } from '@/server/corsair';
+import { getSession } from '@/lib/auth/getSession';
+import { corsairForTenant } from '@/lib/auth/corsairForTenant';
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -77,19 +79,22 @@ STRATEGY:
 
 // ─── Module-level singletons (built once, reused across requests) ─────────────
 
-let toolsReady: Promise<{
+let toolsReady: Map<string, Promise<{
   geminiDeclarations: FunctionDeclaration[];
   handlerMap: Map<string, (args: unknown) => Promise<string>>;
-}> | null = null;
+}>> | null = null;
 
-function getTools() {
-  if (!toolsReady) {
-    toolsReady = (async () => {
+
+function getTools(tenantCorsair: any, tenantId: string) {
+  if (!toolsReady) toolsReady = new Map();
+  
+  if (!toolsReady.has(tenantId)) {
+    toolsReady.set(tenantId, (async () => {
       // AnthropicProvider.build() is synchronous per Corsair docs
       const provider = new AnthropicProvider();
-      const corsairTools: CorsairTool[] = provider.build({ corsair }) as unknown as CorsairTool[];
+      const corsairTools: CorsairTool[] = provider.build({ corsair: tenantCorsair }) as unknown as CorsairTool[];
 
-      console.log('[Agent] Validating Corsair tools:');
+      console.log(`[Agent] Validating Corsair tools for tenant ${tenantId}:`);
       for (const t of corsairTools) {
         console.log(`  [✓] ${t.name}`);
       }
@@ -109,10 +114,11 @@ function getTools() {
       }
 
       return { geminiDeclarations, handlerMap };
-    })();
+    })());
   }
-  return toolsReady;
+  return toolsReady.get(tenantId)!;
 }
+
 
 // ─── Schema cleaner ───────────────────────────────────────────────────────────
 // Gemini rejects JSON Schema fields it doesn't understand ($schema, etc.)
@@ -218,6 +224,10 @@ function classifyError(err: unknown): NextResponse {
 // ─── Route handler ────────────────────────────────────────────────────────────
 
 export async function POST(req: Request) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const corsair = corsairForTenant(session.tenantId);
+
   // ── 1. Validate env ──────────────────────────────────────────────────────────
   const apiKeys = getApiKeys();
   if (apiKeys.length === 0) {
@@ -249,7 +259,7 @@ export async function POST(req: Request) {
   let handlerMap: Map<string, (args: unknown) => Promise<string>>;
 
   try {
-    ({ geminiDeclarations, handlerMap } = await getTools());
+    ({ geminiDeclarations, handlerMap } = await getTools(corsair, session.tenantId));
   } catch (err) {
     console.error('[Agent] Failed to load Corsair tools:', err);
     return NextResponse.json(

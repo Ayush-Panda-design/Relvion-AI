@@ -82,3 +82,27 @@ CREATE TABLE IF NOT EXISTS user_settings (
   notifications_enabled BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+ALTER TABLE email_embeddings ADD COLUMN IF NOT EXISTS priority TEXT DEFAULT 'FYI';
+
+CREATE TABLE IF NOT EXISTS activity_log (
+  id TEXT PRIMARY KEY,
+  event_type TEXT NOT NULL,
+  metadata JSONB NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS activity_log_created_at_idx ON activity_log (created_at DESC);
+CREATE INDEX IF NOT EXISTS activity_log_event_type_idx ON activity_log (event_type);
+-- Multi-tenant user accounts
+CREATE TABLE IF NOT EXISTS users (
+  id          TEXT PRIMARY KEY,
+  tenant_id   TEXT NOT NULL UNIQUE,
+  email       TEXT NOT NULL UNIQUE,
+  password_hash TEXT,
+  name        TEXT,
+  avatar_url  TEXT,
+  created_at  TIMESTAMPTZ DEFAULT NOW(),
+  last_login  TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS users_email_idx ON users (email);
+CREATE INDEX IF NOT EXISTS users_tenant_id_idx ON users (tenant_id);

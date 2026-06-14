@@ -11,6 +11,7 @@ import { Pool } from 'pg';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { localTriage } from '@/server/triage';
 import { broadcastEvent } from '@/lib/eventBus';
+import { logActivity } from '@/lib/activityLog';
 
 const db = new Pool({ connectionString: process.env.DATABASE_URL });
 
@@ -77,12 +78,13 @@ export async function processIncomingMessage(msg: IncomingMessage): Promise<{
       const embedding = result.embedding.values;
 
       await db.query(
-        `INSERT INTO email_embeddings (id, email_id, subject, body_preview, sender, embedding)
-         VALUES ($1, $2, $3, $4, $5, $6::vector)
+        `INSERT INTO email_embeddings (id, email_id, subject, body_preview, sender, embedding, priority)
+         VALUES ($1, $2, $3, $4, $5, $6::vector, $7)
          ON CONFLICT (id) DO UPDATE
            SET embedding = EXCLUDED.embedding,
                subject   = EXCLUDED.subject,
-               body_preview = EXCLUDED.body_preview`,
+               body_preview = EXCLUDED.body_preview,
+               priority = EXCLUDED.priority`,
         [
           `emb_${emailId}`,
           emailId,
@@ -90,6 +92,7 @@ export async function processIncomingMessage(msg: IncomingMessage): Promise<{
           body.substring(0, 500),
           sender,
           JSON.stringify(embedding),
+          priority,
         ]
       );
       embedded = true;
@@ -98,7 +101,35 @@ export async function processIncomingMessage(msg: IncomingMessage): Promise<{
     }
   }
 
+  if (emailId && !embedded) {
+    try {
+      await db.query(
+        `INSERT INTO email_embeddings (id, email_id, subject, body_preview, sender, priority)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         ON CONFLICT (id) DO UPDATE
+           SET subject = EXCLUDED.subject,
+               body_preview = EXCLUDED.body_preview,
+               priority = EXCLUDED.priority`,
+        [`emb_${emailId}`, emailId, subject, body.substring(0, 500), sender, priority]
+      );
+    } catch {
+      // Non-fatal
+    }
+  }
+
   // ── 3. Broadcast SSE event ────────────────────────────────────────────────
+  try {
+    await logActivity('email_received', {
+      emailId,
+      threadId: msg.id || msg.messageId,
+      subject,
+      sender,
+      priority,
+    });
+  } catch {
+    // Non-fatal
+  }
+
   try {
     broadcastEvent('EMAIL_RECEIVED', {
       emailId,

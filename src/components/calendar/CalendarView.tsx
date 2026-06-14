@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Plus, ChevronLeft, ChevronRight, Clock, Users, RefreshCw } from 'lucide-react';
+import { Plus, ChevronLeft, ChevronRight, Clock, Users, RefreshCw, Pencil, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface CalEvent {
@@ -27,6 +27,9 @@ export function CalendarView() {
     attendees: '',
   });
   const [creating, setCreating] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<CalEvent | null>(null);
+  const [updating, setUpdating] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchEvents = async () => {
     setLoading(true);
@@ -74,11 +77,7 @@ export function CalendarView() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to create event');
-      toast.success(
-        form.attendees
-          ? 'Event created! Invite emails sent.'
-          : 'Event created!'
-      );
+      toast.success(form.attendees ? 'Event created with invites sent' : 'Event created!');
       setShowCreate(false);
       setForm({ summary: '', description: '', startDateTime: '', endDateTime: '', attendees: '' });
       fetchEvents();
@@ -86,6 +85,68 @@ export function CalendarView() {
       toast.error(err.message || 'Failed to create event');
     } finally {
       setCreating(false);
+    }
+  };
+
+  const openEdit = (event: CalEvent) => {
+    const startStr = event.start?.dateTime || event.start?.date;
+    const endStr = event.end?.dateTime || event.end?.date;
+    const toLocalInput = (iso?: string) => {
+      if (!iso) return '';
+      const d = new Date(iso);
+      const pad = (n: number) => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    };
+    setEditingEvent(event);
+    setForm({
+      summary: event.summary || '',
+      description: event.description || '',
+      startDateTime: toLocalInput(startStr),
+      endDateTime: toLocalInput(endStr),
+      attendees: (event.attendees || []).map(a => a.email).join(', '),
+    });
+  };
+
+  const updateEvent = async () => {
+    if (!editingEvent?.id) return;
+    setUpdating(true);
+    try {
+      const res = await fetch('/api/calendar/update', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: editingEvent.id, ...form }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update event');
+      toast.success('Event updated');
+      setEditingEvent(null);
+      fetchEvents();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update event');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const deleteEvent = async () => {
+    if (!editingEvent?.id) return;
+    if (!confirm(`Delete "${editingEvent.summary || 'this event'}"?`)) return;
+    setDeleting(true);
+    try {
+      const res = await fetch('/api/calendar/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: editingEvent.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to delete event');
+      toast.success('Event deleted');
+      setEditingEvent(null);
+      fetchEvents();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete event');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -229,7 +290,11 @@ export function CalendarView() {
               const startStr = e.start?.dateTime || e.start?.date;
               const start = startStr ? new Date(startStr) : null;
               return (
-                <div key={e.id} className="bg-[#FFEE58] border border-[#FBC02D] rounded-xl p-3">
+                <div
+                  key={e.id}
+                  className="bg-[#FFEE58] border border-[#FBC02D] rounded-xl p-3 cursor-pointer hover:border-[#D32F2F] transition-colors"
+                  onClick={() => openEdit(e)}
+                >
                   <div className="font-semibold text-red-800 text-sm truncate">
                     {e.summary || '(no title)'}
                   </div>
@@ -254,6 +319,89 @@ export function CalendarView() {
           )}
         </div>
       </div>
+
+      {/* Edit Event Modal */}
+      {editingEvent && (
+        <div className="fixed inset-0 z-50 bg-[#FFF9C4]/80 backdrop-blur-sm flex items-center justify-center px-4">
+          <div className="bg-[#FFF59D] border border-[#FBC02D] rounded-2xl w-full max-w-md shadow-2xl">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[#FBC02D]">
+              <h3 className="font-bold text-red-900 flex items-center gap-2">
+                <Pencil size={16} /> Edit Event
+              </h3>
+              <button
+                onClick={() => setEditingEvent(null)}
+                className="text-green-900 hover:text-red-800 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="text-xs text-green-900 mb-1 block">Title *</label>
+                <input
+                  className="w-full bg-[#FFEE58] border border-[#FBC02D] rounded-xl px-3 py-2 text-sm text-red-800 focus:outline-none focus:ring-1 focus:ring-[#D32F2F]"
+                  value={form.summary}
+                  onChange={e => setForm(f => ({ ...f, summary: e.target.value }))}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-green-900 mb-1 block">Start *</label>
+                  <input
+                    type="datetime-local"
+                    className="w-full bg-[#FFEE58] border border-[#FBC02D] rounded-xl px-3 py-2 text-sm text-red-800 focus:outline-none focus:ring-1 focus:ring-[#D32F2F]"
+                    value={form.startDateTime}
+                    onChange={e => setForm(f => ({ ...f, startDateTime: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-green-900 mb-1 block">End *</label>
+                  <input
+                    type="datetime-local"
+                    className="w-full bg-[#FFEE58] border border-[#FBC02D] rounded-xl px-3 py-2 text-sm text-red-800 focus:outline-none focus:ring-1 focus:ring-[#D32F2F]"
+                    value={form.endDateTime}
+                    onChange={e => setForm(f => ({ ...f, endDateTime: e.target.value }))}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-green-900 mb-1 block">Attendees</label>
+                <input
+                  className="w-full bg-[#FFEE58] border border-[#FBC02D] rounded-xl px-3 py-2 text-sm text-red-800 focus:outline-none focus:ring-1 focus:ring-[#D32F2F]"
+                  value={form.attendees}
+                  onChange={e => setForm(f => ({ ...f, attendees: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="text-xs text-green-900 mb-1 block">Description</label>
+                <textarea
+                  className="w-full bg-[#FFEE58] border border-[#FBC02D] rounded-xl px-3 py-2 text-sm text-red-800 focus:outline-none focus:ring-1 focus:ring-[#D32F2F] resize-none"
+                  rows={2}
+                  value={form.description}
+                  onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={updateEvent}
+                  disabled={updating}
+                  className="flex-1 bg-[#D32F2F] hover:bg-[#C62828] text-[#FFF9C4] font-semibold py-2.5 rounded-xl transition-all disabled:opacity-50"
+                >
+                  {updating ? 'Updating…' : 'Save Changes'}
+                </button>
+                <button
+                  onClick={deleteEvent}
+                  disabled={deleting}
+                  className="px-4 bg-red-100 hover:bg-red-200 text-red-800 font-semibold py-2.5 rounded-xl transition-all disabled:opacity-50 flex items-center gap-1"
+                >
+                  <Trash2 size={14} />
+                  {deleting ? '…' : 'Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Create Event Modal */}
       {showCreate && (
@@ -308,7 +456,7 @@ export function CalendarView() {
                   value={form.attendees}
                   onChange={e => setForm(f => ({ ...f, attendees: e.target.value }))}
                 />
-                <p className="text-xs text-green-700 mt-1">Invite emails sent via Gmail</p>
+                <p className="text-xs text-green-700 mt-1">Invites sent via Google Calendar (sendUpdates: all)</p>
               </div>
               <div>
                 <label className="text-xs text-green-900 mb-1 block">Description</label>
@@ -325,7 +473,7 @@ export function CalendarView() {
                 disabled={creating}
                 className="w-full bg-[#D32F2F] hover:bg-[#C62828] text-[#FFF9C4] font-semibold py-2.5 rounded-xl transition-all disabled:opacity-50"
               >
-                {creating ? 'Creating…' : 'Create Event & Send Invites'}
+                {creating ? 'Creating…' : 'Create Event'}
               </button>
             </div>
           </div>
