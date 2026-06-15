@@ -2,11 +2,11 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { verifySessionToken, COOKIE_NAME } from '@/lib/auth/session';
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Always allow auth routes and static assets
   const isPublic =
+    pathname === '/' ||
     pathname.startsWith('/signin') ||
     pathname.startsWith('/signup') ||
     pathname.startsWith('/api/auth') ||
@@ -16,7 +16,6 @@ export async function middleware(request: NextRequest) {
 
   if (isPublic) return NextResponse.next();
 
-  // Verify session cookie
   const cookie = request.cookies.get(COOKIE_NAME);
   if (!cookie?.value || !(await verifySessionToken(cookie.value))) {
     const url = request.nextUrl.clone();

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/getSession';
 import { corsairForTenant } from '@/lib/auth/corsairForTenant';
-import { encodeRawEmail } from '@/lib/gmail/encodeMessage';
+import { encodeRawEmail, Attachment } from '@/lib/gmail/encodeMessage';
 import { logActivity } from '@/lib/activityLog';
 
 export async function POST(req: Request) {
@@ -10,17 +10,31 @@ export async function POST(req: Request) {
   const corsair = corsairForTenant(session.tenantId);
 
   try {
-    const { to, subject, body } = await req.json();
+    const formData = await req.formData();
 
-    const session = await getSession();
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    const corsair = corsairForTenant(session.tenantId);
+    const to = formData.get('to') as string | null;
+    const subject = formData.get('subject') as string | null;
+    const body = formData.get('body') as string | null;
 
     if (!to || !subject || !body) {
       return NextResponse.json({ error: 'Missing to, subject, or body' }, { status: 400 });
     }
 
-    const encodedEmail = encodeRawEmail({ to, subject, body });
+    // Process file attachments
+    const attachmentFiles = formData.getAll('attachments') as File[];
+    const attachments: Attachment[] = [];
+
+    for (const file of attachmentFiles) {
+      const buffer = Buffer.from(await file.arrayBuffer());
+      attachments.push({
+        filename: file.name,
+        mimeType: file.type || 'application/octet-stream',
+        data: buffer.toString('base64'),
+        size: file.size,
+      });
+    }
+
+    const encodedEmail = encodeRawEmail({ to, subject, body, attachments });
 
     const result = await corsair.gmail.api.messages.send({
       raw: encodedEmail,
@@ -31,6 +45,7 @@ export async function POST(req: Request) {
       threadId: result?.threadId,
       to,
       subject,
+      attachmentCount: attachments.length,
     });
 
     return NextResponse.json({ success: true, result });

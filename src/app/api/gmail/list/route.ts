@@ -56,36 +56,37 @@ export async function GET(req: Request) {
       return NextResponse.json({ emails: [] });
     }
 
-    // Fetch full message details in parallel (batched to 5)
+    // Fetch full message details in parallel (all at once)
     const emails = [];
-    for (let i = 0; i < messageIds.length; i += 5) {
-      const batch = messageIds.slice(i, i + 5);
-      const results = await Promise.all(
-        batch.map((id: string) =>
-          corsair.gmail.api.messages.get({ id, format: 'full' })
-        )
-      );
-      for (const msg of results) {
-        if (!msg) continue;
-        const headers: any[] = msg.payload?.headers || [];
-        const getHeader = (name: string) =>
-          headers.find((h: any) => h.name?.toLowerCase() === name.toLowerCase())?.value || '';
+    const results = await Promise.all(
+      messageIds.map((id: string) =>
+        corsair.gmail.api.messages.get({ 
+          id, 
+          format: 'full'
+        })
+      )
+    );
+    
+    for (const msg of results) {
+      if (!msg) continue;
+      const headers: any[] = msg.payload?.headers || [];
+      const getHeader = (name: string) =>
+        headers.find((h: any) => h.name?.toLowerCase() === name.toLowerCase())?.value || '';
 
-        const rawFrom = getHeader('From');
-        emails.push({
-          id: msg.id,
-          threadId: msg.threadId,
-          labelIds: msg.labelIds || [],
-          data: {
-            subject: getHeader('Subject') || '(no subject)',
-            from: parseDisplayName(rawFrom),
-            fromEmail: parseEmailAddress(rawFrom),
-            to: getHeader('To'),
-            date: getHeader('Date') || new Date().toISOString(),
-            body: msg.snippet || '',
-          },
-        });
-      }
+      const rawFrom = getHeader('From');
+      emails.push({
+        id: msg.id,
+        threadId: msg.threadId,
+        labelIds: msg.labelIds || [],
+        data: {
+          subject: getHeader('Subject') || '(no subject)',
+          from: parseDisplayName(rawFrom),
+          fromEmail: parseEmailAddress(rawFrom),
+          to: getHeader('To'),
+          date: getHeader('Date') || new Date().toISOString(),
+          body: msg.snippet || '',
+        },
+      });
     }
 
     return NextResponse.json({ emails });

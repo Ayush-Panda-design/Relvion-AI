@@ -57,7 +57,7 @@ export async function GET(req: Request) {
     email: session.email 
   });
   
-  const res = NextResponse.redirect(`${APP_URL}/`);
+  const res = NextResponse.redirect(`${APP_URL}/dashboard`);
   res.cookies.set(COOKIE_NAME, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',

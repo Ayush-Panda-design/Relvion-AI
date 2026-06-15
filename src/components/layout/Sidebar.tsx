@@ -49,12 +49,14 @@ export function Sidebar({
   return (
     <aside className="w-[220px] bg-[#FFF59D] border-r border-[#FBC02D] flex flex-col h-screen">
       <div className="p-4 flex items-center gap-2">
-        <div className="text-[#D32F2F]">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-          </svg>
-        </div>
-        <h1 className="font-bold text-lg text-red-900 tracking-tight">Relvion AI</h1>
+        <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+          <div className="text-[#D32F2F]">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+            </svg>
+          </div>
+          <h1 className="font-bold text-lg text-red-900 tracking-tight">Relvion AI</h1>
+        </Link>
       </div>
 
       <div className="px-4 pb-4">

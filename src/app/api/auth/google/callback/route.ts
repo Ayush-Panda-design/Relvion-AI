@@ -142,7 +142,7 @@ export async function GET(req: Request) {
 
     // 5. Set session and redirect to dashboard
     const token = await createSessionToken({ userId, tenantId: finalTenantId, email });
-    const res = NextResponse.redirect(`${APP_URL}/`);
+    const res = NextResponse.redirect(`${APP_URL}/dashboard`);
     res.cookies.set(COOKIE_NAME, token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',

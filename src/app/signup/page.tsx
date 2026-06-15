@@ -50,12 +50,14 @@ export default async function SignUpPage({
       <div className="relative z-10 w-full max-w-lg px-6">
         {/* Logo */}
         <div className="flex items-center justify-center gap-3 mb-8">
-          <div className="text-[#D32F2F] drop-shadow-lg">
-            <svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-            </svg>
-          </div>
-          <h1 className="text-3xl font-bold text-red-900 tracking-tight">Relvion AI</h1>
+          <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+            <div className="text-[#D32F2F] drop-shadow-lg">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+              </svg>
+            </div>
+            <h1 className="text-3xl font-bold text-red-900 tracking-tight">Relvion AI</h1>
+          </Link>
         </div>
 
         {/* Card */}

@@ -1,120 +1,119 @@
-'use client';
-import { useState, useEffect } from 'react';
-import { Sidebar } from '@/components/layout/Sidebar';
-import { TopBar } from '@/components/layout/TopBar';
-import { AgentPanel } from '@/components/agent/AgentPanel';
-import { EmailList } from '@/components/email/EmailList';
-import { CalendarView } from '@/components/calendar/CalendarView';
-import { ComposeModal } from '@/components/email/ComposeModal';
-import { CommandPalette } from '@/components/ui/CommandPalette';
+import { getSession } from '@/lib/auth/getSession';
+import Link from 'next/link';
 
-export default function Home() {
-  const [activeFolder, setActiveFolder] = useState('inbox');
-  const [showCompose, setShowCompose] = useState(false);
-  const [needsGoogle, setNeedsGoogle] = useState(false);
-  const [checking, setChecking] = useState(true);
-
-  // Check if Google is connected
-  useEffect(() => {
-    fetch('/api/gmail/profile')
-      .then(res => res.json())
-      .then(data => {
-        if (!data.email || data.error) {
-          setNeedsGoogle(true);
-        }
-      })
-      .catch(() => setNeedsGoogle(true))
-      .finally(() => setChecking(false));
-  }, []);
-
-  // Global keyboard shortcuts
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-      // c = compose
-      if (e.key === 'c' && !e.metaKey && !e.ctrlKey) { setShowCompose(true); return; }
-      // g + i/c/s navigation
-      if (e.key === 'g') {
-        const next = (k: KeyboardEvent) => {
-          if (k.key === 'i') setActiveFolder('inbox');
-          if (k.key === 'c') setActiveFolder('calendar');
-          if (k.key === 's') setActiveFolder('sent');
-          if (k.key === 'd') setActiveFolder('drafts');
-          if (k.key === 't') setActiveFolder('trash');
-          window.removeEventListener('keydown', next);
-        };
-        window.addEventListener('keydown', next);
-        setTimeout(() => window.removeEventListener('keydown', next), 1000);
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, []);
-
-  if (checking) {
-    return <div className="h-screen bg-[#FFF9C4] flex items-center justify-center font-semibold text-red-900">Loading your inbox...</div>;
-  }
-
-  if (needsGoogle) {
-    return (
-      <div className="flex h-screen w-full bg-[#FFF9C4] overflow-hidden items-center justify-center relative">
-        {/* Animated background blobs */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-40 -left-40 w-[500px] h-[500px] rounded-full bg-[#FFEE58]/40 blur-3xl animate-pulse" />
-          <div className="absolute -bottom-40 -right-40 w-[600px] h-[600px] rounded-full bg-[#FBC02D]/30 blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-        </div>
-        <div className="relative z-10 w-full max-w-md px-6 bg-[#FFFDE7] border border-[#FBC02D] rounded-3xl shadow-[0_20px_60px_rgba(251,192,45,0.3)] p-8 text-center">
-          <h2 className="text-2xl font-bold text-red-900 mb-2">Connect Google</h2>
-          <p className="text-green-800 text-sm mb-8">
-            Relvion AI requires access to your Gmail and Calendar to function.
-          </p>
-          <a
-            href="/api/auth/google/start"
-            className="flex items-center justify-center gap-3 w-full py-3.5 px-6 bg-white hover:bg-gray-50 border border-[#FBC02D] rounded-2xl font-semibold text-gray-700 transition-all shadow-md hover:shadow-lg"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24">
-              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-            </svg>
-            Connect Google Account
-          </a>
-          <form action="/api/auth/signout" method="POST" className="mt-6">
-             <button type="submit" className="text-xs text-red-700 hover:underline">Sign out</button>
-          </form>
-        </div>
-      </div>
-    );
-  }
+export default async function LandingPage() {
+  const session = await getSession();
 
   return (
-    <div className="flex h-screen w-full bg-[#FFF9C4] overflow-hidden text-red-900 font-sans">
-      <Sidebar
-        activeFolder={activeFolder}
-        onFolderChange={setActiveFolder}
-        onComposeClick={() => setShowCompose(true)}
-      />
-
-      <div className="flex-1 flex flex-col min-w-0">
-        <TopBar onSearch={(q) => {/* handled in TopBar */}} />
-        <main className="flex-1 overflow-hidden relative">
-          {activeFolder === 'calendar' ? (
-            <CalendarView />
-          ) : (
-            <EmailList folder={activeFolder} />
-          )}
-        </main>
+    <div className="min-h-screen bg-[#FFF9C4] text-red-900 font-sans overflow-x-hidden flex flex-col relative">
+      {/* Animated background blobs */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full bg-[#FFEE58]/40 blur-3xl animate-pulse" />
+        <div className="absolute top-[20%] right-[10%] w-[500px] h-[500px] rounded-full bg-[#FBC02D]/30 blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+        <div className="absolute bottom-0 left-[20%] w-[400px] h-[400px] rounded-full bg-[#D32F2F]/10 blur-3xl animate-pulse" style={{ animationDelay: '2s' }} />
       </div>
 
-      <AgentPanel />
+      {/* Header */}
+      <header className="relative z-10 w-full px-8 py-6 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="text-[#D32F2F] drop-shadow-lg">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+            </svg>
+          </div>
+          <span className="text-2xl font-bold tracking-tight">Relvion AI</span>
+        </div>
+        <nav className="flex items-center gap-6">
+          <Link href="#features" className="text-sm font-semibold text-green-800 hover:text-red-700 transition-colors">Features</Link>
+          <Link href="#how-it-works" className="text-sm font-semibold text-green-800 hover:text-red-700 transition-colors">How it Works</Link>
+          
+          {session ? (
+            <Link 
+              href="/dashboard"
+              className="px-6 py-2 bg-[#D32F2F] hover:bg-[#C62828] text-[#FFF9C4] rounded-full font-semibold transition-all shadow-[0_0_15px_rgba(201,168,76,0.4)] hover:shadow-[0_0_25px_rgba(201,168,76,0.6)]"
+            >
+              Dashboard
+            </Link>
+          ) : (
+            <div className="flex items-center gap-4 ml-4">
+              <Link href="/signin" className="text-sm font-semibold text-red-800 hover:text-[#D32F2F] transition-colors">
+                Sign In
+              </Link>
+              <Link 
+                href="/signin"
+                className="px-6 py-2 bg-[#D32F2F] hover:bg-[#C62828] text-[#FFF9C4] rounded-full font-semibold transition-all shadow-[0_0_15px_rgba(201,168,76,0.4)] hover:shadow-[0_0_25px_rgba(201,168,76,0.6)]"
+              >
+                Get Started
+              </Link>
+            </div>
+          )}
+        </nav>
+      </header>
 
-      {showCompose && <ComposeModal onClose={() => setShowCompose(false)} />}
+      {/* Hero Section */}
+      <main className="flex-1 relative z-10 flex items-center justify-center pt-10 pb-20">
+        <div className="max-w-5xl mx-auto px-6 flex flex-col items-center text-center">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#FFEE58] border border-[#FBC02D] text-red-800 text-sm font-semibold mb-8 shadow-sm">
+            <span className="flex h-2 w-2 rounded-full bg-[#22c55e]"></span>
+            Now open for early access
+          </div>
+          
+          <h1 className="text-6xl md:text-7xl font-extrabold tracking-tight leading-[1.1] mb-8 text-transparent bg-clip-text bg-gradient-to-r from-red-900 via-red-700 to-[#D32F2F]">
+            The intelligent email <br /> client you deserve.
+          </h1>
+          
+          <p className="text-lg md:text-xl text-green-900 max-w-2xl mb-12 font-medium leading-relaxed">
+            Experience a Superhuman-style inbox supercharged with a dedicated AI assistant. Manage emails, schedule events, and command your workflow with natural language.
+          </p>
 
-      <CommandPalette
-        onFolderChange={setActiveFolder}
-        onComposeClick={() => setShowCompose(true)}
-      />
+          {session ? (
+            <Link 
+              href="/dashboard"
+              className="group relative px-8 py-4 bg-[#D32F2F] text-[#FFF9C4] rounded-2xl font-bold text-lg transition-all hover:bg-[#C62828] shadow-[0_0_30px_rgba(211,47,47,0.4)] hover:shadow-[0_0_40px_rgba(211,47,47,0.6)] overflow-hidden"
+            >
+              <span className="relative z-10 flex items-center gap-2">
+                Go to your Dashboard 
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:translate-x-1"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+              </span>
+            </Link>
+          ) : (
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+              <Link 
+                href="/signin"
+                className="px-8 py-4 bg-[#D32F2F] text-[#FFF9C4] rounded-2xl font-bold text-lg transition-all hover:bg-[#C62828] shadow-[0_0_30px_rgba(211,47,47,0.4)] hover:shadow-[0_0_40px_rgba(211,47,47,0.6)]"
+              >
+                Sign In with Google
+              </Link>
+            </div>
+          )}
+
+          {/* Product Preview Mockup */}
+          <div className="mt-20 relative w-full max-w-4xl rounded-xl border border-[#FBC02D] bg-[#FFFDE7] shadow-[0_30px_100px_rgba(251,192,45,0.4)] overflow-hidden">
+            <div className="h-8 bg-[#FFEE58] border-b border-[#FBC02D] flex items-center px-4 gap-2">
+              <div className="w-3 h-3 rounded-full bg-red-400"></div>
+              <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
+              <div className="w-3 h-3 rounded-full bg-green-400"></div>
+            </div>
+            <div className="p-4 flex gap-4 h-[400px]">
+              <div className="w-1/4 bg-[#FFF59D] rounded-lg border border-[#FBC02D] p-3 space-y-3">
+                <div className="h-8 bg-[#FFEE58] rounded mb-6"></div>
+                <div className="h-4 bg-[#FFEE58] rounded w-3/4"></div>
+                <div className="h-4 bg-[#FFEE58] rounded w-1/2"></div>
+                <div className="h-4 bg-[#FFEE58] rounded w-2/3"></div>
+              </div>
+              <div className="flex-1 bg-[#FFF59D] rounded-lg border border-[#FBC02D] p-4 flex flex-col gap-3">
+                <div className="h-10 bg-[#FFEE58] rounded-lg w-full mb-4"></div>
+                <div className="flex-1 bg-[#FFEE58] rounded-lg w-full"></div>
+                <div className="flex-1 bg-[#FFEE58] rounded-lg w-full"></div>
+                <div className="flex-1 bg-[#FFEE58] rounded-lg w-full"></div>
+              </div>
+              <div className="w-1/4 bg-[#FFF59D] rounded-lg border border-[#FBC02D] p-3 flex flex-col justify-end">
+                <div className="h-12 bg-[#FFEE58] rounded-lg w-full"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }

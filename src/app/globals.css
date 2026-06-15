@@ -32,7 +32,6 @@ body {
   font-family: var(--font-sans);
   margin: 0;
   padding: 0;
-  overflow: hidden; /* AppShell manages scrolling */
 }
 
 /* Custom scrollbar */

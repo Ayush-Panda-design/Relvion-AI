@@ -44,6 +44,7 @@ function nextApiKey(keys: string[]): string {
 
 const SYSTEM_PROMPT = `You are the Relvion AI Assistant inside a Superhuman-style email client.
 You have access to the user's live Gmail and Google Calendar via Corsair tools.
+You can also generate images whatever user ask.
 
 TOOLS AVAILABLE:
 - list_operations: List all available Corsair API operations.
@@ -239,6 +240,7 @@ export async function POST(req: Request) {
   // ── 2. Parse request ─────────────────────────────────────────────────────────
   let message: string;
   let history: { role: string; parts: { text: string }[] }[] = [];
+  let attachments: { name: string; mimeType: string; data: string; size: number }[] = [];
   try {
     const body = await req.json();
     message = body.message;
@@ -247,7 +249,10 @@ export async function POST(req: Request) {
       const firstUser = h.findIndex(m => m.role === 'user');
       history = firstUser >= 0 ? h.slice(firstUser) : [];
     }
-    if (!message?.trim()) {
+    if (Array.isArray(body.attachments)) {
+      attachments = body.attachments;
+    }
+    if (!message?.trim() && attachments.length === 0) {
       return NextResponse.json({ reply: 'Please send a non-empty message.' }, { status: 400 });
     }
   } catch {
@@ -317,9 +322,35 @@ export async function POST(req: Request) {
       throw lastErr;
     }
 
-    // ── 5. First turn ────────────────────────────────────────────────────────
+    // ── 5. First turn (with optional multimodal attachments) ─────────────────
+    // Build message parts: text + inline data for any attachments
+    const messageParts: any[] = [];
+
+    if (message?.trim()) {
+      messageParts.push({ text: message });
+    }
+
+    // Add file attachments as inline data parts for Gemini multimodal
+    for (const att of attachments) {
+      // Supported by Gemini: images, PDFs, audio, video, text
+      messageParts.push({
+        inlineData: {
+          mimeType: att.mimeType,
+          data: att.data,
+        },
+      });
+      // Add a text label so the model knows the filename
+      messageParts.push({ text: `[Attached file: ${att.name} (${att.mimeType}, ${Math.round(att.size / 1024)}KB)]` });
+    }
+
+    if (messageParts.length === 0) {
+      messageParts.push({ text: message || 'Hello' });
+    }
+
+    console.log(`[Agent] Sending message with ${attachments.length} attachment(s)`);
+
     let result = await sendWithRotation(
-      () => chat.sendMessage(message),
+      () => chat.sendMessage(messageParts),
       'initial message'
     );
 
