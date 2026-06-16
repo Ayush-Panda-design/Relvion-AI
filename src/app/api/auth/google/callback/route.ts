@@ -2,10 +2,9 @@ import { NextResponse } from 'next/server';
 import { processOAuthCallback, generateOAuthUrl } from 'corsair/oauth';
 import { setupCorsair } from 'corsair/setup';
 import { corsair } from '@/server/corsair';
-import { Pool } from 'pg';
+import { db } from '@/lib/db';
 import { createSessionToken, COOKIE_NAME } from '@/lib/auth/session';
 
-const db = new Pool({ connectionString: process.env.DATABASE_URL });
 const REDIRECT_URI = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/auth/google/callback`;
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 

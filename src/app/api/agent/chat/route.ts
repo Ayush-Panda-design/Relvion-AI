@@ -2,11 +2,9 @@ import { NextResponse } from 'next/server';
 import { createAgentSseStream, runAgentStream, sseResponse } from '@/server/agent/runAgentStream';
 import type { FunctionDeclaration } from '@google/generative-ai';
 import { AnthropicProvider } from '@corsair-dev/mcp';
-import { Pool } from 'pg';
 import { getSession } from '@/lib/auth/getSession';
 import { corsairForTenant } from '@/lib/auth/corsairForTenant';
-
-const db = new Pool({ connectionString: process.env.DATABASE_URL });
+import { db } from '@/lib/db';
 
 
 // ─── Types ────────────────────────────────────────────────────────────────────

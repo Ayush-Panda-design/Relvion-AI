@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { Pool } from 'pg';
-
-const db = new Pool({ connectionString: process.env.DATABASE_URL });
+import { db } from '@/lib/db';
 
 /**
  * GET /api/migrate?secret=YOUR_MIGRATE_SECRET

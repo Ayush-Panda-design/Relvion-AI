@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server';
-import { Pool } from 'pg';
+import { db } from '@/lib/db';
 import { getSession } from '@/lib/auth/getSession';
 import { corsairForTenant } from '@/lib/auth/corsairForTenant';
-
-const db = new Pool({ connectionString: process.env.DATABASE_URL });
 
 
 function formatGmailDate(d: Date): string {

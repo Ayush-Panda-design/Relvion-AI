@@ -1,10 +1,8 @@
 // src/server/corsair.ts
-import { Pool } from 'pg';
+import { db } from '@/lib/db';
 import { createCorsair } from 'corsair';
 import { gmail } from '@corsair-dev/gmail';
 import { googlecalendar } from '@corsair-dev/googlecalendar';
-
-const db = new Pool({ connectionString: process.env.DATABASE_URL });
 
 export const corsair = createCorsair({
   plugins: [

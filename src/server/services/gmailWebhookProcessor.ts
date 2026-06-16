@@ -7,7 +7,7 @@
  *   3. Upsert into pgvector
  *   4. Broadcast realtime SSE event to all connected clients
  */
-import { Pool } from 'pg';
+import { db } from '@/lib/db';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { localTriage } from '@/server/triage';
 import { broadcastEvent } from '@/lib/eventBus';
@@ -18,8 +18,6 @@ import {
   trackContact,
 } from '@/server/services/contacts';
 import { parseDisplayName, parseEmailAddress } from '@/lib/gmail/parseMessage';
-
-const db = new Pool({ connectionString: process.env.DATABASE_URL });
 
 export interface IncomingMessage {
   id?: string;

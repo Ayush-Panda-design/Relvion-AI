@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server';
-import { Pool } from 'pg';
+import { db } from '@/lib/db';
 import { randomUUID } from 'crypto';
 import { getSession } from '@/lib/auth/getSession';
-
-const db = new Pool({ connectionString: process.env.DATABASE_URL });
 
 export async function GET() {
   const session = await getSession();

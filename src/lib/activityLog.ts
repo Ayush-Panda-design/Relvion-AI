@@ -1,8 +1,6 @@
-import { Pool } from 'pg';
+import { db } from '@/lib/db';
 import { randomUUID } from 'crypto';
 import { broadcastEvent } from '@/lib/eventBus';
-
-const db = new Pool({ connectionString: process.env.DATABASE_URL });
 
 export type ActivityType =
   | 'email_sent'

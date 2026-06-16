@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server';
-import { Pool } from 'pg';
+import { db } from '@/lib/db';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-const db = new Pool({ connectionString: process.env.DATABASE_URL });
 
 // Called after fetching emails — embeds them into pgvector for fast search
 export async function POST(req: Request) {

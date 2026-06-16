@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { Pool } from 'pg';
+import { db } from '@/lib/db';
 import { getSession } from '@/lib/auth/getSession';
 import { corsairForTenant } from '@/lib/auth/corsairForTenant';
 import { parseGmailSearchQuery } from '@/lib/gmail-search-parser';
@@ -9,8 +9,6 @@ import {
   searchGmailViaCorsairDb,
   type UnifiedSearchResult,
 } from '@/lib/corsair-search';
-
-const db = new Pool({ connectionString: process.env.DATABASE_URL });
 
 export type SearchSource =
   | 'corsair-db'

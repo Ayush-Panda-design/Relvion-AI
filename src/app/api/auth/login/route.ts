@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server';
-import { Pool } from 'pg';
+import { db } from '@/lib/db';
 import bcrypt from 'bcryptjs';
 import { createSessionToken, COOKIE_NAME } from '@/lib/auth/session';
-
-const db = new Pool({ connectionString: process.env.DATABASE_URL });
 
 export async function POST(req: Request) {
   try {

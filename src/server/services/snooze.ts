@@ -1,7 +1,5 @@
-import { Pool } from 'pg';
+import { db } from '@/lib/db';
 import { randomUUID } from 'crypto';
-
-const db = new Pool({ connectionString: process.env.DATABASE_URL });
 
 export type SnoozeRow = {
   id: string;

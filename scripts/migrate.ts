@@ -6,7 +6,7 @@
 import 'dotenv/config';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { Pool } from 'pg';
+import { getDbPool } from '../src/lib/db';
 
 async function main() {
   const connectionString = process.env.DATABASE_URL;
@@ -17,7 +17,7 @@ async function main() {
 
   const sqlPath = join(process.cwd(), 'migration.sql');
   const sql = readFileSync(sqlPath, 'utf8');
-  const db = new Pool({ connectionString });
+  const db = getDbPool();
 
   console.log('Running migration.sql…');
   try {
