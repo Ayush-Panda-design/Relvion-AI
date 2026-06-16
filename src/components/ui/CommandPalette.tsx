@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { dash } from '@/components/dashboard/theme';
+import { eventKey } from '@/lib/keyboard';
 
 interface Action {
   id: string;
@@ -38,7 +39,10 @@ export function CommandPalette({ onFolderChange, onComposeClick }: CommandPalett
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key.toLowerCase() === 'k' && (e.metaKey || e.ctrlKey)) {
+      const key = eventKey(e);
+      if (!key && e.key !== 'Escape') return;
+
+      if (key === 'k' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
         e.stopPropagation();
         setOpen((o) => !o);
@@ -197,15 +201,15 @@ export function CommandPalette({ onFolderChange, onComposeClick }: CommandPalett
   if (!open) return null;
 
   const typeColors: Record<string, string> = {
-    Navigation: 'text-[#8ab4f8] bg-[#8ab4f8]/10',
-    Action: 'text-[#8ab4f8] bg-[#8ab4f8]/15',
+    Navigation: cn(dash.accentSoftBg),
+    Action: cn(dash.accentSelected),
   };
 
   const kbdClass = cn(
     'rounded border px-1.5 py-0.5 font-mono text-[10px]',
     dash.border,
     dash.textSubtle,
-    'bg-[#f1f3f4] dark:bg-[#303134]'
+    dash.chip
   );
 
   return (
@@ -229,7 +233,7 @@ export function CommandPalette({ onFolderChange, onComposeClick }: CommandPalett
             className={cn(
               'flex-1 bg-transparent text-base focus:outline-none',
               dash.text,
-              'placeholder:text-[#5f6368] dark:placeholder:text-[#9aa0a6]'
+              'placeholder:text-[#9B9A97] dark:placeholder:text-[#9aa0a6]'
             )}
             placeholder="Search commands…"
             value={query}
@@ -260,7 +264,7 @@ export function CommandPalette({ onFolderChange, onComposeClick }: CommandPalett
                   <div
                     className={cn(
                       'rounded-lg p-1.5',
-                      isSelected ? 'bg-[#8ab4f8]/20 text-[#8ab4f8]' : cn(dash.avatar, 'bg-[#8ab4f8]/10')
+                      isSelected ? dash.accentSelected : dash.accentSoftBg
                     )}
                   >
                     <Icon size={16} />
@@ -276,7 +280,7 @@ export function CommandPalette({ onFolderChange, onComposeClick }: CommandPalett
                     <span
                       className={cn(
                         'rounded-full px-2 py-0.5 text-xs font-medium',
-                        typeColors[action.type] || cn(dash.textMuted, 'bg-[#3c4043]/50')
+                        typeColors[action.type] || cn(dash.textMuted, dash.chip)
                       )}
                     >
                       {action.type}

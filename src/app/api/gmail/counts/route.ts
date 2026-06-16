@@ -41,11 +41,12 @@ export async function GET() {
     for (const label of labels) {
       const key = wantedIds[label.id];
       if (key) {
-        // messagesUnread for inbox / drafts; messagesTotal for others
         counts[key] =
-          label.messagesUnread !== undefined
-            ? label.messagesUnread
-            : label.messagesTotal || 0;
+          key === 'inbox'
+            ? label.messagesTotal || label.messagesUnread || 0
+            : label.messagesUnread !== undefined
+              ? label.messagesUnread
+              : label.messagesTotal || 0;
       }
     }
 

@@ -3,6 +3,8 @@ import { getSession } from '@/lib/auth/getSession';
 import { corsairForTenant } from '@/lib/auth/corsairForTenant';
 import { encodeRawEmail, Attachment } from '@/lib/gmail/encodeMessage';
 import { logActivity } from '@/lib/activityLog';
+import { trackContact } from '@/server/services/contacts';
+import { parseEmailAddress } from '@/lib/gmail/parseMessage';
 
 export async function POST(req: Request) {
   const session = await getSession();
@@ -13,6 +15,8 @@ export async function POST(req: Request) {
     const formData = await req.formData();
 
     const to = formData.get('to') as string | null;
+    const cc = (formData.get('cc') as string | null) || undefined;
+    const bcc = (formData.get('bcc') as string | null) || undefined;
     const subject = formData.get('subject') as string | null;
     const body = formData.get('body') as string | null;
 
@@ -34,7 +38,7 @@ export async function POST(req: Request) {
       });
     }
 
-    const encodedEmail = encodeRawEmail({ to, subject, body, attachments });
+    const encodedEmail = encodeRawEmail({ to, cc, bcc, subject, body, attachments });
 
     const result = await corsair.gmail.api.messages.send({
       raw: encodedEmail,
@@ -47,6 +51,11 @@ export async function POST(req: Request) {
       subject,
       attachmentCount: attachments.length,
     });
+
+    for (const addr of to.split(/[,;]/)) {
+      const email = parseEmailAddress(addr) || addr.trim();
+      if (email.includes('@')) void trackContact(session.tenantId, email);
+    }
 
     return NextResponse.json({ success: true, result });
   } catch (error: any) {

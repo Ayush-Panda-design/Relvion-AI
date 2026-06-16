@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Class-based dark mode (required for theme toggle) */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-brand-gold: #D32F2F;
   --color-brand-gold-hover: #B71C1C;
@@ -23,15 +26,24 @@
 }
 
 :root {
+  color-scheme: light;
+}
+
+.dark {
   color-scheme: dark;
 }
 
 body {
-  background-color: #202124;
-  color: #e8eaed;
+  background-color: #ffffff;
+  color: #37352f;
   font-family: var(--font-sans);
   margin: 0;
   padding: 0;
+}
+
+.dark body {
+  background-color: #202124;
+  color: #e8eaed;
 }
 
 @keyframes spotlight {
@@ -99,6 +111,17 @@ body {
   animation: border-beam var(--duration, 8s) infinite linear;
 }
 
+@keyframes aurora-drift-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.5; }
+  50% { transform: translate(8%, 6%) scale(1.08); opacity: 0.7; }
+}
+@keyframes aurora-drift-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.4; }
+  50% { transform: translate(-6%, 8%) scale(1.05); opacity: 0.55; }
+}
+.animate-aurora-1 { animation: aurora-drift-1 18s ease-in-out infinite; }
+.animate-aurora-2 { animation: aurora-drift-2 22s ease-in-out infinite; }
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
@@ -108,9 +131,15 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--color-border-subtle);
+  background: rgba(55, 53, 47, 0.15);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-text-muted);
+  background: rgba(55, 53, 47, 0.25);
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(138, 180, 248, 0.2);
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(138, 180, 248, 0.35);
 }

@@ -1,17 +1,34 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Archive, Trash2, Star, Reply, X, Send, Loader2 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Archive, Trash2, Star, Reply, X, Send, Loader2, Clock, ChevronDown } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { cn } from '@/lib/utils';
 import { dash } from '@/components/dashboard/theme';
 import type { EmailShortcutHandlers } from '@/hooks/useKeyboardShortcuts';
+import { TemplatePicker } from './TemplatePicker';
 
 interface FullBody {
   text: string;
   html: string;
 }
+
+type ThreadMessage = {
+  id: string;
+  from: string;
+  fromEmail: string;
+  to: string;
+  date: string;
+  body: FullBody;
+  snippet: string;
+};
+
+const SNOOZE_OPTIONS = [
+  { preset: 'later_today', label: 'Later today (6 PM)' },
+  { preset: 'tomorrow', label: 'Tomorrow morning' },
+  { preset: 'next_week', label: 'Next week' },
+] as const;
 
 export function EmailDetail({
   email,
@@ -35,6 +52,11 @@ export function EmailDetail({
     fromEmail?: string;
     subject?: string;
   } | null>(null);
+  const [threadMessages, setThreadMessages] = useState<ThreadMessage[]>([]);
+  const [threadLoading, setThreadLoading] = useState(false);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [showSnoozeMenu, setShowSnoozeMenu] = useState(false);
+  const [isSnoozing, setIsSnoozing] = useState(false);
   const showReplyRef = useRef(showReply);
   showReplyRef.current = showReply;
 
@@ -42,9 +64,12 @@ export function EmailDetail({
     if (!email?.id) return;
     setFullBody(null);
     setFullMeta(null);
+    setThreadMessages([]);
+    setExpandedIds(new Set([email.id]));
     setBodyLoading(true);
+    setThreadLoading(!!email.threadId);
 
-    fetch(`/api/gmail/message/${email.id}`)
+    const messagePromise = fetch(`/api/gmail/message/${email.id}`)
       .then((r) => r.json())
       .then((data) => {
         if (data.body) setFullBody(data.body);
@@ -64,7 +89,23 @@ export function EmailDetail({
       })
       .catch(() => {})
       .finally(() => setBodyLoading(false));
-  }, [email?.id]);
+
+    const threadPromise =
+      email.threadId
+        ? fetch(`/api/gmail/thread/${email.threadId}`)
+            .then((r) => r.json())
+            .then((data) => {
+              if (data.messages?.length) {
+                setThreadMessages(data.messages);
+                setExpandedIds(new Set([data.messages[data.messages.length - 1].id]));
+              }
+            })
+            .catch(() => {})
+            .finally(() => setThreadLoading(false))
+        : Promise.resolve();
+
+    void Promise.all([messagePromise, threadPromise]);
+  }, [email?.id, email?.threadId]);
 
   useEffect(() => {
     if (!onRegisterShortcuts) return;
@@ -170,42 +211,150 @@ export function EmailDetail({
     }
   };
 
-  const renderBody = () => {
-    if (bodyLoading) {
-      return (
-        <div className={cn('flex items-center gap-2 py-8 text-sm', dash.textMuted)}>
-          <Loader2 size={16} className="animate-spin text-[#8ab4f8]" />
-          Loading full message…
-        </div>
-      );
+  const handleSnooze = async (preset: string) => {
+    setIsSnoozing(true);
+    setShowSnoozeMenu(false);
+    try {
+      const res = await fetch('/api/gmail/snooze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          emailId: email.id,
+          threadId: email.threadId,
+          preset,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Snooze failed');
+      toast.success('Snoozed — will return to inbox later');
+      onClose();
+      onRefresh?.();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Snooze failed');
+    } finally {
+      setIsSnoozing(false);
     }
-    if (fullBody?.html) {
+  };
+
+  const toggleExpanded = (id: string) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const renderMessageBody = (body: FullBody | null, fallback?: string) => {
+    if (body?.html) {
       return (
         <iframe
-          srcDoc={fullBody.html}
+          srcDoc={body.html}
           sandbox="allow-same-origin"
-          className="min-h-[300px] w-full rounded-xl border-0 bg-white"
+          className="min-h-[200px] w-full rounded-xl border-0 bg-white"
           style={{ colorScheme: 'light' }}
           onLoad={(e) => {
             const iframe = e.currentTarget;
-            iframe.style.height = (iframe.contentDocument?.body?.scrollHeight || 300) + 'px';
+            iframe.style.height = (iframe.contentDocument?.body?.scrollHeight || 200) + 'px';
           }}
           title="Email body"
         />
       );
     }
-    if (fullBody?.text) {
+    if (body?.text) {
       return (
         <pre className={cn('whitespace-pre-wrap font-sans text-sm leading-relaxed', dash.text)}>
-          {fullBody.text}
+          {body.text}
         </pre>
       );
     }
     return (
       <p className={cn('whitespace-pre-wrap text-sm leading-relaxed', dash.textMuted)}>
-        {email.data?.body || email.snippet || '(No content available)'}
+        {fallback || '(No content available)'}
       </p>
     );
+  };
+
+  const renderBody = () => {
+    if (threadLoading) {
+      return (
+        <div className={cn('flex items-center gap-2 py-4 text-sm', dash.textMuted)}>
+          <Loader2 size={16} className={cn('animate-spin', dash.accent)} />
+          Loading conversation…
+        </div>
+      );
+    }
+
+    if (threadMessages.length > 1) {
+      return (
+        <div className="space-y-3">
+          {threadMessages.map((msg, idx) => {
+            const expanded = expandedIds.has(msg.id);
+            return (
+              <div
+                key={msg.id}
+                className={cn('rounded-xl border', dash.border, expanded ? dash.surface : 'bg-transparent')}
+              >
+                <button
+                  type="button"
+                  onClick={() => toggleExpanded(msg.id)}
+                  className={cn(
+                    'flex w-full items-start gap-3 px-4 py-3 text-left transition-colors',
+                    dash.hover
+                  )}
+                >
+                  <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold uppercase', dash.avatar)}>
+                    {msg.from.charAt(0)}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={cn('text-sm font-semibold', dash.text)}>{msg.from}</span>
+                      <span className={cn('text-xs', dash.textSubtle)}>
+                        {new Date(msg.date).toLocaleString()}
+                      </span>
+                      {idx === threadMessages.length - 1 && (
+                        <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-medium', dash.accentSoftBg)}>
+                          Latest
+                        </span>
+                      )}
+                    </div>
+                    {!expanded && (
+                      <p className={cn('mt-1 truncate text-sm', dash.textMuted)}>{msg.snippet}</p>
+                    )}
+                  </div>
+                  <ChevronDown
+                    size={16}
+                    className={cn('shrink-0 transition-transform', dash.textMuted, expanded && 'rotate-180')}
+                  />
+                </button>
+                <AnimatePresence>
+                  {expanded && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden border-t px-4 py-4"
+                    >
+                      {renderMessageBody(msg.body, msg.snippet)}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
+    if (bodyLoading) {
+      return (
+        <div className={cn('flex items-center gap-2 py-8 text-sm', dash.textMuted)}>
+          <Loader2 size={16} className={cn('animate-spin', dash.accent)} />
+          Loading full message…
+        </div>
+      );
+    }
+    return renderMessageBody(fullBody, email.data?.body || email.snippet);
   };
 
   const ActionBtn = ({
@@ -224,7 +373,7 @@ export function EmailDetail({
       onClick={onClick}
       disabled={isActing}
       title={title}
-      className={cn('rounded-lg p-2 transition-colors', dash.hover, dash.textMuted, 'hover:text-[#8ab4f8]')}
+      className={cn('rounded-lg p-2 transition-colors', dash.hover, dash.textMuted, dash.accentHover)}
     >
       {children}
     </motion.button>
@@ -248,13 +397,45 @@ export function EmailDetail({
           <ActionBtn onClick={() => doAction('trash')} title="Trash (#)">
             <Trash2 size={18} />
           </ActionBtn>
-          <div className={cn('mx-1 h-5 w-px', 'bg-[#dadce0] dark:bg-white/10')} />
+          <div className={cn('mx-1 h-5 w-px', dash.divider)} />
           <ActionBtn onClick={() => doAction('star')} title="Star (s)">
             <Star size={18} />
           </ActionBtn>
           <ActionBtn onClick={() => setShowReply((r) => !r)} title="Reply (r)">
             <Reply size={18} />
           </ActionBtn>
+          <div className="relative">
+            <ActionBtn
+              onClick={() => setShowSnoozeMenu((v) => !v)}
+              title="Snooze"
+            >
+              {isSnoozing ? <Loader2 size={18} className="animate-spin" /> : <Clock size={18} />}
+            </ActionBtn>
+            {showSnoozeMenu && (
+              <div
+                className={cn(
+                  'absolute left-0 top-full z-30 mt-1 min-w-[180px] overflow-hidden rounded-xl border shadow-lg',
+                  dash.elevated,
+                  dash.border
+                )}
+              >
+                {SNOOZE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.preset}
+                    type="button"
+                    onClick={() => void handleSnooze(opt.preset)}
+                    className={cn(
+                      'block w-full px-3 py-2 text-left text-xs transition-colors',
+                      dash.hover,
+                      dash.text
+                    )}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
         <motion.button
           type="button"
@@ -334,7 +515,7 @@ export function EmailDetail({
         >
           <div className={cn('mb-2 text-xs', dash.textSubtle)}>
             Replying to{' '}
-            <span className="text-[#8ab4f8]">
+            <span className={dash.accent}>
               {fullMeta?.from || email.data?.from || 'sender'}
               {(fullMeta?.fromEmail || email.data?.fromEmail) && (
                 <> ({fullMeta?.fromEmail || email.data?.fromEmail})</>
@@ -345,7 +526,8 @@ export function EmailDetail({
             value={replyBody}
             onChange={(e) => setReplyBody(e.target.value)}
             className={cn(
-              'w-full resize-none rounded-xl border p-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#8ab4f8]/25',
+              'w-full resize-none rounded-xl border p-3 text-sm focus:outline-none focus:ring-2',
+              dash.accentRing,
               dash.input,
               dash.text
             )}
@@ -353,8 +535,9 @@ export function EmailDetail({
             placeholder="Write your reply…"
             autoFocus
           />
-          <div className="mt-3 flex items-center gap-3">
-            <motion.button
+          <div className="mt-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <motion.button
               type="button"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -374,10 +557,16 @@ export function EmailDetail({
                 setShowReply(false);
                 setReplyBody('');
               }}
-              className={cn('text-sm transition-colors', dash.textMuted, 'hover:text-[#8ab4f8]')}
+              className={cn('text-sm transition-colors', dash.textMuted, dash.accentHover)}
             >
               Cancel
             </button>
+            </div>
+            <TemplatePicker
+              onSelect={(t) => {
+                if (t.body) setReplyBody((prev) => (prev ? `${prev}\n\n${t.body}` : t.body || ''));
+              }}
+            />
           </div>
         </motion.div>
       )}

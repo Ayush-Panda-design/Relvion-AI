@@ -12,6 +12,12 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { localTriage } from '@/server/triage';
 import { broadcastEvent } from '@/lib/eventBus';
 import { logActivity } from '@/lib/activityLog';
+import {
+  applyContactBoost,
+  getContactStats,
+  trackContact,
+} from '@/server/services/contacts';
+import { parseDisplayName, parseEmailAddress } from '@/lib/gmail/parseMessage';
 
 const db = new Pool({ connectionString: process.env.DATABASE_URL });
 
@@ -31,7 +37,10 @@ export interface IncomingMessage {
   };
 }
 
-export async function processIncomingMessage(msg: IncomingMessage): Promise<{
+export async function processIncomingMessage(
+  msg: IncomingMessage,
+  opts?: { tenantId?: string }
+): Promise<{
   priority: string;
   embedded: boolean;
 }> {
@@ -39,9 +48,16 @@ export async function processIncomingMessage(msg: IncomingMessage): Promise<{
   const subject = msg.subject || msg.data?.subject || '(no subject)';
   const body = msg.snippet || msg.body || msg.data?.body || '';
   const sender = msg.from || msg.data?.from || '';
+  const tenantId = opts?.tenantId;
+
+  if (tenantId && sender) {
+    const fromEmail = parseEmailAddress(sender);
+    const fromName = parseDisplayName(sender);
+    if (fromEmail) void trackContact(tenantId, fromEmail, fromName);
+  }
 
   // ── 1. Triage ─────────────────────────────────────────────────────────────
-  let priority = 'FYI';
+  let priority: 'URGENT' | 'IMPORTANT' | 'FYI' = 'FYI';
   if (process.env.GEMINI_API_KEY && emailId) {
     try {
       const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -65,6 +81,11 @@ export async function processIncomingMessage(msg: IncomingMessage): Promise<{
     }
   } else if (emailId) {
     priority = localTriage(subject, body, sender);
+  }
+
+  if (tenantId && sender) {
+    const stats = await getContactStats(tenantId, parseEmailAddress(sender) || sender);
+    if (stats) priority = applyContactBoost(priority, stats.email_count);
   }
 
   // ── 2. Embed + pgvector upsert ────────────────────────────────────────────

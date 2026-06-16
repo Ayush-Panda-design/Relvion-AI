@@ -3,6 +3,8 @@ import { getSession } from '@/lib/auth/getSession';
 import { corsairForTenant } from '@/lib/auth/corsairForTenant';
 import { encodeRawEmail } from '@/lib/gmail/encodeMessage';
 import { logActivity } from '@/lib/activityLog';
+import { trackContact } from '@/server/services/contacts';
+import { parseEmailAddress } from '@/lib/gmail/parseMessage';
 
 export async function POST(req: Request) {
   const session = await getSession();
@@ -36,6 +38,9 @@ export async function POST(req: Request) {
       to,
       subject: replySubject,
     });
+
+    const recipient = parseEmailAddress(to) || to;
+    if (recipient.includes('@')) void trackContact(session.tenantId, recipient);
 
     return NextResponse.json({ success: true, result });
   } catch (error: any) {

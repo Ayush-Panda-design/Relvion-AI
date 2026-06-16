@@ -1,12 +1,10 @@
 'use client';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
 export default function NewEventPage() {
-  const router = useRouter();
   const [form, setForm] = useState({ summary: '', description: '', startDateTime: '', endDateTime: '', attendees: '' });
   const [creating, setCreating] = useState(false);
 
@@ -22,7 +20,7 @@ export default function NewEventPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       toast.success('Event created!');
-      router.push('/');
+      window.location.href = '/dashboard?folder=calendar';
     } catch (err: any) {
       toast.error(err.message);
     } finally {
@@ -33,7 +31,7 @@ export default function NewEventPage() {
   return (
     <div className="min-h-screen bg-[#FFF9C4] text-red-900 flex flex-col">
       <div className="p-6 max-w-xl mx-auto w-full">
-        <Link href="/" className="inline-flex items-center gap-2 text-green-900 hover:text-red-800 mb-6 text-sm">
+        <Link href="/" prefetch={false} className="inline-flex items-center gap-2 text-green-900 hover:text-red-800 mb-6 text-sm">
           <ArrowLeft size={16} /> Back
         </Link>
         <h1 className="text-2xl font-bold mb-6">New Calendar Event</h1>

@@ -3,6 +3,8 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Send, Paperclip, Zap, X, Image, FileText, Film, Music, File, Copy, Check } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getAgentSessionMessages, setAgentSessionMessages } from '@/lib/agent-session';
+import { cn } from '@/lib/utils';
+import { dash } from '@/components/dashboard/theme';
 
 const STORAGE_KEY = 'relvion_agent_history';
 const WIDTH_STORAGE_KEY = 'relvion_agent_width';
@@ -53,9 +55,11 @@ function CopyMessageButton({ text, isUser }: { text: string; isUser: boolean }) 
       type="button"
       onClick={handleCopy}
       title={isUser ? 'Copy prompt' : 'Copy response'}
-      className={`absolute -top-2 rounded-md border border-[#5f6368]/50 bg-[#3c4043] p-1 text-white/70 opacity-0 shadow-sm transition-opacity hover:bg-[#292a2d] hover:text-[#8ab4f8] group-hover/message:opacity-100 ${
+      className={cn(
+        'absolute -top-2 rounded-md p-1 opacity-0 shadow-sm transition-opacity group-hover/message:opacity-100',
+        dash.chatCopyBtn,
         isUser ? '-left-1' : '-right-1'
-      }`}
+      )}
     >
       {copied ? <Check size={12} /> : <Copy size={12} />}
     </button>
@@ -76,16 +80,16 @@ function ChatBubble({ message }: { message: ChatMessage }) {
           {message.attachments.map((att, j) => (
             <div key={j} className="group relative transition-transform duration-200 hover:scale-105">
               {att.type.startsWith('image/') && att.preview ? (
-                <div className="h-[80px] w-[80px] overflow-hidden rounded-lg border border-[#3c4043] bg-[#292a2d] transition-all duration-200 hover:border-[#8ab4f8]">
+                <div className={cn('h-[80px] w-[80px] overflow-hidden rounded-lg transition-all duration-200', dash.chatAttachment)}>
                   <img src={att.preview} alt={att.name} className="h-full w-full object-cover" />
                 </div>
               ) : (
-                <div className="flex items-center gap-1.5 rounded-lg border border-[#3c4043] bg-[#292a2d] px-2 py-1.5 transition-all duration-200 hover:border-[#8ab4f8]">
+                <div className={cn('flex items-center gap-1.5 rounded-lg px-2 py-1.5 transition-all duration-200', dash.chatAttachment)}>
                   {(() => {
                     const Icon = getFileIcon(att.type);
-                    return <Icon size={12} className="shrink-0 text-[#8ab4f8]" />;
+                    return <Icon size={12} className={cn('shrink-0', dash.accent)} />;
                   })()}
-                  <span className="max-w-[60px] truncate text-[10px] text-white">{att.name}</span>
+                  <span className={cn('max-w-[60px] truncate text-[10px]', dash.text)}>{att.name}</span>
                 </div>
               )}
             </div>
@@ -96,11 +100,10 @@ function ChatBubble({ message }: { message: ChatMessage }) {
         <div className={`group/message relative max-w-[90%] ${isUser ? 'pr-1' : 'pl-1'}`}>
           <CopyMessageButton text={message.content} isUser={isUser} />
           <div
-            className={`whitespace-pre-wrap break-words rounded-2xl px-4 py-2 text-sm [overflow-wrap:anywhere] transition-all duration-200 ${
-              isUser
-                ? 'rounded-br-sm bg-[#8ab4f8] text-[#202124] shadow-[0_0_12px_rgba(138,180,248,0.25)]'
-                : 'rounded-bl-sm border border-[#3c4043] bg-[#292a2d] text-white hover:border-[#3a3a3a]'
-            }`}
+            className={cn(
+              'whitespace-pre-wrap break-words rounded-2xl px-4 py-2 text-sm [overflow-wrap:anywhere] transition-all duration-200',
+              isUser ? cn('rounded-br-sm', dash.chatUser) : cn('rounded-bl-sm', dash.chatAgent)
+            )}
           >
             {message.content}
           </div>
@@ -301,7 +304,11 @@ export function AgentPanel() {
   return (
     <aside
       style={{ width: panelWidth }}
-      className="relative flex h-screen shrink-0 flex-col border-l border-[#3c4043] bg-[#202124]"
+      className={cn(
+        'relative z-20 flex h-screen shrink-0 flex-col border-l',
+        dash.sidebar,
+        dash.border
+      )}
     >
       <div
         role="separator"
@@ -310,17 +317,18 @@ export function AgentPanel() {
         onMouseDown={startResize}
         onDoubleClick={resetPanelWidth}
         title="Drag to resize · double-click to reset"
-        className={`absolute left-0 top-0 z-10 h-full w-3 -translate-x-1/2 cursor-col-resize transition-colors ${
-          isResizing ? 'bg-[#8ab4f8]/40' : 'bg-transparent hover:bg-[#8ab4f8]/25'
-        }`}
+        className={cn(
+          'absolute left-0 top-0 z-10 h-full w-3 -translate-x-1/2 cursor-col-resize transition-colors',
+          isResizing ? dash.resizeHandleActive : cn('bg-transparent', dash.resizeHandle)
+        )}
       />
 
-      <div className="flex h-14 shrink-0 items-center gap-2 border-b border-[#3c4043] bg-[#202124] px-4">
-        <Zap size={18} className="animate-pulse text-[#8ab4f8]" />
-        <h2 className="truncate font-semibold tracking-tight text-white">AI Assistant</h2>
+      <div className={cn('flex h-14 shrink-0 items-center gap-2 border-b px-4', dash.glassToolbar, dash.border)}>
+        <Zap size={18} className={cn('animate-pulse', dash.accent)} />
+        <h2 className={cn('truncate font-semibold tracking-tight', dash.text)}>AI Assistant</h2>
         <div className="relative ml-auto flex h-2.5 w-2.5 items-center justify-center">
-          <span className="absolute inline-flex h-full w-full rounded-full bg-[#22c55e] opacity-75 animate-ping"></span>
-          <span className="relative inline-flex rounded-full w-2 h-2 bg-[#22c55e]"></span>
+          <span className={cn('absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping', dash.online)} />
+          <span className={cn('relative inline-flex h-2 w-2 rounded-full', dash.online)} />
         </div>
       </div>
 
@@ -330,11 +338,11 @@ export function AgentPanel() {
         ))}
         {sending && (
           <div className="flex items-start animate-[fadeSlideIn_0.3s_ease-out]">
-            <div className="px-4 py-2 rounded-2xl rounded-bl-sm bg-[#292a2d] border border-[#3c4043] text-sm text-white">
+            <div className={cn('rounded-2xl rounded-bl-sm px-4 py-2 text-sm', dash.chatAgent)}>
               <span className="inline-flex gap-1">
-                <span className="animate-bounce text-[#8ab4f8]" style={{ animationDelay: '0ms' }}>●</span>
-                <span className="animate-bounce text-[#8ab4f8]" style={{ animationDelay: '150ms' }}>●</span>
-                <span className="animate-bounce text-[#8ab4f8]" style={{ animationDelay: '300ms' }}>●</span>
+                <span className={cn('animate-bounce', dash.accent)} style={{ animationDelay: '0ms' }}>●</span>
+                <span className={cn('animate-bounce', dash.accent)} style={{ animationDelay: '150ms' }}>●</span>
+                <span className={cn('animate-bounce', dash.accent)} style={{ animationDelay: '300ms' }}>●</span>
               </span>
             </div>
           </div>
@@ -344,25 +352,25 @@ export function AgentPanel() {
 
       {/* Attached files preview */}
       {attachedFiles.length > 0 && (
-        <div className="px-4 py-2 border-t border-[#3c4043] bg-[#202124] animate-[fadeSlideIn_0.25s_ease-out]">
+        <div className={cn('animate-[fadeSlideIn_0.25s_ease-out] border-t px-4 py-2', dash.glassToolbar, dash.border)}>
           <div className="flex flex-wrap gap-1.5">
             {attachedFiles.map((file, i) => {
               const Icon = getFileIcon(file.type);
               const preview = filePreviews.get(file.name + file.size);
               return (
-                <div key={i} className="relative group flex items-center gap-1.5 px-2 py-1 rounded-lg bg-[#292a2d] border border-[#3c4043] transition-all duration-200 hover:border-[#8ab4f8] hover:scale-[1.03]">
+                <div key={i} className={cn('group relative flex items-center gap-1.5 rounded-lg px-2 py-1 transition-all duration-200 hover:scale-[1.03]', dash.chatAttachment)}>
                   {preview ? (
-                    <img src={preview} alt={file.name} className="w-5 h-5 rounded object-cover" />
+                    <img src={preview} alt={file.name} className="h-5 w-5 rounded object-cover" />
                   ) : (
-                    <Icon size={12} className="text-[#8ab4f8] shrink-0" />
+                    <Icon size={12} className={cn('shrink-0', dash.accent)} />
                   )}
                   <div className="flex flex-col">
-                    <span className="text-[10px] text-white truncate max-w-[80px] leading-tight">{file.name}</span>
-                    <span className="text-[9px] text-[#22c55e] leading-tight">{formatFileSize(file.size)}</span>
+                    <span className={cn('max-w-[80px] truncate text-[10px] leading-tight', dash.text)}>{file.name}</span>
+                    <span className="text-[9px] leading-tight text-[#16a34a] dark:text-[#22c55e]">{formatFileSize(file.size)}</span>
                   </div>
                   <button
                     onClick={() => removeFile(i)}
-                    className="text-white/60 hover:text-[#8ab4f8] transition-colors ml-0.5 hover:rotate-90 duration-200"
+                    className={cn('ml-0.5 transition-colors duration-200 hover:rotate-90', dash.textMuted, dash.accentHover)}
                   >
                     <X size={10} />
                   </button>
@@ -373,16 +381,16 @@ export function AgentPanel() {
         </div>
       )}
 
-      <div className="p-4 border-t border-[#3c4043] bg-[#202124]">
+      <div className={cn('border-t p-4', dash.glassToolbar, dash.border)}>
         <div className="relative flex items-center gap-1">
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="text-white/70 hover:text-[#8ab4f8] transition-all duration-200 p-1.5 rounded-lg hover:bg-[#292a2d] hover:scale-110 shrink-0 relative"
+            className={cn('relative shrink-0 rounded-lg p-1.5 transition-all duration-200 hover:scale-110', dash.textMuted, dash.hover, dash.accentHover)}
             title="Attach files (images, docs, etc.)"
           >
             <Paperclip size={16} />
             {attachedFiles.length > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-[#8ab4f8] text-white text-[8px] flex items-center justify-center font-bold animate-[fadeSlideIn_0.2s_ease-out]">
+              <span className={cn('absolute -right-0.5 -top-0.5 flex h-3.5 w-3.5 animate-[fadeSlideIn_0.2s_ease-out] items-center justify-center rounded-full text-[8px] font-bold text-white', dash.accentBg)}>
                 {attachedFiles.length}
               </span>
             )}
@@ -402,22 +410,27 @@ export function AgentPanel() {
             onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
             placeholder={attachedFiles.length > 0 ? 'Add a message...' : 'Ask anything...'}
             disabled={sending}
-            className="flex-1 pl-3 pr-8 py-2.5 bg-[#201f1f] border border-[#3c4043] rounded-xl text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-[#8ab4f8] focus:shadow-[0_0_0_3px_rgba(138,180,248,0.15)] transition-all duration-200 disabled:opacity-50"
+            className={cn(
+              'flex-1 rounded-xl border py-2.5 pl-3 pr-8 text-sm transition-all focus:outline-none disabled:opacity-50',
+              dash.input,
+              dash.text,
+              'placeholder:text-[#9B9A97] focus:ring-2 focus:ring-[#2383E2]/20 dark:placeholder:text-white/40 dark:focus:ring-[#8ab4f8]/20'
+            )}
           />
           <button
             onClick={handleSend}
             disabled={sending && !input.trim() && attachedFiles.length === 0}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-[#8ab4f8] hover:text-[#aecbfa] hover:scale-110 active:scale-95 transition-all duration-150 p-1 disabled:opacity-30"
+            className={cn('absolute right-2 top-1/2 -translate-y-1/2 p-1 transition-all duration-150 hover:scale-110 active:scale-95 disabled:opacity-30', dash.accent, dash.accentHover)}
           >
             <Send size={16} />
           </button>
         </div>
         <div className="flex items-center justify-between mt-1.5 px-1">
-          <span className="text-[9px] text-white/40">Images, PDFs, docs up to 10MB</span>
+          <span className={cn('text-[9px]', dash.textSubtle)}>Images, PDFs, docs up to 10MB</span>
           {attachedFiles.length > 0 && (
             <button
               onClick={() => setAttachedFiles([])}
-              className="text-[9px] text-[#8ab4f8] hover:text-[#aecbfa] transition-colors duration-200"
+              className={cn('text-[9px] transition-colors duration-200', dash.accent, dash.accentHover)}
             >
               Clear all
             </button>

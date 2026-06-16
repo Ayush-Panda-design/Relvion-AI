@@ -12,6 +12,7 @@ import {
   PenLine,
   ChevronLeft,
   ChevronRight,
+  Clock,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
@@ -53,6 +54,7 @@ export function Sidebar({
 
   const folders = [
     { name: 'inbox', label: 'Inbox', icon: Inbox, count: counts.inbox || 0 },
+    { name: 'snoozed', label: 'Snoozed', icon: Clock, count: counts.snoozed || 0 },
     { name: 'drafts', label: 'Drafts', icon: FileText, count: counts.drafts || 0 },
     { name: 'sent', label: 'Sent', icon: Send, count: counts.sent || 0 },
     { name: 'spam', label: 'Spam', icon: Archive, count: counts.spam || 0 },
@@ -76,10 +78,15 @@ export function Sidebar({
   }) => {
     const content = (
       <>
-        {active && (
-          <span className="absolute inset-0 rounded-full bg-orange-600/15 dark:bg-orange-600/20" />
-        )}
-        <Icon size={20} strokeWidth={1.75} className={cn('relative z-10 shrink-0', active && 'text-[#8ab4f8]')} />
+        {active && <span className={cn('absolute inset-0 rounded-lg', dash.navActive)} />}
+        <Icon
+          size={20}
+          strokeWidth={1.75}
+          className={cn(
+            'relative z-10 shrink-0 transition-colors',
+            active ? 'text-[#2383E2] dark:text-[#8ab4f8]' : ''
+          )}
+        />
         <AnimatePresence>
           {!collapsed && (
             <motion.span
@@ -88,9 +95,9 @@ export function Sidebar({
               exit={{ opacity: 0, width: 0 }}
               className="relative z-10 flex flex-1 items-center justify-between overflow-hidden font-medium"
             >
-              <span className={dash.text}>{label}</span>
+              <span className={active ? dash.text : dash.textMuted}>{label}</span>
               {count !== undefined && count > 0 && (
-                <span className="text-xs font-medium text-[#8ab4f8]">{count}</span>
+                <span className={cn('text-xs font-medium tabular-nums', dash.accent)}>{count}</span>
               )}
             </motion.span>
           )}
@@ -99,8 +106,8 @@ export function Sidebar({
     );
 
     const className = cn(
-      'group relative flex w-full items-center gap-3 rounded-full px-4 py-2.5 text-sm transition-colors duration-150 text-left',
-      active ? dash.accentSoft : dash.textMuted,
+      'group relative flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-150 text-left',
+      active ? dash.text : dash.textMuted,
       !active && dash.hover
     );
 
@@ -150,14 +157,18 @@ export function Sidebar({
       initial={false}
       animate={{ width: collapsed ? 72 : 256 }}
       transition={{ type: 'tween', duration: 0.2 }}
-      className={cn('flex h-screen shrink-0 flex-col border-r', dash.sidebar, dash.border)}
+      className={cn(
+        'relative z-20 flex h-screen shrink-0 flex-col border-r',
+        dash.sidebar,
+        dash.border
+      )}
     >
       <div className={cn('flex items-center gap-2 p-3', collapsed ? 'justify-center' : 'px-4')}>
-        <Link href="/" className="flex items-center gap-2.5">
+        <Link href="/" prefetch={false} className="flex items-center gap-2.5">
           <BrandMark size={28} variant="auto" />
           {!collapsed && (
-            <span className={cn('text-lg font-bold tracking-tight', dash.text)}>
-              Relvion<span className="text-[#8ab4f8]">.</span>
+            <span className={cn('text-lg font-semibold tracking-tight', dash.text)}>
+              Relvion<span className="text-[#2383E2] dark:text-[#8ab4f8]">.</span>
             </span>
           )}
         </Link>
@@ -170,9 +181,9 @@ export function Sidebar({
           whileTap={{ scale: 0.97 }}
           onClick={() => onComposeClick?.()}
           className={cn(
-            'flex w-full items-center justify-center gap-2 rounded-2xl py-3 text-sm font-semibold transition-all',
+            'flex w-full items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-medium transition-all',
             dash.compose,
-            collapsed ? 'rounded-full px-0' : 'px-4'
+            collapsed ? 'px-0' : 'px-4'
           )}
           title="Compose"
         >

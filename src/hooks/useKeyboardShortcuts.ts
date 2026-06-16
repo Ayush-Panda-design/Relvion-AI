@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, type MutableRefObject } from 'react';
-import { isTypingTarget, isTrashKey } from '@/lib/keyboard';
+import { isTypingTarget, isTrashKey, eventKey } from '@/lib/keyboard';
 
 export type EmailShortcutHandlers = {
   archive: () => void;
@@ -67,7 +67,9 @@ export function useKeyboardShortcuts({
     const handler = (e: KeyboardEvent) => {
       if (isTypingTarget(e.target)) return;
 
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+      const key = eventKey(e);
+
+      if ((e.metaKey || e.ctrlKey) && key === 'k') {
         return;
       }
 
@@ -90,7 +92,7 @@ export function useKeyboardShortcuts({
       if (pendingG.current) {
         e.preventDefault();
         clearG();
-        const key = e.key.toLowerCase();
+        if (!key) return;
         const folder = G_FOLDERS[key];
         if (folder) {
           onFolderChangeRef.current?.(folder);
@@ -104,14 +106,14 @@ export function useKeyboardShortcuts({
         return;
       }
 
-      if (e.key.toLowerCase() === 'g') {
+      if (key === 'g') {
         e.preventDefault();
         pendingG.current = true;
         gTimer.current = setTimeout(clearG, 1200);
         return;
       }
 
-      if (e.key.toLowerCase() === 'c') {
+      if (key === 'c') {
         e.preventDefault();
         onComposeRef.current();
         return;
@@ -119,7 +121,7 @@ export function useKeyboardShortcuts({
 
       if (!email) return;
 
-      if (e.key.toLowerCase() === 'e') {
+      if (key === 'e') {
         e.preventDefault();
         email.archive();
         return;
@@ -131,13 +133,13 @@ export function useKeyboardShortcuts({
         return;
       }
 
-      if (e.key.toLowerCase() === 's') {
+      if (key === 's') {
         e.preventDefault();
         email.star();
         return;
       }
 
-      if (e.key.toLowerCase() === 'r') {
+      if (key === 'r') {
         e.preventDefault();
         email.reply();
       }

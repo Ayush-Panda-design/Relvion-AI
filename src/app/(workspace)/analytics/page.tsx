@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { RefreshCw, TrendingUp, Clock, CalendarDays, Inbox, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getCached, setCached } from '@/lib/client-cache';
+import { subscribeAppEvents } from '@/lib/app-events';
 import { ContentProgress } from '@/components/ui/ContentProgress';
 import { cn } from '@/lib/utils';
 import { dash } from '@/components/dashboard/theme';
@@ -39,7 +40,7 @@ function StatCard({
     <div className={cn('rounded-2xl border p-5', dash.elevated, dash.border)}>
       <div className="mb-3 flex items-center justify-between">
         <span className={cn('text-sm', dash.textMuted)}>{label}</span>
-        <Icon size={18} className="text-[#8ab4f8]" strokeWidth={1.75} />
+        <Icon size={18} className={dash.accent} strokeWidth={1.75} />
       </div>
       <div className={cn('text-3xl font-normal tabular-nums', dash.text)}>{value}</div>
       {sub && <p className={cn('mt-2 text-xs', dash.textSubtle)}>{sub}</p>}
@@ -64,7 +65,7 @@ function BarChart({
             <span className={cn(dash.textMuted)}>{item.label}</span>
             <span className={cn('tabular-nums', dash.text)}>{item.value}</span>
           </div>
-          <div className="h-2 overflow-hidden rounded-full bg-[#303134]">
+          <div className={cn('h-2 overflow-hidden rounded-full', dash.progressTrack)}>
             <div
               className={cn('h-full rounded-full transition-all duration-500', barClass)}
               style={{ width: max > 0 ? `${(item.value / max) * 100}%` : '0%' }}
@@ -80,6 +81,7 @@ export default function AnalyticsPage() {
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [live, setLive] = useState(false);
 
   const load = useCallback(async (silent = false) => {
     if (silent) setRefreshing(true);
@@ -109,6 +111,24 @@ export default function AnalyticsPage() {
     }
   }, [load]);
 
+  useEffect(() => {
+    const realtimeEvents = new Set([
+      'ANALYTICS_UPDATED',
+      'EMAIL_RECEIVED',
+      'EMAIL_UPDATED',
+      'EMAIL_DELETED',
+      'CALENDAR_UPDATED',
+    ]);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    return subscribeAppEvents((type) => {
+      if (!realtimeEvents.has(type)) return;
+      setLive(true);
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => load(true), 400);
+    });
+  }, [load]);
+
   const priorityMax = data
     ? Math.max(data.priorityBreakdown.URGENT, data.priorityBreakdown.IMPORTANT, data.priorityBreakdown.FYI, 1)
     : 1;
@@ -126,8 +146,14 @@ export default function AnalyticsPage() {
         <header className="mb-8 flex items-start justify-between gap-4">
           <div>
             <h1 className={cn('text-2xl font-normal tracking-tight', dash.text)}>Analytics</h1>
-            <p className={cn('mt-1 text-sm', dash.textMuted)}>
+            <p className={cn('mt-1 flex items-center gap-2 text-sm', dash.textMuted)}>
               Insights from Gmail, Calendar, and your AI-indexed inbox
+              {live && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-500">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+                  Live
+                </span>
+              )}
             </p>
           </div>
           <button
@@ -184,7 +210,7 @@ export default function AnalyticsPage() {
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <section className={cn('rounded-2xl border p-5', dash.elevated, dash.border)}>
                 <div className="mb-4 flex items-center gap-2">
-                  <Sparkles size={18} className="text-[#8ab4f8]" />
+                  <Sparkles size={18} className={dash.accent} />
                   <h2 className={cn('text-base font-medium', dash.text)}>AI priority breakdown</h2>
                 </div>
                 <BarChart
@@ -194,7 +220,7 @@ export default function AnalyticsPage() {
                     { label: 'FYI', value: data.priorityBreakdown.FYI },
                   ]}
                   max={priorityMax}
-                  barClass="bg-[#8ab4f8]"
+                  barClass="bg-[#2383E2] dark:bg-[#8ab4f8]"
                 />
                 <p className={cn('mt-4 text-xs', dash.textSubtle)}>
                   {data.indexedEmails.toLocaleString()} emails indexed for vector search
@@ -203,7 +229,7 @@ export default function AnalyticsPage() {
 
               <section className={cn('rounded-2xl border p-5', dash.elevated, dash.border)}>
                 <div className="mb-4 flex items-center gap-2">
-                  <Inbox size={18} className="text-[#8ab4f8]" />
+                  <Inbox size={18} className={dash.accent} />
                   <h2 className={cn('text-base font-medium', dash.text)}>Mailbox overview</h2>
                 </div>
                 <BarChart
@@ -214,7 +240,7 @@ export default function AnalyticsPage() {
                     { label: 'Starred', value: data.starredTotal },
                   ]}
                   max={mailboxMax}
-                  barClass="bg-[#669df6]"
+                  barClass="bg-[#1a6fc2] dark:bg-[#669df6]"
                 />
               </section>
             </div>
@@ -230,7 +256,7 @@ export default function AnalyticsPage() {
                   {data.dailyActivity.map((day) => (
                     <div key={day.date} className="flex flex-1 flex-col items-center gap-2">
                       <div
-                        className="w-full min-h-[4px] rounded-t-md bg-[#8ab4f8] transition-all"
+                        className="w-full min-h-[4px] rounded-t-md bg-[#2383E2] transition-all dark:bg-[#8ab4f8]"
                         style={{ height: `${Math.max((day.total / activityMax) * 100, 4)}%` }}
                         title={`${day.total} events`}
                       />

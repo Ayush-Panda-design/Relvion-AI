@@ -8,7 +8,8 @@ export type AppEventType =
   | 'EMAIL_RECEIVED'
   | 'EMAIL_UPDATED'
   | 'EMAIL_DELETED'
-  | 'CALENDAR_UPDATED';
+  | 'CALENDAR_UPDATED'
+  | 'ANALYTICS_UPDATED';
 
 export interface AppEvent {
   type: AppEventType;

@@ -1,5 +1,6 @@
 import { Pool } from 'pg';
 import { randomUUID } from 'crypto';
+import { broadcastEvent } from '@/lib/eventBus';
 
 const db = new Pool({ connectionString: process.env.DATABASE_URL });
 
@@ -23,6 +24,7 @@ export async function logActivity(
       `INSERT INTO activity_log (id, event_type, metadata) VALUES ($1, $2, $3)`,
       [randomUUID(), eventType, JSON.stringify(metadata)]
     );
+    broadcastEvent('ANALYTICS_UPDATED', { eventType });
   } catch (err) {
     console.error('[activityLog] failed:', err);
   }

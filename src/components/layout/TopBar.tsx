@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { dash } from '@/components/dashboard/theme';
+import { ThemeToggle } from '@/components/dashboard/ThemeToggle';
 import { GMAIL_SEARCH_HINTS } from '@/lib/gmail-search-parser';
 
 interface SearchResult {
@@ -149,10 +150,8 @@ export function TopBar({
   return (
     <header
       className={cn(
-        'relative flex h-[64px] shrink-0 items-center gap-3 px-4',
-        dash.bg,
-        'border-b',
-        dash.border
+        'relative flex h-[56px] shrink-0 items-center gap-3 px-4',
+        dash.glassToolbar
       )}
     >
       {/* Spacer balances right icons — keeps search centered */}
@@ -177,7 +176,7 @@ export function TopBar({
         >
           <Search
             size={20}
-            className={cn('ml-4 shrink-0', searching ? 'animate-pulse text-[#8ab4f8]' : dash.textMuted)}
+            className={cn('ml-4 shrink-0', searching ? cn('animate-pulse', dash.accent) : dash.textMuted)}
             strokeWidth={1.75}
           />
           <input
@@ -187,7 +186,7 @@ export function TopBar({
             className={cn(
               'w-full bg-transparent py-3 pl-3 pr-20 text-sm focus:outline-none',
               dash.text,
-              'placeholder:text-[#5f6368] dark:placeholder:text-[#9aa0a6]'
+              'placeholder:text-[#9B9A97] dark:placeholder:text-[#9aa0a6]'
             )}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -220,7 +219,7 @@ export function TopBar({
           <kbd
             className={cn(
               'absolute right-3 hidden rounded border px-1.5 py-0.5 text-[10px] font-medium sm:inline-block',
-              'border-[#dadce0] text-[#5f6368] dark:border-[#5f6368] dark:text-[#9aa0a6]'
+              cn(dash.border, dash.textMuted)
             )}
           >
             /
@@ -257,7 +256,7 @@ export function TopBar({
                       setShowHints(false);
                     }}
                   >
-                    <span className={cn('font-mono text-xs text-[#8ab4f8]', dash.text)}>{hint.example}</span>
+                    <span className={cn('font-mono text-xs', dash.accent)}>{hint.example}</span>
                     <span className={cn('text-xs', dash.textMuted)}>{hint.desc}</span>
                   </button>
                 ))}
@@ -292,7 +291,7 @@ export function TopBar({
                     <div className="flex items-center gap-1.5">
                       {source === 'pgvector' || source === 'pgvector+corsair' ? (
                         <>
-                          <Zap size={12} className="text-[#8ab4f8]" /> Semantic
+                          <Zap size={12} className={dash.accent} /> Semantic
                         </>
                       ) : source === 'gmail-api' ? (
                         <>
@@ -300,7 +299,7 @@ export function TopBar({
                         </>
                       ) : (
                         <>
-                          <Database size={12} className="text-[#8ab4f8]" /> Corsair Search
+                          <Database size={12} className={dash.accent} /> Corsair Search
                         </>
                       )}
                       {(source === 'corsair-db+calendar' || events.length > 0) && (
@@ -318,7 +317,7 @@ export function TopBar({
                       {activeOperators.map((op) => (
                         <span
                           key={op}
-                          className="rounded-full bg-[#8ab4f8]/15 px-2 py-0.5 font-mono text-[10px] text-[#8ab4f8]"
+                          className={cn('rounded-full px-2 py-0.5 font-mono text-[10px]', dash.accentSoftBg)}
                         >
                           {op}
                         </span>
@@ -332,12 +331,12 @@ export function TopBar({
                         className={cn('cursor-pointer px-4 py-3 transition-colors', dash.hover)}
                       >
                         <div className="flex items-center gap-2">
-                          <Mail size={14} className="shrink-0 text-[#8ab4f8]" />
+                          <Mail size={14} className={cn('shrink-0', dash.accent)} />
                           <div className={cn('min-w-0 flex-1 truncate text-sm font-medium', dash.text)}>
                             {r.subject}
                           </div>
                           {r.similarity < 1 && r.similarity > 0.6 && (
-                            <span className="flex shrink-0 items-center gap-0.5 text-[10px] text-[#8ab4f8]">
+                            <span className={cn('flex shrink-0 items-center gap-0.5 text-[10px]', dash.accent)}>
                               <Sparkles size={10} />
                               {Math.round(r.similarity * 100)}%
                             </span>
@@ -384,7 +383,8 @@ export function TopBar({
       </div>
 
       {/* Right actions */}
-      <div className="flex w-[88px] shrink-0 items-center justify-end gap-0.5">
+      <div className="flex w-[120px] shrink-0 items-center justify-end gap-0.5">
+        <ThemeToggle />
         <div className="relative" ref={notifRef}>
           <button
             type="button"
@@ -393,7 +393,7 @@ export function TopBar({
           >
             <Bell size={20} strokeWidth={1.75} />
             {unreadCount > 0 && (
-              <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[#8ab4f8]" />
+              <span className={cn('absolute right-1 top-1 h-2 w-2 rounded-full', dash.accentBg)} />
             )}
           </button>
 
@@ -423,7 +423,7 @@ export function TopBar({
                       <div key={n.id} className={cn('cursor-pointer px-4 py-3', dash.hover)}>
                         <div className="flex justify-between gap-2">
                           <div className="min-w-0">
-                            <div className="truncate text-xs font-medium text-[#8ab4f8]">{n.from}</div>
+                            <div className={cn('truncate text-xs font-medium', dash.accent)}>{n.from}</div>
                             <div className={cn('truncate text-sm', dash.text)}>{n.subject}</div>
                           </div>
                           <span className={cn('shrink-0 text-[10px]', dash.textSubtle)}>{timeAgo(n.date)}</span>

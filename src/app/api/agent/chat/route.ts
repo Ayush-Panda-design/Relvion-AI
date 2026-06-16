@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI, type FunctionDeclaration } from '@google/generative-ai';
 import { AnthropicProvider } from '@corsair-dev/mcp';
+import { Pool } from 'pg';
 import { getSession } from '@/lib/auth/getSession';
 import { corsairForTenant } from '@/lib/auth/corsairForTenant';
+
+const db = new Pool({ connectionString: process.env.DATABASE_URL });
 
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -77,6 +80,36 @@ STRATEGY:
 2. Parse all results and give the user a clear, concise answer.
 3. If a tool call fails, report the error to the user rather than failing silently.
 4. After creating/updating/sending something (event, email), check the run_script result for an "error" or "isError" field. Only tell the user it succeeded if the result contains a real object/ID with no error. If there's an error, explain it and try to fix the request — never claim success on a failed call.`;
+
+async function buildSystemPrompt(tenantId: string): Promise<string> {
+  if (!process.env.DATABASE_URL) return SYSTEM_PROMPT;
+
+  try {
+    const res = await db.query<{ name: string; subject: string; body: string }>(
+      `SELECT name, subject, body FROM email_templates
+       WHERE tenant_id = $1 OR tenant_id IS NULL
+       ORDER BY name ASC LIMIT 20`,
+      [tenantId]
+    );
+    if (!res.rows.length) return SYSTEM_PROMPT;
+
+    const block = res.rows
+      .map(
+        (t, i) =>
+          `${i + 1}. "${t.name}" — Subject: ${t.subject || '(none)'}\n   Body: ${(t.body || '').substring(0, 400)}`
+      )
+      .join('\n');
+
+    return `${SYSTEM_PROMPT}
+
+USER EMAIL TEMPLATES (use when drafting replies or new emails):
+${block}
+
+When the user asks you to compose or reply, prefer these templates when a name or topic matches.`;
+  } catch {
+    return SYSTEM_PROMPT;
+  }
+}
 
 // ─── Module-level singletons (built once, reused across requests) ─────────────
 
@@ -276,12 +309,13 @@ export async function POST(req: Request) {
   // ── 4. Initialise Gemini with key rotation ───────────────────────────────────
   try {
     let currentKeyIdx = keyIndex;
+    const systemInstruction = await buildSystemPrompt(session.tenantId);
 
     const makeModel = (apiKey: string) => {
       const genAI = new GoogleGenerativeAI(apiKey);
       return genAI.getGenerativeModel({
         model: MODEL,
-        systemInstruction: SYSTEM_PROMPT,
+        systemInstruction,
         tools: [{ functionDeclarations: geminiDeclarations }],
         generationConfig: { temperature: 0.2 },
       });

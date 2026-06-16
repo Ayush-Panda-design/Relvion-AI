@@ -36,7 +36,10 @@ export const corsair = createCorsair({
                   '@/server/services/gmailWebhookProcessor'
                 );
                 if (msg) {
-                  await processIncomingMessage(msg);
+                  const tenantId =
+                    (ctx as { tenantId?: string })?.tenantId ||
+                    (ctx as { account?: { tenantId?: string } })?.account?.tenantId;
+                  await processIncomingMessage(msg, { tenantId });
                 }
               } catch (e: any) {
                 console.error('[corsair/gmail hook] processIncomingMessage failed:', e?.message);

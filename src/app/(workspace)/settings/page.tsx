@@ -19,6 +19,8 @@ import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { dash, type Density } from '@/components/dashboard/theme';
 import { useDensity } from '@/components/dashboard/DensityProvider';
+import { useTheme } from '@/components/dashboard/ThemeProvider';
+import { Sun, Moon } from 'lucide-react';
 
 interface WebhookConfig {
   baseUrl: string | null;
@@ -56,7 +58,7 @@ function SettingsCard({
     >
       <div className={cn('border-b px-6 py-4', dash.border)}>
         <div className="flex items-start gap-3">
-          <div className={cn('rounded-xl p-2.5', 'bg-[#d3e3fd]/30 dark:bg-[#394457]/60')}>
+          <div className={cn('rounded-xl p-2.5', dash.iconWell)}>
             <Icon size={20} className="text-[#8ab4f8]" strokeWidth={1.75} />
           </div>
           <div>
@@ -111,6 +113,7 @@ export default function SettingsPage() {
   const [webhookResult, setWebhookResult] = useState<WebhookResult | null>(null);
   const [registering, setRegistering] = useState(false);
   const { density, setDensity } = useDensity();
+  const { theme, setTheme } = useTheme();
 
   useEffect(() => {
     fetch('/api/gmail/profile')
@@ -178,20 +181,10 @@ export default function SettingsPage() {
                 <p className={cn('truncate text-sm', dash.textMuted)}>{profile?.email || 'Loading…'}</p>
                 {profile && (
                   <div className="mt-2 flex flex-wrap gap-2">
-                    <span
-                      className={cn(
-                        'rounded-full px-2.5 py-0.5 text-xs',
-                        'bg-[#303134] text-[#9aa0a6]'
-                      )}
-                    >
+                    <span className={cn('rounded-full px-2.5 py-0.5 text-xs', dash.chip)}>
                       {profile.messagesTotal.toLocaleString()} messages
                     </span>
-                    <span
-                      className={cn(
-                        'rounded-full px-2.5 py-0.5 text-xs',
-                        'bg-[#303134] text-[#9aa0a6]'
-                      )}
-                    >
+                    <span className={cn('rounded-full px-2.5 py-0.5 text-xs', dash.chip)}>
                       {profile.threadsTotal.toLocaleString()} threads
                     </span>
                   </div>
@@ -222,7 +215,7 @@ export default function SettingsPage() {
             <p className={cn('mb-4 text-sm leading-relaxed', dash.textMuted)}>
               Relvion uses Google push notifications to update your inbox in real time. For local
               development, expose your app with a public URL (e.g. ngrok) and set{' '}
-              <code className="rounded bg-[#303134] px-1.5 py-0.5 text-xs text-[#8ab4f8]">
+              <code className={cn('rounded px-1.5 py-0.5 text-xs', dash.code)}>
                 WEBHOOK_BASE_URL
               </code>{' '}
               in your environment. Watches expire after ~7 days — re-enable below when needed.
@@ -246,7 +239,7 @@ export default function SettingsPage() {
                 className={cn(
                   'mb-4 space-y-1.5 rounded-xl border p-3 text-xs',
                   dash.border,
-                  'bg-[#303134]/40'
+                  'bg-[#F7F7F5] dark:bg-[#303134]/40'
                 )}
               >
                 <div className="flex items-center gap-2">
@@ -295,6 +288,46 @@ export default function SettingsPage() {
             )}
           </SettingsCard>
 
+          {/* Appearance */}
+          <SettingsCard
+            icon={Sun}
+            title="Appearance"
+            description="Notion-style light or Gmail-style dark workspace"
+          >
+            <div className="grid grid-cols-2 gap-3">
+              {(
+                [
+                  { id: 'light' as const, label: 'Light', desc: 'Clean & minimal', icon: Sun },
+                  { id: 'dark' as const, label: 'Dark', desc: 'Gmail neutrals', icon: Moon },
+                ] as const
+              ).map(({ id, label, desc, icon: Icon }) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => {
+                    setTheme(id);
+                    toast.success(`${label} mode enabled`);
+                  }}
+                  className={cn(
+                    'flex flex-col items-start gap-2 rounded-xl border p-4 text-left transition-all',
+                    theme === id
+                      ? 'border-[#2383E2] bg-[#F7F7F5] shadow-sm dark:border-[#8ab4f8] dark:bg-[#8ab4f8]/10'
+                      : cn(dash.border, dash.hover)
+                  )}
+                >
+                  <Icon
+                    size={20}
+                    className={theme === id ? 'text-[#2383E2] dark:text-[#8ab4f8]' : dash.textMuted}
+                  />
+                  <div>
+                    <p className={cn('text-sm font-medium', dash.text)}>{label}</p>
+                    <p className={cn('text-xs', dash.textSubtle)}>{desc}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </SettingsCard>
+
           {/* Inbox density */}
           <SettingsCard
             icon={LayoutList}
@@ -313,7 +346,7 @@ export default function SettingsPage() {
                   className={cn(
                     'rounded-xl border px-3 py-3 text-sm capitalize transition-all',
                     density === d
-                      ? 'border-[#8ab4f8] bg-[#394457]/50 text-[#8ab4f8]'
+                      ? 'border-[#2383E2] bg-[#F7F7F5] text-[#2383E2] dark:border-[#8ab4f8] dark:bg-[#8ab4f8]/10 dark:text-[#8ab4f8]'
                       : cn(dash.border, dash.textMuted, dash.hover)
                   )}
                 >

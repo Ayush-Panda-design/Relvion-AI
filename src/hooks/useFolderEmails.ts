@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { getCached, setCached, runWhenIdle } from '@/lib/client-cache';
+import { getCached, setCached, runWhenIdle, invalidateCache } from '@/lib/client-cache';
 
 export type EmailItem = {
   id: string;
@@ -77,7 +77,7 @@ async function triageInBackground(
             body: JSON.stringify({
               subject: email.data?.subject,
               body: email.data?.body || '',
-              sender: email.data?.from,
+              sender: email.data?.fromEmail || email.data?.from,
             }),
           });
           if (res.ok) {
@@ -107,12 +107,12 @@ function scheduleEmbed(emails: EmailItem[]) {
 }
 
 export function prefetchFolderEmails(folder: string) {
-  const key = `emails:${folder}`;
+  const key = `emails:v2:${folder}`;
   if (getCached<ListResponse>(key, FOLDER_TTL)) return;
   fetch(`/api/gmail/list?folder=${folder}`)
     .then((r) => (r.ok ? r.json() : null))
     .then((data: ListResponse | null) => {
-      if (data?.emails) {
+      if (data?.emails?.length) {
         setCached(key, { emails: applyCachedPriorities(data.emails) });
       }
     })
@@ -120,7 +120,7 @@ export function prefetchFolderEmails(folder: string) {
 }
 
 export function useFolderEmails(folder: string) {
-  const cacheKey = `emails:${folder}`;
+  const cacheKey = `emails:v2:${folder}`;
   const [emails, setEmails] = useState<EmailItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -142,11 +142,22 @@ export function useFolderEmails(folder: string) {
       else setLoading(true);
 
       try {
+        if (folder === 'inbox') {
+          fetch('/api/gmail/snooze/release', { method: 'POST' }).catch(() => {});
+        }
+
         const res = await fetch(`/api/gmail/list?folder=${folder}`);
         if (!res.ok) throw new Error('Failed to load emails');
-        const data: ListResponse = await res.json();
+        const data: ListResponse & { error?: string } = await res.json();
+        if (data.error && !(data.emails?.length)) {
+          throw new Error(data.error);
+        }
         const fetched = applyCachedPriorities(data.emails || []);
-        setCached(cacheKey, { emails: fetched });
+        if (fetched.length > 0) {
+          setCached(cacheKey, { emails: fetched });
+        } else {
+          invalidateCache(`emails:v2:${folder}`);
+        }
         setEmails(fetched);
 
         scheduleEmbed(fetched);

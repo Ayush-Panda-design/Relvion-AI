@@ -106,3 +106,36 @@ CREATE TABLE IF NOT EXISTS users (
 );
 CREATE INDEX IF NOT EXISTS users_email_idx ON users (email);
 CREATE INDEX IF NOT EXISTS users_tenant_id_idx ON users (tenant_id);
+
+-- Contact intelligence (frequent senders)
+CREATE TABLE IF NOT EXISTS contacts (
+  id TEXT PRIMARY KEY,
+  tenant_id TEXT NOT NULL,
+  email TEXT NOT NULL,
+  name TEXT,
+  email_count INT NOT NULL DEFAULT 1,
+  last_emailed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (tenant_id, email)
+);
+CREATE INDEX IF NOT EXISTS contacts_tenant_email_idx ON contacts (tenant_id, email);
+
+-- Compose auto-save (Postgres, debounced)
+CREATE TABLE IF NOT EXISTS compose_drafts (
+  id TEXT PRIMARY KEY,
+  tenant_id TEXT NOT NULL UNIQUE,
+  to_addr TEXT,
+  cc TEXT,
+  bcc TEXT,
+  subject TEXT,
+  body TEXT,
+  gmail_draft_id TEXT,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Snooze + templates: tenant scoping
+ALTER TABLE snoozed_emails ADD COLUMN IF NOT EXISTS tenant_id TEXT;
+ALTER TABLE snoozed_emails ADD COLUMN IF NOT EXISTS thread_id TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS snoozed_emails_tenant_email_idx ON snoozed_emails (tenant_id, email_id);
+
+ALTER TABLE email_templates ADD COLUMN IF NOT EXISTS tenant_id TEXT;
+CREATE INDEX IF NOT EXISTS email_templates_tenant_idx ON email_templates (tenant_id);

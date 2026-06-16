@@ -7,6 +7,8 @@ export interface Attachment {
 
 export function encodeRawEmail(parts: {
   to?: string;
+  cc?: string;
+  bcc?: string;
   subject?: string;
   body?: string;
   inReplyTo?: string;
@@ -18,6 +20,8 @@ export function encodeRawEmail(parts: {
   const headers = [
     'From: me',
     ...(parts.to ? [`To: ${parts.to}`] : []),
+    ...(parts.cc ? [`Cc: ${parts.cc}`] : []),
+    ...(parts.bcc ? [`Bcc: ${parts.bcc}`] : []),
     ...(parts.subject ? [`Subject: ${parts.subject}`] : []),
     ...(parts.inReplyTo ? [`In-Reply-To: ${parts.inReplyTo}`] : []),
     ...(parts.references ? [`References: ${parts.references}`] : []),

@@ -15,6 +15,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { EmailDetail } from './EmailDetail';
 import toast from 'react-hot-toast';
 import { cn } from '@/lib/utils';
+import { groupEmailsByThread } from '@/lib/groupThreads';
 import { dash, densityTokens } from '@/components/dashboard/theme';
 import { useDensity } from '@/components/dashboard/DensityProvider';
 import { ContentProgress } from '@/components/ui/ContentProgress';
@@ -33,12 +34,12 @@ function EmailListSkeleton() {
       {[1, 2, 3, 4, 5, 6].map((i) => (
         <div
           key={i}
-          className={cn('flex items-center gap-3 rounded-xl px-4 py-3', 'dark:bg-[#292a2d]/50')}
+          className={cn('flex items-center gap-3 rounded-xl px-4 py-3', 'bg-[#F7F7F5]/80 dark:bg-[#292a2d]/50')}
         >
-          <div className="h-10 w-10 animate-pulse rounded-full bg-[#3c4043]/50" />
+          <div className="h-10 w-10 animate-pulse rounded-full bg-[#E9E9E7] dark:bg-[#3c4043]/50" />
           <div className="flex-1 space-y-2">
-            <div className="h-3 w-1/4 animate-pulse rounded bg-[#3c4043]/50" />
-            <div className="h-3 w-3/4 animate-pulse rounded bg-[#3c4043]/40" />
+            <div className="h-3 w-1/4 animate-pulse rounded bg-[#E9E9E7] dark:bg-[#3c4043]/50" />
+            <div className="h-3 w-3/4 animate-pulse rounded bg-[#F1F1EF] dark:bg-[#3c4043]/40" />
           </div>
         </div>
       ))}
@@ -82,6 +83,8 @@ export function EmailList({
   }, [onRegisterEmailShortcuts]);
 
   const filtered = filter === 'ALL' ? emails : emails.filter((e) => e.priority === filter);
+  const displayEmails =
+    folder === 'inbox' || folder === 'sent' ? groupEmailsByThread(filtered) : filtered;
 
   const runAction = (e: React.MouseEvent, id: string, action: string, label: string) => {
     e.stopPropagation();
@@ -116,23 +119,17 @@ export function EmailList({
         )}
       >
         {/* Toolbar */}
-        <div
-          className={cn(
-            'flex shrink-0 items-center gap-3 border-b px-4 py-2',
-            dash.border,
-            'bg-[#f6f8fc] dark:bg-[#202124]'
-          )}
-        >
-          <div className="flex gap-0.5 rounded-full bg-[#e8eaed]/80 p-0.5 dark:bg-[#303134]">
+        <div className={cn('flex shrink-0 items-center gap-3 px-4 py-2.5', dash.glassToolbar)}>
+          <div className="flex gap-0.5 rounded-lg border border-[#E9E9E7] bg-[#F7F7F5] p-0.5 dark:border-[#3c4043] dark:bg-[#303134]">
             {(['ALL', 'URGENT', 'IMPORTANT'] as const).map((f) => (
               <button
                 key={f}
                 type="button"
                 onClick={() => setFilter(f)}
                 className={cn(
-                  'rounded-full px-3 py-1 text-xs font-medium transition-all',
+                  'rounded-md px-3 py-1.5 text-xs font-medium transition-all',
                   filter === f
-                    ? 'bg-white text-[#202124] shadow-sm dark:bg-[#3c4043] dark:text-[#e8eaed]'
+                    ? 'bg-white text-[#37352F] shadow-sm dark:bg-[#3c4043] dark:text-[#e8eaed] dark:shadow-none'
                     : cn(dash.textMuted, dash.hover)
                 )}
               >
@@ -162,7 +159,7 @@ export function EmailList({
               {density}
             </button>
             <span className={cn('hidden text-xs sm:inline', dash.textSubtle)}>
-              {refreshing ? 'Syncing…' : `${filtered.length}`}
+              {refreshing ? 'Syncing…' : `${displayEmails.length}`}
             </span>
             <button
               type="button"
@@ -177,13 +174,13 @@ export function EmailList({
 
         {/* Email rows */}
         <div className={cn('flex-1 overflow-y-auto', refreshing && emails.length > 0 && 'opacity-95')}>
-          {filtered.length === 0 ? (
+          {displayEmails.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center gap-3">
               <MailOpen size={40} className={dash.textMuted} strokeWidth={1.25} />
               <p className={cn('text-sm', dash.textMuted)}>No emails in {folder}</p>
             </div>
           ) : (
-            filtered.map((email) => {
+            displayEmails.map((email) => {
               const isTriaging = triaging.has(email.id);
               const isSelected = selectedEmail?.id === email.id;
               const isUnread = email.data?.unread !== false;
@@ -236,15 +233,21 @@ export function EmailList({
                         {from}
                       </span>
                       <span className={cn('min-w-0 truncate text-sm', dash.textMuted)}>
-                        <span className={isUnread ? 'font-medium text-[#202124] dark:text-[#e8eaed]' : ''}>
+                        <span className={isUnread ? cn('font-medium', dash.rowUnread) : ''}>
                           {subject}
                         </span>
+                        {(email as { messageCount?: number }).messageCount &&
+                          (email as { messageCount?: number }).messageCount! > 1 && (
+                            <span className={cn('ml-1 font-normal', dash.accent)}>
+                              ({(email as { messageCount?: number }).messageCount})
+                            </span>
+                          )}
                         {snippet && (
                           <span className="font-normal"> — {snippet}</span>
                         )}
                       </span>
                       {isTriaging && (
-                        <span className="shrink-0 text-[10px] text-[#8ab4f8]">Analyzing…</span>
+                        <span className={cn('shrink-0 text-[10px]', dash.accent)}>Analyzing…</span>
                       )}
                       {email.priority && email.priority !== 'FYI' && !isTriaging && (
                         <span
@@ -264,16 +267,22 @@ export function EmailList({
                           {from}
                         </span>
                         {isTriaging && (
-                          <span className="text-[10px] text-[#8ab4f8]">Analyzing…</span>
+                          <span className={cn('text-[10px]', dash.accent)}>Analyzing…</span>
                         )}
                       </div>
                       <div
                         className={cn(
                           'truncate text-sm',
-                          isUnread ? 'font-medium text-[#202124] dark:text-[#e8eaed]' : dash.textMuted
+                          isUnread ? dash.rowUnread : dash.textMuted
                         )}
                       >
                         {subject}
+                        {(email as { messageCount?: number }).messageCount &&
+                          (email as { messageCount?: number }).messageCount! > 1 && (
+                            <span className={cn('ml-1 font-normal', dash.accent)}>
+                              ({(email as { messageCount?: number }).messageCount})
+                            </span>
+                          )}
                       </div>
                       {d.showSnippet && snippet && (
                         <div className={cn('mt-0.5 truncate text-sm', dash.textSubtle)}>{snippet}</div>
@@ -312,7 +321,7 @@ export function EmailList({
                         className={cn(
                           'rounded-full p-2 transition-colors',
                           dash.textMuted,
-                          'hover:bg-[#e8eaed] hover:text-[#202124] dark:hover:bg-[#3c4043] dark:hover:text-[#e8eaed]'
+                          cn(dash.hover, dash.text)
                         )}
                         title={label}
                       >
@@ -335,7 +344,7 @@ export function EmailList({
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 12 }}
             transition={{ duration: 0.18 }}
-            className="flex flex-1 flex-col overflow-hidden border-l border-[#dadce0] dark:border-[#3c4043]"
+            className={cn('flex flex-1 flex-col overflow-hidden border-l', dash.border)}
           >
             <EmailDetail
               email={selectedEmail}
