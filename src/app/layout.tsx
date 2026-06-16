@@ -6,10 +6,23 @@ import ToastProvider from "@/components/ui/ToastProvider";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Relvion AI — Your Intelligent Email Client",
-  description: "Superhuman-style email and calendar client powered by Corsair + Gemini AI",
+  title: "Relvion AI — Intelligent Email & Calendar Workspace",
+  description: "Relvion AI unifies email, calendar, and a dedicated AI agent into one focused workspace.",
   icons: {
-    icon: "/favicon.ico",
+    icon: [
+      {
+        url: "/brand/icon-light.svg",
+        type: "image/svg+xml",
+        media: "(prefers-color-scheme: light)",
+      },
+      {
+        url: "/brand/icon-dark.svg",
+        type: "image/svg+xml",
+        media: "(prefers-color-scheme: dark)",
+      },
+    ],
+    apple: "/brand/apple-icon.svg",
+    shortcut: "/brand/icon-dark.svg",
   },
 };
 
@@ -19,8 +32,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.className} antialiased dark`}>
-      <body className="flex flex-col bg-[#FFF9C4] text-red-900 min-h-screen">
+    <html lang="en" className={`${inter.className} antialiased dark`} suppressHydrationWarning>
+      <body className="flex min-h-screen flex-col">
         {children}
         <ToastProvider />
       </body>

@@ -1,7 +1,12 @@
 'use client';
-import { useState, useEffect } from 'react';
+
+import { useState, useEffect, useRef } from 'react';
 import { Archive, Trash2, Star, Reply, X, Send, Loader2 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
+import { cn } from '@/lib/utils';
+import { dash } from '@/components/dashboard/theme';
+import type { EmailShortcutHandlers } from '@/hooks/useKeyboardShortcuts';
 
 interface FullBody {
   text: string;
@@ -12,10 +17,12 @@ export function EmailDetail({
   email,
   onClose,
   onRefresh,
+  onRegisterShortcuts,
 }: {
   email: any;
   onClose: () => void;
   onRefresh?: () => void;
+  onRegisterShortcuts?: (handlers: EmailShortcutHandlers | null) => void;
 }) {
   const [showReply, setShowReply] = useState(false);
   const [replyBody, setReplyBody] = useState('');
@@ -23,14 +30,14 @@ export function EmailDetail({
   const [isActing, setIsActing] = useState(false);
   const [fullBody, setFullBody] = useState<FullBody | null>(null);
   const [bodyLoading, setBodyLoading] = useState(false);
-  // Enriched header data from full message fetch
   const [fullMeta, setFullMeta] = useState<{
     from?: string;
     fromEmail?: string;
     subject?: string;
   } | null>(null);
+  const showReplyRef = useRef(showReply);
+  showReplyRef.current = showReply;
 
-  // Fetch full message body + headers when email is selected
   useEffect(() => {
     if (!email?.id) return;
     setFullBody(null);
@@ -38,12 +45,10 @@ export function EmailDetail({
     setBodyLoading(true);
 
     fetch(`/api/gmail/message/${email.id}`)
-      .then(r => r.json())
-      .then(data => {
+      .then((r) => r.json())
+      .then((data) => {
         if (data.body) setFullBody(data.body);
-        // Capture enriched header data (real email address, full subject)
         if (data.from || data.subject) {
-          // Extract the email address from the full From header
           const rawFrom: string = data.from || '';
           const addrMatch = rawFrom.match(/<([^>]+)>/);
           const fromEmail = addrMatch ? addrMatch[1].trim() : rawFrom.trim();
@@ -57,11 +62,55 @@ export function EmailDetail({
           });
         }
       })
-      .catch(() => {
-        // Non-fatal — fall back to list metadata
-      })
+      .catch(() => {})
       .finally(() => setBodyLoading(false));
   }, [email?.id]);
+
+  useEffect(() => {
+    if (!onRegisterShortcuts) return;
+
+    const runAction = async (action: string) => {
+      setIsActing(true);
+      try {
+        const res = await fetch('/api/gmail/action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: email.id, action }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Action failed');
+        toast.success(
+          action === 'archive'
+            ? 'Archived!'
+            : action === 'trash'
+              ? 'Moved to trash!'
+              : action === 'star'
+                ? 'Starred!'
+                : 'Done!'
+        );
+        if (action === 'archive' || action === 'trash') {
+          onClose();
+          onRefresh?.();
+        }
+      } catch (err: any) {
+        toast.error(err.message || 'Action failed');
+      } finally {
+        setIsActing(false);
+      }
+    };
+
+    onRegisterShortcuts({
+      archive: () => void runAction('archive'),
+      trash: () => void runAction('trash'),
+      star: () => void runAction('star'),
+      reply: () => {
+        if (!showReplyRef.current) setShowReply(true);
+      },
+      close: onClose,
+    });
+
+    return () => onRegisterShortcuts(null);
+  }, [email?.id, onClose, onRefresh, onRegisterShortcuts]);
 
   if (!email) return null;
 
@@ -76,13 +125,7 @@ export function EmailDetail({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Action failed');
       toast.success(
-        action === 'archive'
-          ? 'Archived!'
-          : action === 'trash'
-          ? 'Moved to trash!'
-          : action === 'star'
-          ? 'Starred!'
-          : 'Done!'
+        action === 'archive' ? 'Archived!' : action === 'trash' ? 'Moved to trash!' : action === 'star' ? 'Starred!' : 'Done!'
       );
       if (action === 'archive' || action === 'trash') {
         onClose();
@@ -99,19 +142,12 @@ export function EmailDetail({
     if (!replyBody.trim()) return;
     setIsSending(true);
     try {
-      // Prefer the real email address from the full message fetch (fullMeta),
-      // then fall back to the fromEmail set by the list route, then the raw from
-      const replyTo =
-        fullMeta?.fromEmail ||
-        email.data?.fromEmail ||
-        email.data?.from ||
-        '';
+      const replyTo = fullMeta?.fromEmail || email.data?.fromEmail || email.data?.from || '';
       if (!replyTo || replyTo === 'Unknown Sender') {
         toast.error('Cannot reply: sender email address is unknown.');
         return;
       }
-      const replySubject =
-        fullMeta?.subject || email.data?.subject || '(no subject)';
+      const replySubject = fullMeta?.subject || email.data?.subject || '(no subject)';
       const res = await fetch('/api/gmail/reply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -134,13 +170,11 @@ export function EmailDetail({
     }
   };
 
-
-  // Render body content: prefer full HTML → plain text → snippet
   const renderBody = () => {
     if (bodyLoading) {
       return (
-        <div className="flex items-center gap-2 text-green-800 text-sm py-8">
-          <Loader2 size={16} className="animate-spin" />
+        <div className={cn('flex items-center gap-2 py-8 text-sm', dash.textMuted)}>
+          <Loader2 size={16} className="animate-spin text-[#8ab4f8]" />
           Loading full message…
         </div>
       );
@@ -150,12 +184,11 @@ export function EmailDetail({
         <iframe
           srcDoc={fullBody.html}
           sandbox="allow-same-origin"
-          className="w-full min-h-[300px] border-0 bg-white rounded-lg"
+          className="min-h-[300px] w-full rounded-xl border-0 bg-white"
           style={{ colorScheme: 'light' }}
-          onLoad={e => {
+          onLoad={(e) => {
             const iframe = e.currentTarget;
-            iframe.style.height =
-              (iframe.contentDocument?.body?.scrollHeight || 300) + 'px';
+            iframe.style.height = (iframe.contentDocument?.body?.scrollHeight || 300) + 'px';
           }}
           title="Email body"
         />
@@ -163,115 +196,145 @@ export function EmailDetail({
     }
     if (fullBody?.text) {
       return (
-        <pre className="text-red-700 leading-relaxed text-sm whitespace-pre-wrap font-sans">
+        <pre className={cn('whitespace-pre-wrap font-sans text-sm leading-relaxed', dash.text)}>
           {fullBody.text}
         </pre>
       );
     }
     return (
-      <p className="text-green-900 leading-relaxed text-sm whitespace-pre-wrap">
+      <p className={cn('whitespace-pre-wrap text-sm leading-relaxed', dash.textMuted)}>
         {email.data?.body || email.snippet || '(No content available)'}
       </p>
     );
   };
 
+  const ActionBtn = ({
+    onClick,
+    title,
+    children,
+  }: {
+    onClick: () => void;
+    title: string;
+    children: React.ReactNode;
+  }) => (
+    <motion.button
+      type="button"
+      whileHover={{ scale: 1.08 }}
+      whileTap={{ scale: 0.92 }}
+      onClick={onClick}
+      disabled={isActing}
+      title={title}
+      className={cn('rounded-lg p-2 transition-colors', dash.hover, dash.textMuted, 'hover:text-[#8ab4f8]')}
+    >
+      {children}
+    </motion.button>
+  );
+
   return (
-    <div className="w-1/2 border-l border-[#FBC02D] bg-[#FFF59D] h-full flex flex-col overflow-hidden">
-      {/* Action Bar */}
-      <div className="h-[60px] border-b border-[#FBC02D] flex items-center justify-between px-4 shrink-0 bg-[#FFF9C4]">
-        <div className="flex items-center gap-1 text-green-900">
-          <button
-            onClick={() => doAction('archive')}
-            disabled={isActing}
-            className="p-2 hover:bg-[#FFEE58] hover:text-red-800 rounded-lg transition-colors"
-            title="Archive (e)"
-          >
+    <div
+      className={cn('flex h-full flex-1 flex-col overflow-hidden border-l', dash.surface, dash.border)}
+    >
+      <div
+        className={cn(
+          'flex h-14 shrink-0 items-center justify-between border-b px-4',
+          dash.elevated,
+          dash.border
+        )}
+      >
+        <div className="flex items-center gap-0.5">
+          <ActionBtn onClick={() => doAction('archive')} title="Archive (e)">
             <Archive size={18} />
-          </button>
-          <button
-            onClick={() => doAction('trash')}
-            disabled={isActing}
-            className="p-2 hover:bg-[#FFEE58] hover:text-red-400 rounded-lg transition-colors"
-            title="Trash (#)"
-          >
+          </ActionBtn>
+          <ActionBtn onClick={() => doAction('trash')} title="Trash (#)">
             <Trash2 size={18} />
-          </button>
-          <div className="w-px h-5 bg-[#FBC02D] mx-1" />
-          <button
-            onClick={() => doAction('star')}
-            disabled={isActing}
-            className="p-2 hover:bg-[#FFEE58] hover:text-[#D32F2F] rounded-lg transition-colors"
-            title="Star (s)"
-          >
+          </ActionBtn>
+          <div className={cn('mx-1 h-5 w-px', 'bg-[#dadce0] dark:bg-white/10')} />
+          <ActionBtn onClick={() => doAction('star')} title="Star (s)">
             <Star size={18} />
-          </button>
-          <button
-            onClick={() => setShowReply(r => !r)}
-            className="p-2 hover:bg-[#FFEE58] hover:text-[#D32F2F] rounded-lg transition-colors"
-            title="Reply (r)"
-          >
+          </ActionBtn>
+          <ActionBtn onClick={() => setShowReply((r) => !r)} title="Reply (r)">
             <Reply size={18} />
-          </button>
+          </ActionBtn>
         </div>
-        <button
+        <motion.button
+          type="button"
+          whileHover={{ scale: 1.08 }}
+          whileTap={{ scale: 0.92 }}
           onClick={onClose}
-          className="p-2 hover:bg-[#FFEE58] text-green-900 hover:text-red-800 rounded-lg transition-colors"
+          className={cn('rounded-lg p-2 transition-colors', dash.hover, dash.textMuted)}
         >
           <X size={18} />
-        </button>
+        </motion.button>
       </div>
 
-      {/* Email Content */}
       <div className="flex-1 overflow-y-auto p-6">
-        <h1 className="text-xl font-bold text-red-900 mb-4">
+        <motion.h1
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={cn('mb-5 text-xl font-bold tracking-tight', dash.text)}
+        >
           {fullMeta?.subject || email.data?.subject || '(no subject)'}
-        </h1>
+        </motion.h1>
 
-        <div className="flex items-start gap-4 mb-6">
-          <div className="w-10 h-10 rounded-full bg-[#FFEE58] border border-[#D32F2F] flex items-center justify-center font-bold text-[#D32F2F] text-sm shrink-0">
-            {(fullMeta?.from || email.data?.from || 'U').charAt(0).toUpperCase()}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="mb-6 flex items-start gap-4"
+        >
+          <div className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-bold uppercase', dash.avatar)}>
+            {(fullMeta?.from || email.data?.from || 'U').charAt(0)}
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-semibold text-red-800">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={cn('font-semibold', dash.text)}>
                 {fullMeta?.from || email.data?.from || 'Unknown'}
               </span>
               {(fullMeta?.fromEmail || email.data?.fromEmail) && (
-                <span className="text-green-700 text-xs">
+                <span className={cn('text-xs', dash.textSubtle)}>
                   &lt;{fullMeta?.fromEmail || email.data?.fromEmail}&gt;
                 </span>
               )}
-              <span className="text-green-800 text-xs">to me</span>
+              <span className={cn('text-xs', dash.textSubtle)}>to me</span>
             </div>
-            <div className="text-xs text-green-800 mt-0.5">
-              {email.data?.date
-                ? new Date(email.data.date).toLocaleString()
-                : 'No date'}
+            <div className={cn('mt-0.5 text-xs', dash.textSubtle)}>
+              {email.data?.date ? new Date(email.data.date).toLocaleString() : 'No date'}
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {email.priority && email.priority !== 'FYI' && (
-          <div
-            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold mb-4 ${
+          <span
+            className={cn(
+              'mb-4 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold',
               email.priority === 'URGENT'
-                ? 'bg-red-500/20 text-red-400'
-                : 'bg-blue-500/20 text-blue-400'
-            }`}
+                ? 'bg-red-500/15 text-red-500'
+                : 'bg-blue-500/15 text-blue-500'
+            )}
           >
             {email.priority}
-          </div>
+          </span>
         )}
 
-        <div className="border-t border-[#FBC02D] pt-4">{renderBody()}</div>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.1 }}
+          className={cn('border-t pt-5', dash.border)}
+        >
+          {renderBody()}
+        </motion.div>
       </div>
 
-      {/* Inline Reply Box */}
       {showReply && (
-        <div className="border-t border-[#FBC02D] p-4 bg-[#FFF9C4] shrink-0">
-          <div className="text-xs text-green-800 mb-2">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={cn('shrink-0 border-t p-4', dash.elevated, dash.border)}
+        >
+          <div className={cn('mb-2 text-xs', dash.textSubtle)}>
             Replying to{' '}
-            <span className="text-red-700">
+            <span className="text-[#8ab4f8]">
               {fullMeta?.from || email.data?.from || 'sender'}
               {(fullMeta?.fromEmail || email.data?.fromEmail) && (
                 <> ({fullMeta?.fromEmail || email.data?.fromEmail})</>
@@ -280,47 +343,64 @@ export function EmailDetail({
           </div>
           <textarea
             value={replyBody}
-            onChange={e => setReplyBody(e.target.value)}
-            className="w-full bg-[#FFEE58] border border-[#FBC02D] rounded-xl p-3 text-sm text-red-800 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-[#D32F2F] resize-none"
+            onChange={(e) => setReplyBody(e.target.value)}
+            className={cn(
+              'w-full resize-none rounded-xl border p-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#8ab4f8]/25',
+              dash.input,
+              dash.text
+            )}
             rows={4}
             placeholder="Write your reply…"
             autoFocus
           />
-          <div className="flex items-center gap-3 mt-3">
-            <button
+          <div className="mt-3 flex items-center gap-3">
+            <motion.button
+              type="button"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={sendReply}
               disabled={isSending || !replyBody.trim()}
-              className="bg-[#D32F2F] hover:bg-[#C62828] text-[#FFF9C4] font-semibold py-1.5 px-5 rounded-lg text-sm flex items-center gap-2 disabled:opacity-50"
+              className={cn(
+                'flex items-center gap-2 rounded-xl px-5 py-2 text-sm font-semibold text-white disabled:opacity-50',
+                dash.accentBg
+              )}
             >
               <Send size={14} />
               {isSending ? 'Sending…' : 'Send Reply'}
-            </button>
+            </motion.button>
             <button
+              type="button"
               onClick={() => {
                 setShowReply(false);
                 setReplyBody('');
               }}
-              className="text-green-800 hover:text-red-700 text-sm"
+              className={cn('text-sm transition-colors', dash.textMuted, 'hover:text-[#8ab4f8]')}
             >
               Cancel
             </button>
           </div>
-        </div>
+        </motion.div>
       )}
 
-      {/* Keyboard hints */}
-      <div className="border-t border-[#FBC02D] px-4 py-2 flex items-center gap-4 text-xs text-green-700 bg-[#FFF9C4] shrink-0">
+      <div
+        className={cn(
+          'flex shrink-0 items-center gap-4 border-t px-4 py-2 text-xs',
+          dash.elevated,
+          dash.border,
+          dash.textSubtle
+        )}
+      >
         <span>
-          <kbd className="border border-[#FBC02D] rounded px-1">e</kbd> Archive
+          <kbd className={cn('rounded border px-1', dash.border)}>e</kbd> Archive
         </span>
         <span>
-          <kbd className="border border-[#FBC02D] rounded px-1">#</kbd> Trash
+          <kbd className={cn('rounded border px-1', dash.border)}>#</kbd> Trash
         </span>
         <span>
-          <kbd className="border border-[#FBC02D] rounded px-1">r</kbd> Reply
+          <kbd className={cn('rounded border px-1', dash.border)}>r</kbd> Reply
         </span>
         <span>
-          <kbd className="border border-[#FBC02D] rounded px-1">s</kbd> Star
+          <kbd className={cn('rounded border px-1', dash.border)}>s</kbd> Star
         </span>
       </div>
     </div>

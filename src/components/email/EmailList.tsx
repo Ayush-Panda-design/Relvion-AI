@@ -1,338 +1,324 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
-import { Star, Archive, Trash2, RefreshCw } from 'lucide-react';
+
+import { useState, useEffect, useRef } from 'react';
+import {
+  Star,
+  Archive,
+  Trash2,
+  RefreshCw,
+  MailOpen,
+  AlignJustify,
+  Rows3,
+  LayoutList,
+} from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { EmailDetail } from './EmailDetail';
 import toast from 'react-hot-toast';
+import { cn } from '@/lib/utils';
+import { dash, densityTokens } from '@/components/dashboard/theme';
+import { useDensity } from '@/components/dashboard/DensityProvider';
+import { ContentProgress } from '@/components/ui/ContentProgress';
+import { useFolderEmails } from '@/hooks/useFolderEmails';
+import type { EmailShortcutHandlers } from '@/hooks/useKeyboardShortcuts';
 
 const PRIORITY_COLORS: Record<string, string> = {
-  URGENT: 'text-red-400 bg-red-500/10 border-red-500/20',
-  IMPORTANT: 'text-blue-400 bg-blue-500/10 border-blue-500/20',
-  FYI: 'text-green-800 bg-slate-500/10 border-slate-500/20',
+  URGENT: 'bg-red-500/10 text-red-400 border-red-500/20',
+  IMPORTANT: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+  FYI: 'bg-stone-500/10 text-stone-400 border-stone-500/20',
 };
 
-export function EmailList({ folder }: { folder: string }) {
-  const [emails, setEmails] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+function EmailListSkeleton() {
+  return (
+    <div className={cn('h-full space-y-0.5 px-2 py-2', dash.bg)}>
+      {[1, 2, 3, 4, 5, 6].map((i) => (
+        <div
+          key={i}
+          className={cn('flex items-center gap-3 rounded-xl px-4 py-3', 'dark:bg-[#292a2d]/50')}
+        >
+          <div className="h-10 w-10 animate-pulse rounded-full bg-[#3c4043]/50" />
+          <div className="flex-1 space-y-2">
+            <div className="h-3 w-1/4 animate-pulse rounded bg-[#3c4043]/50" />
+            <div className="h-3 w-3/4 animate-pulse rounded bg-[#3c4043]/40" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function EmailList({
+  folder,
+  onRegisterRefresh,
+  onRegisterEmailShortcuts,
+}: {
+  folder: string;
+  onRegisterRefresh?: (fn: () => void) => void;
+  onRegisterEmailShortcuts?: (handlers: EmailShortcutHandlers | null) => void;
+}) {
+  const { emails, loading, refreshing, triaging, fetchEmails } = useFolderEmails(folder);
+  const { density, setDensity } = useDensity();
+  const d = densityTokens[density];
   const [filter, setFilter] = useState<'ALL' | 'URGENT' | 'IMPORTANT'>('ALL');
   const [selectedEmail, setSelectedEmail] = useState<any>(null);
-  const [triaging, setTriaging] = useState<Set<string>>(new Set());
 
-  const fetchEmails = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/gmail/list?folder=${folder}`);
-      if (!res.ok) throw new Error('Failed to load emails');
-      const data = await res.json();
-      const fetched: any[] = data.emails || [];
-      setEmails(fetched);
-
-      // Trigger embedding ingestion in background (non-blocking)
-      if (fetched.length > 0) {
-        fetch('/api/gmail/embed', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ emails: fetched }),
-        }).catch(() => {});
-      }
-
-      // Triage each email sequentially (100ms spacing to respect rate limits)
-      setTriaging(new Set(fetched.map((e: any) => e.id)));
-      const triageEmails = async () => {
-        for (const email of fetched) {
-          try {
-            const res = await fetch('/api/gmail/triage', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                subject: email.data?.subject,
-                body: email.data?.body || '',
-                sender: email.data?.from,
-              }),
-            });
-            if (res.ok) {
-              const { priority } = await res.json();
-              setEmails(prev =>
-                prev.map(e => (e.id === email.id ? { ...e, priority } : e))
-              );
-            }
-          } catch {
-            // Non-fatal
-          } finally {
-            setTriaging(prev => {
-              const next = new Set(prev);
-              next.delete(email.id);
-              return next;
-            });
-          }
-          await new Promise(resolve => setTimeout(resolve, 100));
-        }
-      };
-      triageEmails();
-    } catch (e) {
-      toast.error('Failed to load emails. Check your connection.');
-    } finally {
-      setLoading(false);
-    }
+  useEffect(() => {
+    setSelectedEmail(null);
+    setFilter('ALL');
   }, [folder]);
 
+  const fetchRef = useRef(fetchEmails);
+  fetchRef.current = fetchEmails;
+
   useEffect(() => {
-    fetchEmails();
-  }, [fetchEmails]);
+    onRegisterRefresh?.(() => fetchRef.current({ silent: true }));
+  }, [onRegisterRefresh]);
 
-  // SSE subscription — auto-refresh when new email arrives or is deleted
   useEffect(() => {
-    const es = new EventSource('/api/events');
-    es.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data);
-        if (
-          msg.type === 'EMAIL_RECEIVED' ||
-          msg.type === 'EMAIL_UPDATED' ||
-          msg.type === 'EMAIL_DELETED'
-        ) {
-          fetchEmails();
-        }
-      } catch {}
-    };
-    es.onerror = () => {
-      // SSE connection dropped — will auto-reconnect; no user action needed
-    };
-    return () => es.close();
-  }, [fetchEmails]);
+    onRegisterEmailShortcuts?.(null);
+  }, [folder, onRegisterEmailShortcuts]);
 
-  // Keyboard shortcuts for email detail view
   useEffect(() => {
-    if (!selectedEmail) return;
-    const handler = async (e: KeyboardEvent) => {
-      if (
-        e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLTextAreaElement
-      )
-        return;
-      if (e.key === 'Escape') {
-        setSelectedEmail(null);
-        return;
-      }
-      if (e.key === 'e') {
-        const res = await fetch('/api/gmail/action', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: selectedEmail.id, action: 'archive' }),
-        });
-        if (res.ok) {
-          toast.success('Archived');
-          setSelectedEmail(null);
-          fetchEmails();
-        }
-      }
-      if (e.key === '#') {
-        const res = await fetch('/api/gmail/action', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: selectedEmail.id, action: 'trash' }),
-        });
-        if (res.ok) {
-          toast.success('Moved to trash');
-          setSelectedEmail(null);
-          fetchEmails();
-        }
-      }
-      if (e.key === 's') {
-        const res = await fetch('/api/gmail/action', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id: selectedEmail.id, action: 'star' }),
-        });
-        if (res.ok) toast.success('Starred');
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [selectedEmail, fetchEmails]);
+    return () => onRegisterEmailShortcuts?.(null);
+  }, [onRegisterEmailShortcuts]);
 
-  const filtered =
-    filter === 'ALL' ? emails : emails.filter(e => e.priority === filter);
+  const filtered = filter === 'ALL' ? emails : emails.filter((e) => e.priority === filter);
 
-  if (loading) {
-    return (
-      <div className="p-4 space-y-2">
-        {[1, 2, 3, 4, 5].map(i => (
-          <div
-            key={i}
-            className="animate-pulse flex items-center p-4 bg-[#FFEE58] rounded-xl gap-4"
-          >
-            <div className="w-10 h-10 bg-[#FBC02D] rounded-full" />
-            <div className="flex-1 space-y-2">
-              <div className="h-4 bg-[#FBC02D] rounded w-1/4" />
-              <div className="h-3 bg-[#FBC02D] rounded w-3/4" />
-            </div>
-          </div>
-        ))}
-      </div>
-    );
+  const runAction = (e: React.MouseEvent, id: string, action: string, label: string) => {
+    e.stopPropagation();
+    fetch('/api/gmail/action', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, action }),
+    }).then(() => {
+      toast.success(label);
+      if (action !== 'star') fetchEmails({ silent: true });
+    });
+  };
+
+  const cycleDensity = () => {
+    const order: typeof density[] = ['default', 'comfortable', 'compact'];
+    const next = order[(order.indexOf(density) + 1) % order.length];
+    setDensity(next);
+  };
+
+  if (loading && emails.length === 0) {
+    return <EmailListSkeleton />;
   }
 
   return (
-    <div className={`flex h-full ${selectedEmail ? '' : ''}`}>
-      {/* Email List Panel */}
+    <div className={cn('relative flex h-full', dash.bg)}>
+      <ContentProgress active={refreshing} />
+
       <div
-        className={`${
-          selectedEmail ? 'w-1/2' : 'w-full'
-        } flex flex-col border-r border-[#FBC02D] overflow-hidden`}
+        className={cn(
+          'flex flex-col overflow-hidden transition-[width] duration-200',
+          selectedEmail ? 'w-[42%] min-w-[300px]' : 'w-full'
+        )}
       >
         {/* Toolbar */}
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-[#FBC02D] bg-[#FFF9C4] shrink-0">
-          <div className="flex gap-1 bg-[#FFEE58] rounded-xl p-1">
-            {(['ALL', 'URGENT', 'IMPORTANT'] as const).map(f => (
+        <div
+          className={cn(
+            'flex shrink-0 items-center gap-3 border-b px-4 py-2',
+            dash.border,
+            'bg-[#f6f8fc] dark:bg-[#202124]'
+          )}
+        >
+          <div className="flex gap-0.5 rounded-full bg-[#e8eaed]/80 p-0.5 dark:bg-[#303134]">
+            {(['ALL', 'URGENT', 'IMPORTANT'] as const).map((f) => (
               <button
                 key={f}
+                type="button"
                 onClick={() => setFilter(f)}
-                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                className={cn(
+                  'rounded-full px-3 py-1 text-xs font-medium transition-all',
                   filter === f
-                    ? 'bg-[#D32F2F] text-[#FFF9C4]'
-                    : 'text-green-900 hover:text-red-800'
-                }`}
+                    ? 'bg-white text-[#202124] shadow-sm dark:bg-[#3c4043] dark:text-[#e8eaed]'
+                    : cn(dash.textMuted, dash.hover)
+                )}
               >
                 {f}
               </button>
             ))}
           </div>
-          <div className="ml-auto flex items-center gap-2">
-            <span className="text-xs text-green-800">
-              {filtered.length} emails
+
+          <div className="ml-auto flex items-center gap-1">
+            <button
+              type="button"
+              onClick={cycleDensity}
+              title={`Density: ${density}`}
+              className={cn(
+                'flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs capitalize transition-colors',
+                dash.hover,
+                dash.textMuted
+              )}
+            >
+              {density === 'compact' ? (
+                <AlignJustify size={14} />
+              ) : density === 'comfortable' ? (
+                <Rows3 size={14} />
+              ) : (
+                <LayoutList size={14} />
+              )}
+              {density}
+            </button>
+            <span className={cn('hidden text-xs sm:inline', dash.textSubtle)}>
+              {refreshing ? 'Syncing…' : `${filtered.length}`}
             </span>
             <button
-              onClick={fetchEmails}
-              className="p-1.5 hover:bg-[#FFEE58] rounded-lg text-green-900 hover:text-red-800 transition-colors"
+              type="button"
+              onClick={() => fetchEmails({ silent: emails.length > 0 })}
+              className={cn('rounded-full p-2 transition-colors', dash.hover, dash.textMuted)}
               title="Refresh"
             >
-              <RefreshCw size={14} />
+              <RefreshCw size={15} className={refreshing ? 'animate-spin' : ''} />
             </button>
           </div>
         </div>
 
-        {/* Email Items */}
-        <div className="flex-1 overflow-y-auto">
+        {/* Email rows */}
+        <div className={cn('flex-1 overflow-y-auto', refreshing && emails.length > 0 && 'opacity-95')}>
           {filtered.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-green-800 gap-2">
-              <div className="text-4xl">📭</div>
-              <p className="text-sm">No emails in {folder}</p>
+            <div className="flex h-full flex-col items-center justify-center gap-3">
+              <MailOpen size={40} className={dash.textMuted} strokeWidth={1.25} />
+              <p className={cn('text-sm', dash.textMuted)}>No emails in {folder}</p>
             </div>
           ) : (
-            filtered.map(email => {
+            filtered.map((email) => {
               const isTriaging = triaging.has(email.id);
               const isSelected = selectedEmail?.id === email.id;
+              const isUnread = email.data?.unread !== false;
+              const from = email.data?.from || 'Unknown';
+              const subject = email.data?.subject || '(no subject)';
+              const snippet = email.data?.body || '';
+              const dateStr = email.data?.date
+                ? new Date(email.data.date).toLocaleDateString(undefined, {
+                    month: 'short',
+                    day: 'numeric',
+                  })
+                : '';
+
               return (
                 <div
                   key={email.id}
                   onClick={() => setSelectedEmail(isSelected ? null : email)}
-                  className={`flex items-start p-4 cursor-pointer border-b border-[#FBC02D] transition-all group hover:bg-[#FFEE58] ${
-                    isSelected
-                      ? 'bg-[#FFEE58] border-l-2 border-l-[#D32F2F]'
-                      : ''
-                  }`}
+                  className={cn(
+                    'group relative flex cursor-pointer items-center transition-colors duration-150',
+                    d.rowPy,
+                    d.rowPx,
+                    d.gap,
+                    isSelected ? dash.rowActive : dash.hover,
+                    'border-b',
+                    dash.border
+                  )}
                 >
                   {/* Avatar */}
-                  <div className="w-9 h-9 rounded-full bg-[#FBC02D] border border-[#F9A825] flex items-center justify-center font-bold text-sm text-[#D32F2F] shrink-0 mr-3">
-                    {(email.data?.from || 'U').charAt(0).toUpperCase()}
+                  <div
+                    className={cn(
+                      'flex shrink-0 items-center justify-center rounded-full font-medium uppercase',
+                      d.avatar,
+                      dash.avatar
+                    )}
+                  >
+                    {from.charAt(0)}
                   </div>
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2 mb-0.5">
-                      <span className="font-semibold text-red-800 text-sm truncate">
-                        {email.data?.from || 'Unknown'}
+                  {/* Content */}
+                  {d.singleLine ? (
+                    <div className="flex min-w-0 flex-1 items-baseline gap-2 overflow-hidden pr-24">
+                      <span
+                        className={cn(
+                          'shrink-0 truncate',
+                          isUnread ? dash.rowUnread : dash.rowRead,
+                          'text-sm',
+                          density === 'compact' ? 'max-w-[120px]' : 'max-w-[160px]'
+                        )}
+                      >
+                        {from}
                       </span>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {isTriaging ? (
-                          <span className="text-xs text-green-700 animate-pulse">
-                            Analyzing…
-                          </span>
-                        ) : email.priority ? (
-                          <span
-                            className={`text-xs font-semibold px-1.5 py-0.5 rounded-full border ${
-                              PRIORITY_COLORS[email.priority] || ''
-                            }`}
-                          >
-                            {email.priority}
-                          </span>
-                        ) : null}
-                        <span className="text-xs text-green-800">
-                          {email.data?.date
-                            ? new Date(email.data.date).toLocaleDateString(
-                                undefined,
-                                { month: 'short', day: 'numeric' }
-                              )
-                            : ''}
+                      <span className={cn('min-w-0 truncate text-sm', dash.textMuted)}>
+                        <span className={isUnread ? 'font-medium text-[#202124] dark:text-[#e8eaed]' : ''}>
+                          {subject}
                         </span>
+                        {snippet && (
+                          <span className="font-normal"> — {snippet}</span>
+                        )}
+                      </span>
+                      {isTriaging && (
+                        <span className="shrink-0 text-[10px] text-[#8ab4f8]">Analyzing…</span>
+                      )}
+                      {email.priority && email.priority !== 'FYI' && !isTriaging && (
+                        <span
+                          className={cn(
+                            'shrink-0 rounded border px-1 py-0.5 text-[10px] font-medium',
+                            PRIORITY_COLORS[email.priority]
+                          )}
+                        >
+                          {email.priority}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="min-w-0 flex-1 pr-24">
+                      <div className="flex items-center gap-2">
+                        <span className={cn('truncate text-sm', isUnread ? dash.rowUnread : dash.rowRead)}>
+                          {from}
+                        </span>
+                        {isTriaging && (
+                          <span className="text-[10px] text-[#8ab4f8]">Analyzing…</span>
+                        )}
                       </div>
+                      <div
+                        className={cn(
+                          'truncate text-sm',
+                          isUnread ? 'font-medium text-[#202124] dark:text-[#e8eaed]' : dash.textMuted
+                        )}
+                      >
+                        {subject}
+                      </div>
+                      {d.showSnippet && snippet && (
+                        <div className={cn('mt-0.5 truncate text-sm', dash.textSubtle)}>{snippet}</div>
+                      )}
                     </div>
-                    <div className="text-sm text-red-700 font-medium truncate">
-                      {email.data?.subject || '(no subject)'}
-                    </div>
-                    <div className="text-xs text-green-800 truncate mt-0.5">
-                      {email.data?.body || ''}
-                    </div>
-                  </div>
+                  )}
 
-                  {/* Hover actions */}
-                  <div className="hidden group-hover:flex items-center gap-1 ml-2 shrink-0">
-                    <button
-                      onClick={e => {
-                        e.stopPropagation();
-                        fetch('/api/gmail/action', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({
-                            id: email.id,
-                            action: 'archive',
-                          }),
-                        }).then(() => {
-                          toast.success('Archived');
-                          fetchEmails();
-                        });
-                      }}
-                      className="p-1 hover:bg-[#FFF9C4] rounded text-green-800 hover:text-red-800"
-                      title="Archive"
-                    >
-                      <Archive size={14} />
-                    </button>
-                    <button
-                      onClick={e => {
-                        e.stopPropagation();
-                        fetch('/api/gmail/action', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({
-                            id: email.id,
-                            action: 'trash',
-                          }),
-                        }).then(() => {
-                          toast.success('Trashed');
-                          fetchEmails();
-                        });
-                      }}
-                      className="p-1 hover:bg-[#FFF9C4] rounded text-green-800 hover:text-red-400"
-                      title="Trash"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                    <button
-                      onClick={e => {
-                        e.stopPropagation();
-                        fetch('/api/gmail/action', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({
-                            id: email.id,
-                            action: 'star',
-                          }),
-                        }).then(() => toast.success('Starred'));
-                      }}
-                      className="p-1 hover:bg-[#FFF9C4] rounded text-green-800 hover:text-[#D32F2F]"
-                      title="Star"
-                    >
-                      <Star size={14} />
-                    </button>
+                  {/* Date — hides on hover */}
+                  <span
+                    className={cn(
+                      'absolute right-4 text-xs tabular-nums transition-opacity duration-150',
+                      dash.textSubtle,
+                      'group-hover:opacity-0'
+                    )}
+                  >
+                    {dateStr}
+                  </span>
+
+                  {/* Hover actions — Gmail style */}
+                  <div
+                    className={cn(
+                      'absolute right-3 flex items-center gap-0.5 rounded-full px-1 py-0.5',
+                      'opacity-0 transition-all duration-150 group-hover:opacity-100',
+                      'bg-[#f6f8fc]/90 dark:bg-[#303134]/95'
+                    )}
+                  >
+                    {[
+                      { action: 'archive', icon: Archive, label: 'Archived' },
+                      { action: 'trash', icon: Trash2, label: 'Trashed' },
+                      { action: 'star', icon: Star, label: 'Starred' },
+                    ].map(({ action, icon: Icon, label }) => (
+                      <button
+                        key={action}
+                        type="button"
+                        onClick={(e) => runAction(e, email.id, action, label)}
+                        className={cn(
+                          'rounded-full p-2 transition-colors',
+                          dash.textMuted,
+                          'hover:bg-[#e8eaed] hover:text-[#202124] dark:hover:bg-[#3c4043] dark:hover:text-[#e8eaed]'
+                        )}
+                        title={label}
+                      >
+                        <Icon size={16} strokeWidth={1.75} />
+                      </button>
+                    ))}
                   </div>
                 </div>
               );
@@ -341,14 +327,25 @@ export function EmailList({ folder }: { folder: string }) {
         </div>
       </div>
 
-      {/* Email Detail Pane */}
-      {selectedEmail && (
-        <EmailDetail
-          email={selectedEmail}
-          onClose={() => setSelectedEmail(null)}
-          onRefresh={fetchEmails}
-        />
-      )}
+      <AnimatePresence mode="wait">
+        {selectedEmail && (
+          <motion.div
+            key={selectedEmail.id}
+            initial={{ opacity: 0, x: 12 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 12 }}
+            transition={{ duration: 0.18 }}
+            className="flex flex-1 flex-col overflow-hidden border-l border-[#dadce0] dark:border-[#3c4043]"
+          >
+            <EmailDetail
+              email={selectedEmail}
+              onClose={() => setSelectedEmail(null)}
+              onRefresh={() => fetchEmails({ silent: true })}
+              onRegisterShortcuts={onRegisterEmailShortcuts}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

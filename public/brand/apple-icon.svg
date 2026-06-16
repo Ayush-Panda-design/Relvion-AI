@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" fill="none" role="img" aria-label="Relvion">
+  <rect width="180" height="180" rx="40" fill="#0a0a0a"/>
+  <rect width="180" height="180" rx="40" stroke="#ea580c" stroke-opacity="0.3" stroke-width="2"/>
+  <circle cx="90" cy="92" r="62" fill="url(#apple-glow)"/>
+  <path
+    d="M97 31L59 91h30l-6 58 44-66H97l6-52z"
+    fill="url(#apple-bolt)"
+  />
+  <defs>
+    <radialGradient id="apple-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(90 95) scale(62)">
+      <stop stop-color="#ea580c" stop-opacity="0.25"/>
+      <stop offset="1" stop-color="#ea580c" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="apple-bolt" x1="59" y1="31" x2="126" y2="149" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fdba74"/>
+      <stop offset="0.5" stop-color="#fb923c"/>
+      <stop offset="1" stop-color="#ea580c"/>
+    </linearGradient>
+  </defs>
+</svg>

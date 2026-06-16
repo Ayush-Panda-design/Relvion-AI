@@ -1,7 +1,27 @@
 'use client';
-import { Mail, Calendar, Settings, BarChart2, Inbox, Send, Archive, Trash, FileText, Clock } from 'lucide-react';
+
+import {
+  Calendar,
+  Settings,
+  BarChart2,
+  Inbox,
+  Send,
+  Archive,
+  Trash,
+  FileText,
+  PenLine,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { BrandMark } from '@/components/brand/BrandMark';
+import { cn } from '@/lib/utils';
+import { dash } from '@/components/dashboard/theme';
+import { prefetchFolderEmails } from '@/hooks/useFolderEmails';
+import { prefetchCalendarEvents } from '@/hooks/useCalendarEvents';
+import { prefetchJson } from '@/lib/client-cache';
 
 export function Sidebar({
   activeFolder,
@@ -14,25 +34,18 @@ export function Sidebar({
 }) {
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [profile, setProfile] = useState<{ email: string; name: string } | null>(null);
+  const [collapsed, setCollapsed] = useState(false);
 
-  // Fetch live counts for the sidebar badges
   useEffect(() => {
-    fetch('/api/gmail/counts')
-      .then(r => r.json())
-      .then(setCounts)
-      .catch(() => {});
+    fetch('/api/gmail/counts').then((r) => r.json()).then(setCounts).catch(() => {});
   }, []);
 
-  // Fetch user profile for the bottom section
   useEffect(() => {
     fetch('/api/gmail/profile')
-      .then(r => r.json())
-      .then(data => {
+      .then((r) => r.json())
+      .then((data) => {
         if (data.email) {
-          setProfile({
-            email: data.email,
-            name: data.email.split('@')[0], // Fallback name
-          });
+          setProfile({ email: data.email, name: data.email.split('@')[0] });
         }
       })
       .catch(() => {});
@@ -46,121 +59,195 @@ export function Sidebar({
     { name: 'trash', label: 'Trash', icon: Trash, count: counts.trash || 0 },
   ];
 
+  const NavItem = ({
+    active,
+    onClick,
+    href,
+    icon: Icon,
+    label,
+    count,
+  }: {
+    active: boolean;
+    onClick?: () => void;
+    href?: string;
+    icon: typeof Inbox;
+    label: string;
+    count?: number;
+  }) => {
+    const content = (
+      <>
+        {active && (
+          <span className="absolute inset-0 rounded-full bg-orange-600/15 dark:bg-orange-600/20" />
+        )}
+        <Icon size={20} strokeWidth={1.75} className={cn('relative z-10 shrink-0', active && 'text-[#8ab4f8]')} />
+        <AnimatePresence>
+          {!collapsed && (
+            <motion.span
+              initial={{ opacity: 0, width: 0 }}
+              animate={{ opacity: 1, width: 'auto' }}
+              exit={{ opacity: 0, width: 0 }}
+              className="relative z-10 flex flex-1 items-center justify-between overflow-hidden font-medium"
+            >
+              <span className={dash.text}>{label}</span>
+              {count !== undefined && count > 0 && (
+                <span className="text-xs font-medium text-[#8ab4f8]">{count}</span>
+              )}
+            </motion.span>
+          )}
+        </AnimatePresence>
+      </>
+    );
+
+    const className = cn(
+      'group relative flex w-full items-center gap-3 rounded-full px-4 py-2.5 text-sm transition-colors duration-150 text-left',
+      active ? dash.accentSoft : dash.textMuted,
+      !active && dash.hover
+    );
+
+    if (href) {
+      return (
+        <Link
+          href={href}
+          prefetch={false}
+          className={className}
+          onMouseEnter={() => {
+            if (href === '/analytics') prefetchJson('analytics', '/api/analytics');
+          }}
+        >
+          {content}
+        </Link>
+      );
+    }
+
+    return (
+      <motion.button
+        type="button"
+        onClick={onClick}
+        onMouseEnter={() => {
+          if (label === 'Calendar') prefetchCalendarEvents();
+          else if (['Inbox', 'Drafts', 'Sent', 'Spam', 'Trash'].includes(label)) {
+            const map: Record<string, string> = {
+              Inbox: 'inbox',
+              Drafts: 'drafts',
+              Sent: 'sent',
+              Spam: 'spam',
+              Trash: 'trash',
+            };
+            prefetchFolderEmails(map[label] || 'inbox');
+          }
+        }}
+        whileHover={{ scale: 1.01 }}
+        whileTap={{ scale: 0.99 }}
+        className={className}
+      >
+        {content}
+      </motion.button>
+    );
+  };
+
   return (
-    <aside className="w-[220px] bg-[#FFF59D] border-r border-[#FBC02D] flex flex-col h-screen">
-      <div className="p-4 flex items-center gap-2">
-        <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-          <div className="text-[#D32F2F]">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-            </svg>
-          </div>
-          <h1 className="font-bold text-lg text-red-900 tracking-tight">Relvion AI</h1>
+    <motion.aside
+      initial={false}
+      animate={{ width: collapsed ? 72 : 256 }}
+      transition={{ type: 'tween', duration: 0.2 }}
+      className={cn('flex h-screen shrink-0 flex-col border-r', dash.sidebar, dash.border)}
+    >
+      <div className={cn('flex items-center gap-2 p-3', collapsed ? 'justify-center' : 'px-4')}>
+        <Link href="/" className="flex items-center gap-2.5">
+          <BrandMark size={28} variant="auto" />
+          {!collapsed && (
+            <span className={cn('text-lg font-bold tracking-tight', dash.text)}>
+              Relvion<span className="text-[#8ab4f8]">.</span>
+            </span>
+          )}
         </Link>
       </div>
 
-      <div className="px-4 pb-4">
-        <button
-          onClick={() => {
-            if (onComposeClick) onComposeClick();
-          }}
-          className="w-full bg-[#D32F2F] hover:bg-[#C62828] text-[#FFF9C4] font-semibold py-2.5 rounded-xl transition-all shadow-[0_0_15px_rgba(201,168,76,0.3)] hover:shadow-[0_0_25px_rgba(201,168,76,0.5)] flex items-center justify-center gap-2"
+      <div className={cn('px-3 pb-2', collapsed && 'px-2')}>
+        <motion.button
+          type="button"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.97 }}
+          onClick={() => onComposeClick?.()}
+          className={cn(
+            'flex w-full items-center justify-center gap-2 rounded-2xl py-3 text-sm font-semibold transition-all',
+            dash.compose,
+            collapsed ? 'rounded-full px-0' : 'px-4'
+          )}
+          title="Compose"
         >
-          <span className="text-lg leading-none mb-0.5">+</span> Compose
-        </button>
+          <PenLine size={18} />
+          {!collapsed && <span>Compose</span>}
+        </motion.button>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-3 py-2 space-y-6">
+      <div className="flex-1 space-y-6 overflow-y-auto px-2 py-2">
         <div>
-          <h2 className="text-xs font-semibold text-green-800 uppercase tracking-wider mb-2 px-3">
-            Mail
-          </h2>
+          {!collapsed && (
+            <p className={cn('mb-1 px-3 text-[11px] font-semibold uppercase tracking-wider', dash.textSubtle)}>
+              Mail
+            </p>
+          )}
           <div className="space-y-0.5">
-            {folders.map(f => (
-              <button
+            {folders.map((f) => (
+              <NavItem
                 key={f.name}
-                onClick={() => onFolderChange(f.name)}
-                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all ${
-                  activeFolder === f.name
-                    ? 'bg-[#FFEE58] text-red-900 shadow-[0_0_10px_rgba(201,168,76,0.1)]'
-                    : 'text-green-900 hover:bg-[#FFEE58] hover:text-red-800'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <f.icon size={18} className={activeFolder === f.name ? 'text-[#D32F2F]' : ''} />
-                  <span className="text-sm font-medium">{f.label}</span>
-                </div>
-                {f.count > 0 && (
-                  <span
-                    className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${
-                      f.name === 'inbox' ? 'bg-[#D32F2F] text-[#FFF9C4]' : 'bg-[#FBC02D]'
-                    }`}
-                  >
-                    {f.count}
-                  </span>
-                )}
-              </button>
+                active={activeFolder === f.name}
+                href={`/dashboard?folder=${f.name}`}
+                icon={f.icon}
+                label={f.label}
+                count={f.count}
+              />
             ))}
           </div>
         </div>
 
         <div>
-          <h2 className="text-xs font-semibold text-green-800 uppercase tracking-wider mb-2 px-3">
-            Calendar
-          </h2>
-          <div className="space-y-0.5">
-            <button
-              onClick={() => onFolderChange('calendar')}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all ${
-                activeFolder === 'calendar'
-                  ? 'bg-[#FFEE58] text-red-900 shadow-[0_0_10px_rgba(201,168,76,0.1)]'
-                  : 'text-green-900 hover:bg-[#FFEE58] hover:text-red-800'
-              }`}
-            >
-              <Calendar size={18} className={activeFolder === 'calendar' ? 'text-[#D32F2F]' : ''} />
-              <span className="text-sm font-medium">Calendar</span>
-            </button>
-          </div>
+          {!collapsed && (
+            <p className={cn('mb-1 px-3 text-[11px] font-semibold uppercase tracking-wider', dash.textSubtle)}>
+              Apps
+            </p>
+          )}
+          <NavItem
+            active={activeFolder === 'calendar'}
+            href="/dashboard?folder=calendar"
+            icon={Calendar}
+            label="Calendar"
+          />
         </div>
 
         <div>
-          <h2 className="text-xs font-semibold text-green-800 uppercase tracking-wider mb-2 px-3">
-            Other
-          </h2>
-          <div className="space-y-0.5">
-            <Link
-              href="/analytics"
-              className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-green-900 hover:bg-[#FFEE58] hover:text-red-800 transition-all"
-            >
-              <BarChart2 size={18} />
-              <span className="text-sm font-medium">Analytics</span>
-            </Link>
-            <Link
-              href="/settings"
-              className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-green-900 hover:bg-[#FFEE58] hover:text-red-800 transition-all"
-            >
-              <Settings size={18} />
-              <span className="text-sm font-medium">Settings</span>
-            </Link>
-          </div>
+          {!collapsed && (
+            <p className={cn('mb-1 px-3 text-[11px] font-semibold uppercase tracking-wider', dash.textSubtle)}>
+              More
+            </p>
+          )}
+          <NavItem href="/analytics" active={activeFolder === 'analytics'} icon={BarChart2} label="Analytics" />
+          <NavItem href="/settings" active={activeFolder === 'settings'} icon={Settings} label="Settings" />
         </div>
       </div>
 
-      <div className="p-4 border-t border-[#FBC02D]">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-[#FFEE58] flex items-center justify-center font-semibold text-sm border border-[#D32F2F] uppercase">
-            {profile?.name ? profile.name.charAt(0) : 'U'}
+      <div className={cn('border-t p-3', dash.border)}>
+        <div className={cn('flex items-center gap-3', collapsed && 'justify-center')}>
+          <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold uppercase', dash.avatar)}>
+            {profile?.name?.charAt(0) || 'U'}
           </div>
-          <div className="flex flex-col min-w-0">
-            <span className="text-sm font-medium text-red-800 truncate">
-              {profile?.name || 'User'}
-            </span>
-            <span className="text-xs text-green-800 truncate">
-              {profile?.email || 'user@example.com'}
-            </span>
-          </div>
+          {!collapsed && (
+            <div className="min-w-0 flex-1">
+              <p className={cn('truncate text-sm font-medium', dash.text)}>{profile?.name || 'User'}</p>
+              <p className={cn('truncate text-xs', dash.textSubtle)}>{profile?.email || ''}</p>
+            </div>
+          )}
         </div>
+        <button
+          type="button"
+          onClick={() => setCollapsed((c) => !c)}
+          className={cn('mt-3 flex w-full items-center justify-center rounded-lg p-2 transition-colors', dash.hover, dash.textMuted)}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+        </button>
       </div>
-    </aside>
+    </motion.aside>
   );
 }
