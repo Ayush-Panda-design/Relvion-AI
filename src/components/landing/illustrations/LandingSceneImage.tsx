@@ -42,6 +42,7 @@ export function LandingSceneImage({
           alt={scene.alt}
           fill
           priority={priority}
+          unoptimized
           className="object-cover"
           sizes="(max-width: 768px) 100vw, 720px"
         />

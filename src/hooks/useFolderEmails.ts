@@ -25,6 +25,40 @@ const TRIAGE_CACHE_PREFIX = 'relvion:triage:';
 const TRIAGE_MAX = 8;
 const FOLDER_TTL = 3 * 60 * 1000;
 
+function cacheKeyFor(folder: string) {
+  return `emails:v5:${folder}`;
+}
+
+function isGoodSubject(subject?: string) {
+  return Boolean(subject && subject !== '(no subject)');
+}
+
+function isGoodFrom(from?: string) {
+  return Boolean(from && from !== 'Unknown Sender');
+}
+
+/** Keep richer metadata when a refresh returns partial rows. */
+function mergeEmailLists(prev: EmailItem[], next: EmailItem[]): EmailItem[] {
+  if (prev.length === 0) return next;
+  const prevById = new Map(prev.map((e) => [e.id, e]));
+  return next.map((e) => {
+    const old = prevById.get(e.id);
+    if (!old?.data || !e.data) return e;
+    return {
+      ...e,
+      data: {
+        ...e.data,
+        subject: isGoodSubject(e.data.subject) ? e.data.subject : old.data.subject,
+        from: isGoodFrom(e.data.from) ? e.data.from : old.data.from,
+        fromEmail: e.data.fromEmail || old.data.fromEmail,
+        date: e.data.date || old.data.date,
+        body: e.data.body || old.data.body,
+        unread: e.data.unread ?? old.data.unread,
+      },
+    };
+  });
+}
+
 function triageCacheKey(id: string) {
   return `${TRIAGE_CACHE_PREFIX}${id}`;
 }
@@ -50,6 +84,11 @@ function applyCachedPriorities(emails: EmailItem[]): EmailItem[] {
     const cached = readTriagePriority(e.id);
     return cached ? { ...e, priority: cached } : e;
   });
+}
+
+function readFolderCache(folder: string): EmailItem[] {
+  const hit = getCached<ListResponse>(cacheKeyFor(folder), FOLDER_TTL);
+  return hit?.emails?.length ? applyCachedPriorities(hit.emails) : [];
 }
 
 async function triageInBackground(
@@ -107,7 +146,7 @@ function scheduleEmbed(emails: EmailItem[]) {
 }
 
 export function prefetchFolderEmails(folder: string) {
-  const key = `emails:v2:${folder}`;
+  const key = cacheKeyFor(folder);
   if (getCached<ListResponse>(key, FOLDER_TTL)) return;
   fetch(`/api/gmail/list?folder=${folder}`)
     .then((r) => (r.ok ? r.json() : null))
@@ -119,10 +158,16 @@ export function prefetchFolderEmails(folder: string) {
     .catch(() => {});
 }
 
+export function prefetchAllMailFolders() {
+  for (const folder of ['inbox', 'drafts', 'sent', 'spam', 'trash']) {
+    prefetchFolderEmails(folder);
+  }
+}
+
 export function useFolderEmails(folder: string) {
-  const cacheKey = `emails:v2:${folder}`;
-  const [emails, setEmails] = useState<EmailItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cacheKey = cacheKeyFor(folder);
+  const [emails, setEmails] = useState<EmailItem[]>(() => readFolderCache(folder));
+  const [loading, setLoading] = useState(() => readFolderCache(folder).length === 0);
   const [refreshing, setRefreshing] = useState(false);
   const [triaging, setTriaging] = useState<Set<string>>(new Set());
   const emailsRef = useRef(emails);
@@ -152,11 +197,22 @@ export function useFolderEmails(folder: string) {
         if (data.error && !(data.emails?.length)) {
           throw new Error(data.error);
         }
-        const fetched = applyCachedPriorities(data.emails || []);
-        if (fetched.length > 0) {
+        const fetched = mergeEmailLists(
+          emailsRef.current,
+          applyCachedPriorities(data.emails || [])
+        );
+        const mostlyComplete =
+          fetched.length === 0 ||
+          fetched.filter(
+            (e) => isGoodSubject(e.data?.subject) && isGoodFrom(e.data?.from)
+          ).length /
+            fetched.length >=
+            0.85;
+
+        if (fetched.length > 0 && mostlyComplete) {
           setCached(cacheKey, { emails: fetched });
-        } else {
-          invalidateCache(`emails:v2:${folder}`);
+        } else if (fetched.length === 0) {
+          invalidateCache(`emails:v5:${folder}`);
         }
         setEmails(fetched);
 
@@ -186,16 +242,16 @@ export function useFolderEmails(folder: string) {
   );
 
   useEffect(() => {
-    const hit = getCached<ListResponse>(cacheKey, FOLDER_TTL);
-    if (hit?.emails?.length) {
-      setEmails(applyCachedPriorities(hit.emails));
+    const cached = readFolderCache(folder);
+    if (cached.length > 0) {
+      setEmails(cached);
       setLoading(false);
       fetchEmails({ silent: true });
     } else {
       setEmails([]);
       fetchEmails({ silent: false });
     }
-  }, [folder, cacheKey, fetchEmails]);
+  }, [folder, fetchEmails]);
 
   return { emails, loading, refreshing, triaging, fetchEmails };
 }

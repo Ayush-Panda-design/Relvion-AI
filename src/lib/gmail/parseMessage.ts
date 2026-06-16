@@ -45,6 +45,14 @@ function readHeader(headers: HeaderLike[], name: string): string {
   return '';
 }
 
+/** When Subject header is missing (rate limits / metadata quirks), infer from snippet. */
+export function inferSubjectFromSnippet(snippet: string): string {
+  if (!snippet?.trim()) return '';
+  const first = snippet.trim().split(/\r?\n/)[0]?.trim() ?? '';
+  if (/^(fwd?|re):\s*/i.test(first)) return first.slice(0, 160);
+  return '';
+}
+
 /** Unwrap Corsair / API envelopes until we reach a Gmail message object. */
 export function unwrapGmailMessage(msg: unknown): Record<string, unknown> | null {
   let current: unknown = msg;
@@ -94,7 +102,9 @@ export function parseGmailMessage(msg: unknown): ParsedMessage | null {
 
   const headers = collectHeaders(m);
   const rawFrom = readHeader(headers, 'From');
-  const subject = readHeader(headers, 'Subject');
+  let subject = readHeader(headers, 'Subject');
+  const snippet = typeof m.snippet === 'string' ? m.snippet : '';
+  if (!subject) subject = inferSubjectFromSnippet(snippet);
   const payload = (m.payload || {}) as Parameters<typeof extractBody>[0];
   const { text, html } = extractBody(payload);
 
@@ -102,13 +112,13 @@ export function parseGmailMessage(msg: unknown): ParsedMessage | null {
     id: m.id,
     threadId: typeof m.threadId === 'string' ? m.threadId : undefined,
     labelIds: Array.isArray(m.labelIds) ? (m.labelIds as string[]) : [],
-    snippet: typeof m.snippet === 'string' ? m.snippet : '',
+    snippet,
     subject: subject || '(no subject)',
     from: parseDisplayName(rawFrom),
     fromEmail: parseEmailAddress(rawFrom),
     to: readHeader(headers, 'To'),
     date: readHeader(headers, 'Date') || new Date().toISOString(),
-    body: (typeof m.snippet === 'string' ? m.snippet : '') || text || '',
+    body: snippet || text || '',
     bodyText: text,
     bodyHtml: html,
     isUnread: Array.isArray(m.labelIds) && (m.labelIds as string[]).includes('UNREAD'),

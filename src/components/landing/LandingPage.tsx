@@ -26,6 +26,7 @@ import { TextRevealCard } from "@/components/ui/text-reveal-card";
 import { InfiniteMovingCards } from "@/components/ui/infinite-moving-cards";
 import { BorderBeam } from "@/components/ui/border-beam";
 import { Card3D } from "@/components/ui/card-3d";
+import { TextGenerateEffect } from "@/components/ui/text-generate-effect";
 import { BrandMark } from "@/components/brand/BrandMark";
 import { WorkflowDiagram, ArchitectureDiagram, BeforeAfterFlow } from "@/components/landing/visuals/Diagrams";
 import { ImageShowcase, FeatureImage, DayInLifeDiagram } from "@/components/landing/visuals/Showcase";
@@ -51,6 +52,8 @@ import {
 import { PainPointsSection } from "./sections/PainPointsSection";
 import { ProductPreviewSection } from "./sections/ProductPreviewSection";
 import { KeyboardShortcutsSection } from "./sections/KeyboardShortcutsSection";
+import { LandingStatsBand } from "./sections/LandingStatsBand";
+import { WorkflowInsightCards } from "./sections/WorkflowInsightCards";
 
 import { SectionFloatingOrbs } from "@/components/landing/motion/SectionFloatingOrbs";
 import { LandingIllustration } from "@/components/landing/illustrations/LandingIllustration";
@@ -212,6 +215,21 @@ const faqs = [
   { q: "What integrations are supported?", a: "Gmail and Google Calendar at launch. More integrations are on the roadmap based on community feedback." },
 ];
 
+const architecturePoints = [
+  {
+    title: "OAuth-only access",
+    body: "Relvion never stores your Google password. Gmail and Calendar connect through scoped tokens you can revoke anytime.",
+  },
+  {
+    title: "Agent in the loop",
+    body: "Gemini summarizes and drafts inside your workspace — sends always require your explicit approval.",
+  },
+  {
+    title: "Your data stays in Google",
+    body: "Mail and events remain in your Google account. Relvion is the intelligent interface, not a migration tool.",
+  },
+];
+
 const testimonials = [
   { quote: "I stopped living in five tabs. Relvion is the first mail client that actually respects how I think.", name: "Jordan Lee", role: "Head of Product" },
   { quote: "The agent drafts are eerily accurate. I edit maybe one sentence and hit send.", name: "Maya Okonkwo", role: "Startup founder" },
@@ -299,12 +317,14 @@ export default function LandingPage({ session }: { session: SessionPayload | nul
   const tone = "light" as const;
 
   return (
-    <div suppressHydrationWarning className="relative min-h-screen scroll-pt-20 overflow-x-hidden bg-white">
+    <div suppressHydrationWarning className="relative min-h-screen scroll-pt-20 overflow-x-hidden bg-[#FAFBFC]">
       <LandingNav session={!!session} ctaHref={ctaHref} ctaLabel={ctaLabel} />
 
       <HeroSection ctaHref={ctaHref} ctaLabel={ctaLabel} />
 
       <Marquee tone="light" />
+
+      <LandingStatsBand />
 
       <PainPointsSection items={painPoints} />
 
@@ -358,6 +378,8 @@ export default function LandingPage({ session }: { session: SessionPayload | nul
         <BlurFade delay={0.2} className="mt-10">
           <BeforeAfterFlow isDark={isDark} />
         </BlurFade>
+
+        <WorkflowInsightCards />
       </section>
 
 
@@ -373,6 +395,19 @@ export default function LandingPage({ session }: { session: SessionPayload | nul
               Your data stays in Google. Relvion is the intelligent layer — triage, drafts, and scheduling without migrating your mail.
             </p>
           </BlurFade>
+          <div className="mt-10 grid gap-4 sm:grid-cols-3">
+            {architecturePoints.map((pt, i) => (
+              <BlurFade key={pt.title} delay={0.1 + i * 0.06}>
+                <motion.div
+                  whileHover={{ y: -4 }}
+                  className="rounded-2xl border border-[#E8EAED]/80 bg-white/70 p-5 shadow-sm"
+                >
+                  <h3 className="text-sm font-semibold text-[#202124]">{pt.title}</h3>
+                  <p className="mt-2 text-xs leading-relaxed text-[#5F6368]">{pt.body}</p>
+                </motion.div>
+              </BlurFade>
+            ))}
+          </div>
           <BlurFade delay={0.15} className="mt-12">
             <ArchitectureDiagram isDark={isDark} />
           </BlurFade>
@@ -406,6 +441,13 @@ export default function LandingPage({ session }: { session: SessionPayload | nul
           <h2 className={cn("mt-3 text-3xl font-bold tracking-tight sm:text-4xl", landingText(tone, "primary"))}>
             Built for depth, not checkbox lists.
           </h2>
+          <div className={cn("mt-4 max-w-2xl text-base leading-relaxed", landingText(tone, "muted"))}>
+            <TextGenerateEffect
+              words="Every feature is designed around one goal: less context switching between Gmail, Calendar, and AI."
+              className="!font-normal !text-base !text-[#5F6368]"
+              duration={0.35}
+            />
+          </div>
         </BlurFade>
 
         <div className="mt-16 space-y-24">
@@ -474,6 +516,9 @@ export default function LandingPage({ session }: { session: SessionPayload | nul
         <h2 className={cn("mt-3 text-3xl font-bold tracking-tight", landingText(tone, "primary"))}>
           Made for people with too much inbox.
         </h2>
+        <p className={cn("mt-4 max-w-2xl text-base leading-relaxed", landingText(tone, "muted"))}>
+          Whether you run a company, operate support queues, or manage brand partnerships — Relvion adapts to how you actually work, not how generic inbox apps assume you should.
+        </p>
         <div className="mt-12 flex flex-col gap-4">
           {useCases.map((uc, i) => (
             <BlurFade key={uc.role} delay={i * 0.1}>
@@ -560,6 +605,9 @@ export default function LandingPage({ session }: { session: SessionPayload | nul
           <h2 className={cn("mt-3 text-3xl font-bold tracking-tight", landingText(tone, "primary"))}>
             What people are saying.
           </h2>
+          <p className={cn("mt-4 max-w-xl text-base leading-relaxed", landingText(tone, "muted"))}>
+            Early-access teams report fewer tabs, faster triage, and drafts they actually send — here is what stood out in their first week.
+          </p>
         </BlurFade>
         <BlurFade delay={0.15} className="mt-10 space-y-5">
           <InfiniteMovingCards items={testimonials} direction="left" speed="slow" isDark={isDark} />
@@ -575,6 +623,9 @@ export default function LandingPage({ session }: { session: SessionPayload | nul
           <h2 className={cn("mt-3 text-center text-3xl font-bold tracking-tight", landingText(tone, "primary"))}>
             Common questions
           </h2>
+          <p className={cn("mx-auto mt-4 max-w-md text-center text-sm leading-relaxed", landingText(tone, "muted"))}>
+            Everything you need to know about connecting Google, how the agent works, and what early access includes.
+          </p>
           <div className="mt-10">
             {faqs.map((f) => (
               <FAQItem key={f.q} q={f.q} a={f.a} tone={tone} />

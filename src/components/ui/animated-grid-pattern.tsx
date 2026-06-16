@@ -8,10 +8,12 @@ export function AnimatedGridPattern({
   className,
   numSquares = 40,
   maxOpacity = 0.15,
+  squareClassName = "fill-orange-600/20 stroke-orange-600/30",
 }: {
   className?: string;
   numSquares?: number;
   maxOpacity?: number;
+  squareClassName?: string;
 }) {
   const id = useId();
   const containerRef = useRef<SVGSVGElement>(null);
@@ -59,7 +61,7 @@ export function AnimatedGridPattern({
             y={`${sq.y}%`}
             width="32"
             height="32"
-            className="fill-orange-600/20 stroke-orange-600/30"
+            className={cn(squareClassName)}
             initial={{ opacity: 0 }}
             animate={{ opacity: [0, maxOpacity, 0] }}
             transition={{

@@ -55,6 +55,8 @@ export function EmailDetail({
   } | null>(null);
   const [threadMessages, setThreadMessages] = useState<ThreadMessage[]>([]);
   const [threadLoading, setThreadLoading] = useState(false);
+  const [loadedBodies, setLoadedBodies] = useState<Record<string, FullBody>>({});
+  const [loadingBodies, setLoadingBodies] = useState<Set<string>>(new Set());
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [showSnoozeMenu, setShowSnoozeMenu] = useState(false);
   const [isSnoozing, setIsSnoozing] = useState(false);
@@ -66,6 +68,8 @@ export function EmailDetail({
     setFullBody(null);
     setFullMeta(null);
     setThreadMessages([]);
+    setLoadedBodies({});
+    setLoadingBodies(new Set());
     setExpandedIds(new Set([email.id]));
     setBodyLoading(true);
     setThreadLoading(!!email.threadId);
@@ -73,26 +77,28 @@ export function EmailDetail({
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 12_000);
 
-    const messagePromise = fetch(`/api/gmail/message/${email.id}`, { signal: controller.signal })
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.body) setFullBody(data.body);
-        if (data.from || data.subject) {
-          const rawFrom: string = data.from || '';
-          const addrMatch = rawFrom.match(/<([^>]+)>/);
-          const fromEmail = addrMatch ? addrMatch[1].trim() : rawFrom.trim();
-          const displayName = rawFrom.includes('<')
-            ? rawFrom.replace(/<[^>]+>/, '').trim()
-            : rawFrom.trim();
-          setFullMeta({
-            from: displayName || fromEmail,
-            fromEmail,
-            subject: data.subject,
-          });
-        }
-      })
-      .catch(() => {})
-      .finally(() => setBodyLoading(false));
+    const loadFullBody = (id: string) =>
+      fetch(`/api/gmail/message/${id}`, { signal: controller.signal })
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.body) {
+            setLoadedBodies((prev) => ({ ...prev, [id]: data.body }));
+            if (id === email.id) setFullBody(data.body);
+          }
+          if (id === email.id && (data.from || data.subject)) {
+            const rawFrom: string = data.from || '';
+            const addrMatch = rawFrom.match(/<([^>]+)>/);
+            const fromEmail = addrMatch ? addrMatch[1].trim() : rawFrom.trim();
+            const displayName = rawFrom.includes('<')
+              ? rawFrom.replace(/<[^>]+>/, '').trim()
+              : rawFrom.trim();
+            setFullMeta({
+              from: displayName || fromEmail,
+              fromEmail,
+              subject: data.subject,
+            });
+          }
+        });
 
     const threadPromise = email.threadId
       ? fetch(`/api/gmail/thread/${email.threadId}`, { signal: controller.signal })
@@ -100,16 +106,19 @@ export function EmailDetail({
           .then((data) => {
             if (data.messages?.length) {
               setThreadMessages(data.messages);
-              setExpandedIds(new Set([data.messages[data.messages.length - 1].id]));
+              setExpandedIds(new Set([email.id]));
             }
           })
           .catch(() => {})
           .finally(() => setThreadLoading(false))
-      : Promise.resolve();
+      : Promise.resolve().finally(() => setThreadLoading(false));
 
-    void Promise.all([messagePromise, threadPromise]).finally(() => {
+    const bodyPromise = loadFullBody(email.id).catch(() => {}).finally(() => setBodyLoading(false));
+
+    void Promise.all([threadPromise, bodyPromise]).finally(() => {
       window.clearTimeout(timeout);
       setThreadLoading(false);
+      setBodyLoading(false);
     });
   }, [email?.id, email?.threadId]);
 
@@ -242,11 +251,36 @@ export function EmailDetail({
     }
   };
 
+  const ensureMessageBody = async (id: string) => {
+    if (loadedBodies[id] || loadingBodies.has(id)) return;
+    setLoadingBodies((prev) => new Set(prev).add(id));
+    try {
+      const res = await fetch(`/api/gmail/message/${id}`);
+      const data = await res.json();
+      if (data.body) {
+        setLoadedBodies((prev) => ({ ...prev, [id]: data.body }));
+      }
+    } catch {
+      /* non-fatal */
+    } finally {
+      setLoadingBodies((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
+  };
+
   const toggleExpanded = (id: string) => {
     setExpandedIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      const willExpand = !next.has(id);
+      if (willExpand) {
+        next.add(id);
+        void ensureMessageBody(id);
+      } else {
+        next.delete(id);
+      }
       return next;
     });
   };
@@ -330,7 +364,14 @@ export function EmailDetail({
                       exit={{ height: 0, opacity: 0 }}
                       className="overflow-hidden border-t px-4 py-4"
                     >
-                      {renderMessageBody(msg.body, msg.snippet)}
+                      {loadingBodies.has(msg.id) && !loadedBodies[msg.id] ? (
+                        <div className={cn('flex items-center gap-2 py-4 text-sm', dash.textMuted)}>
+                          <Loader2 size={16} className={cn('animate-spin', dash.accent)} />
+                          Loading message…
+                        </div>
+                      ) : (
+                        renderMessageBody(loadedBodies[msg.id] || msg.body, msg.snippet)
+                      )}
                     </motion.div>
                   )}
                 </AnimatePresence>

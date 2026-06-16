@@ -13,7 +13,8 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith('/api/migrate') ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/favicon') ||
-    pathname.startsWith('/brand');
+    pathname.startsWith('/brand') ||
+    pathname.startsWith('/landing');
 
   if (isPublic) return NextResponse.next();
 
@@ -29,6 +30,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|brand/).*)',
+    '/((?!_next/static|_next/image|favicon.ico|brand/|landing/).*)',
   ],
 };

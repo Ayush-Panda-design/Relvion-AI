@@ -15,7 +15,7 @@ export function SectionFloatingOrbs() {
       {ORBS.map((orb, i) => (
         <motion.span
           key={i}
-          className={`absolute rounded-full opacity-30 blur-3xl ${orb.size}`}
+          className={`absolute rounded-full opacity-[0.18] blur-3xl ${orb.size}`}
           style={{
             backgroundColor: orb.color,
             top: orb.top,

@@ -8,7 +8,7 @@ import { PageLoader } from '@/components/dashboard/loading/DashboardLoaders';
 import { PageEnter } from '@/components/dashboard/loading/PageEnter';
 import { cn } from '@/lib/utils';
 import { dash } from '@/components/dashboard/theme';
-import { prefetchFolderEmails } from '@/hooks/useFolderEmails';
+import { prefetchFolderEmails, prefetchAllMailFolders } from '@/hooks/useFolderEmails';
 import { prefetchCalendarEvents } from '@/hooks/useCalendarEvents';
 import { runWhenIdle } from '@/lib/client-cache';
 import { subscribeAppEvents } from '@/lib/app-events';
@@ -33,7 +33,7 @@ function DashboardContent() {
 
   useEffect(() => {
     runWhenIdle(() => {
-      prefetchFolderEmails('inbox');
+      prefetchAllMailFolders();
       prefetchCalendarEvents();
     });
   }, []);
@@ -99,12 +99,11 @@ function DashboardContent() {
   }
 
   return (
-    <PageEnter layoutKey={activeFolder} className="min-h-0 flex-1">
+    <PageEnter className="min-h-0 flex-1">
       {activeFolder === 'calendar' ? (
         <CalendarView onRegisterRefresh={registerCalendarRefresh} />
       ) : (
         <EmailList
-          key={activeFolder}
           folder={activeFolder}
           onRegisterRefresh={registerEmailRefresh}
           onRegisterEmailShortcuts={(handlers) => {

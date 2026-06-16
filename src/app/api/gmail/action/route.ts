@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/getSession';
 import { corsairForTenant } from '@/lib/auth/corsairForTenant';
 import { clearTenantCache } from '@/lib/tenant-cache';
+import { clearGmailListCaches } from '@/lib/gmail/listFetch';
 
 type GmailAction = 'archive' | 'trash' | 'markRead' | 'star';
 
@@ -62,6 +63,7 @@ export async function POST(req: Request) {
     }
 
     clearTenantCache(session.tenantId, 'gmail-label-counts');
+    clearGmailListCaches(session.tenantId);
 
     const failed = results.filter((r) => !r.ok);
     return NextResponse.json({

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/getSession';
 import { corsairForTenant } from '@/lib/auth/corsairForTenant';
-import { parseGmailMessage, type ParsedMessage } from '@/lib/gmail/parseMessage';
+import { fetchMessagesByIds } from '@/lib/gmail/listFetch';
 
 export async function GET(
   _req: Request,
@@ -19,33 +19,41 @@ export async function GET(
   try {
     const thread = await corsair.gmail.api.threads.get({
       id: threadId,
-      format: 'full',
+      format: 'minimal',
     });
 
-    if (!thread?.messages?.length) {
+    const messageIds: string[] = (thread?.messages || [])
+      .map((m: { id?: string }) => m.id)
+      .filter((id: string | undefined): id is string => Boolean(id));
+
+    if (messageIds.length === 0) {
       return NextResponse.json({ error: 'Thread not found' }, { status: 404 });
     }
 
-    const messages = (thread.messages as unknown[])
-      .map((msg) => parseGmailMessage(msg))
-      .filter((m): m is ParsedMessage => Boolean(m))
+    const listItems = await fetchMessagesByIds(corsair, messageIds);
+    const byId = new Map(listItems.map((item) => [item.id, item]));
+
+    const messages = messageIds
+      .map((id) => byId.get(id))
+      .filter((item): item is NonNullable<typeof item> => Boolean(item))
+      .map((item) => ({
+        id: item.id,
+        threadId: item.threadId,
+        subject: item.data?.subject || '(no subject)',
+        from: item.data?.from || 'Unknown Sender',
+        fromEmail: item.data?.fromEmail || '',
+        to: item.data?.to || '',
+        date: item.data?.date || new Date().toISOString(),
+        snippet: item.data?.body || '',
+        body: { text: item.data?.body || '', html: '' },
+        isUnread: item.data?.unread ?? false,
+      }))
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     return NextResponse.json({
       threadId,
       messageCount: messages.length,
-      messages: messages.map((m) => ({
-        id: m.id,
-        threadId: m.threadId,
-        subject: m.subject,
-        from: m.from,
-        fromEmail: m.fromEmail,
-        to: m.to,
-        date: m.date,
-        snippet: m.snippet,
-        body: { text: m.bodyText || '', html: m.bodyHtml || '' },
-        isUnread: m.isUnread,
-      })),
+      messages,
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to fetch thread';

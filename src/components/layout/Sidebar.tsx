@@ -136,6 +136,21 @@ export function Sidebar({
     );
 
     if (href) {
+      const folderPrefetch =
+        label === 'Inbox'
+          ? 'inbox'
+          : label === 'Drafts'
+            ? 'drafts'
+            : label === 'Sent'
+              ? 'sent'
+              : label === 'Spam'
+                ? 'spam'
+                : label === 'Trash'
+                  ? 'trash'
+                  : label === 'Snoozed'
+                    ? 'snoozed'
+                    : null;
+
       return (
         <Link
           href={href}
@@ -143,6 +158,7 @@ export function Sidebar({
           className={className}
           onMouseEnter={() => {
             if (href === '/analytics') prefetchJson('analytics', '/api/analytics');
+            else if (folderPrefetch) prefetchFolderEmails(folderPrefetch);
           }}
         >
           {content}

@@ -29,8 +29,14 @@ export function prefetchCalendarEvents() {
 
 export function useCalendarEvents() {
   const cacheKey = 'calendar:events';
-  const [events, setEvents] = useState<CalEvent[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [events, setEvents] = useState<CalEvent[]>(() => {
+    const hit = getCached<CalendarResponse>(cacheKey, CAL_TTL);
+    return hit?.events || [];
+  });
+  const [loading, setLoading] = useState(() => {
+    const hit = getCached<CalendarResponse>(cacheKey, CAL_TTL);
+    return !(hit?.events?.length);
+  });
   const [refreshing, setRefreshing] = useState(false);
   const eventsRef = useRef(events);
   const fetchingRef = useRef(false);

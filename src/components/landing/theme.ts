@@ -21,11 +21,11 @@ export type LandingTone = "dark" | "light";
 export type LandingThemeInput = LandingTone | boolean;
 
 const SECTION_BG: Record<LandingSectionVariant, string> = {
-  white: "bg-white text-[#202124]",
-  gray: "bg-[#F8F9FA] text-[#202124]",
-  blue: "bg-[#E8F0FE] text-[#202124]",
-  green: "bg-[#E6F4EA] text-[#202124]",
-  cream: "bg-[#FEF7E0] text-[#202124]",
+  white: "bg-[#FAFBFC] text-[#202124]",
+  gray: "bg-[#F6F7F8] text-[#202124]",
+  blue: "bg-[#F0F4FA] text-[#202124]",
+  green: "bg-[#F2F7F4] text-[#202124]",
+  cream: "bg-[#FBF8F2] text-[#202124]",
 };
 
 export function resolveTone(_input: LandingThemeInput): LandingTone {

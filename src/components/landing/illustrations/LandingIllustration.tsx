@@ -78,6 +78,7 @@ export function LandingIllustration({
           alt={meta.alt}
           fill
           priority={priority}
+          unoptimized
           className="object-cover"
           sizes="(max-width: 768px) 100vw, 800px"
         />
