@@ -263,6 +263,9 @@ function Marquee({ isDark }: { isDark: boolean }) {
 function ProductPreview({ isDark }: { isDark: boolean }) {
   const [active, setActive] = useState<(typeof productTabs)[number]["id"]>("inbox");
   const tab = productTabs.find((t) => t.id === active)!;
+  const inboxTab = productTabs.find((t) => t.id === "inbox")!;
+  const calendarTab = productTabs.find((t) => t.id === "calendar")!;
+  const agentTab = productTabs.find((t) => t.id === "agent")!;
 
   return (
     <Card3D containerClassName="w-full">
@@ -327,7 +330,7 @@ function ProductPreview({ isDark }: { isDark: boolean }) {
                 key={`list-${active}`}
               >
                 {active === "inbox" &&
-                  tab.rows?.map((row, i) => (
+                  inboxTab.rows.map((row, i) => (
                     <motion.div
                       key={i}
                       variants={staggerItem}
@@ -355,7 +358,7 @@ function ProductPreview({ isDark }: { isDark: boolean }) {
                   ))}
 
                 {active === "calendar" &&
-                  tab.events?.map((ev, i) => (
+                  calendarTab.events.map((ev, i) => (
                     <motion.div
                       key={i}
                       variants={staggerItem}
@@ -371,7 +374,7 @@ function ProductPreview({ isDark }: { isDark: boolean }) {
                   ))}
 
                 {active === "agent" &&
-                  tab.messages?.map((msg, i) => (
+                  agentTab.messages.map((msg, i) => (
                     <motion.div
                       key={i}
                       variants={staggerItem}
