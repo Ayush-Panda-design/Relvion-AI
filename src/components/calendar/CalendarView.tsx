@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
+import { CalendarEventsLoader } from '@/components/dashboard/loading/DashboardLoaders';
+import { DashboardIllustration } from '@/components/illustrations/DashboardIllustration';
 import { ContentProgress } from '@/components/ui/ContentProgress';
 import { useCalendarEvents, type CalEvent } from '@/hooks/useCalendarEvents';
 import { cn } from '@/lib/utils';
@@ -24,7 +26,7 @@ import { dash } from '@/components/dashboard/theme';
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
 
 const EVENT_PALETTE = [
-  { pill: 'bg-[#2383E2]/15 text-[#2383E2] dark:bg-[#8ab4f8]/20 dark:text-[#8ab4f8]', bar: 'bg-[#2383E2] dark:bg-[#8ab4f8]', card: 'border-l-[#2383E2] dark:border-l-[#8ab4f8]' },
+  { pill: 'bg-[#0D9488]/15 text-[#0D9488] dark:bg-[#8ab4f8]/20 dark:text-[#8ab4f8]', bar: 'bg-[#0D9488] dark:bg-[#8ab4f8]', card: 'border-l-[#0D9488] dark:border-l-[#8ab4f8]' },
   { pill: 'bg-[#f28b82]/20 text-[#f28b82]', bar: 'bg-[#f28b82]', card: 'border-l-[#f28b82]' },
   { pill: 'bg-[#81c995]/20 text-[#81c995]', bar: 'bg-[#81c995]', card: 'border-l-[#81c995]' },
   { pill: 'bg-[#fdd663]/20 text-[#fdd663]', bar: 'bg-[#fdd663]', card: 'border-l-[#fdd663]' },
@@ -72,12 +74,18 @@ function formatDayLabel(date: Date) {
   return date.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
 }
 
+const USER_TZ =
+  typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC';
+
 const emptyForm = {
   summary: '',
   description: '',
   startDateTime: '',
   endDateTime: '',
   attendees: '',
+  allDay: false,
+  recurrence: 'none' as 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly',
+  timeZone: USER_TZ,
 };
 
 
@@ -259,13 +267,17 @@ export function CalendarView({ onRegisterRefresh }: { onRegisterRefresh?: (fn: (
   const openEdit = (event: CalEvent) => {
     const startStr = event.start?.dateTime || event.start?.date;
     const endStr = event.end?.dateTime || event.end?.date;
+    const allDay = !event.start?.dateTime;
     setEditingEvent(event);
     setForm({
       summary: event.summary || '',
       description: event.description || '',
-      startDateTime: toLocalInput(startStr),
-      endDateTime: toLocalInput(endStr),
+      startDateTime: allDay ? (startStr || '').slice(0, 10) : toLocalInput(startStr),
+      endDateTime: allDay ? (endStr || '').slice(0, 10) : toLocalInput(endStr),
       attendees: (event.attendees || []).map((a) => a.email).join(', '),
+      allDay,
+      recurrence: 'none',
+      timeZone: USER_TZ,
     });
   };
 
@@ -317,7 +329,7 @@ export function CalendarView({ onRegisterRefresh }: { onRegisterRefresh?: (fn: (
     const ds = `${year}-${pad(month + 1)}-${pad(day)}T09:00`;
     const de = `${year}-${pad(month + 1)}-${pad(day)}T10:00`;
     setSelectedDay(day);
-    setForm({ ...emptyForm, startDateTime: ds, endDateTime: de });
+    setForm({ ...emptyForm, startDateTime: ds, endDateTime: de, timeZone: USER_TZ });
     setShowCreate(true);
   };
 
@@ -337,24 +349,59 @@ export function CalendarView({ onRegisterRefresh }: { onRegisterRefresh?: (fn: (
           onChange={(e) => setForm((f) => ({ ...f, summary: e.target.value }))}
         />
       </FormField>
+      <label className={cn('flex cursor-pointer items-center gap-2 text-sm', dash.textMuted)}>
+        <input
+          type="checkbox"
+          checked={form.allDay}
+          onChange={(e) => setForm((f) => ({ ...f, allDay: e.target.checked }))}
+          className="rounded border-gray-400"
+        />
+        All-day event
+      </label>
       <div className="grid grid-cols-2 gap-3">
-        <FormField label="Start *">
+        <FormField label={form.allDay ? 'Start date *' : 'Start *'}>
           <input
-            type="datetime-local"
+            type={form.allDay ? 'date' : 'datetime-local'}
             className={inputClass}
             value={form.startDateTime}
             onChange={(e) => setForm((f) => ({ ...f, startDateTime: e.target.value }))}
           />
         </FormField>
-        <FormField label="End *">
+        <FormField label={form.allDay ? 'End date *' : 'End *'}>
           <input
-            type="datetime-local"
+            type={form.allDay ? 'date' : 'datetime-local'}
             className={inputClass}
             value={form.endDateTime}
             onChange={(e) => setForm((f) => ({ ...f, endDateTime: e.target.value }))}
           />
         </FormField>
       </div>
+      <FormField label="Repeat" hint="Creates a recurring series (up to 52 occurrences)">
+        <select
+          className={inputClass}
+          value={form.recurrence}
+          onChange={(e) =>
+            setForm((f) => ({
+              ...f,
+              recurrence: e.target.value as typeof f.recurrence,
+            }))
+          }
+        >
+          <option value="none">Does not repeat</option>
+          <option value="daily">Daily</option>
+          <option value="weekly">Weekly</option>
+          <option value="monthly">Monthly</option>
+          <option value="yearly">Yearly</option>
+        </select>
+      </FormField>
+      <FormField label="Time zone" hint="Uses your browser timezone by default">
+        <input
+          className={inputClass}
+          value={form.timeZone}
+          onChange={(e) => setForm((f) => ({ ...f, timeZone: e.target.value }))}
+          placeholder={USER_TZ}
+        />
+      </FormField>
       <FormField label="Attendees" hint="Comma-separated emails — invites sent via Google Calendar">
         <input
           className={inputClass}
@@ -376,17 +423,17 @@ export function CalendarView({ onRegisterRefresh }: { onRegisterRefresh?: (fn: (
   );
 
   return (
-    <div className={cn('relative flex h-full overflow-hidden', dash.bg)}>
+    <div className={cn('relative flex min-h-0 flex-1 overflow-hidden', dash.bg)}>
       <ContentProgress active={refreshing} />
 
       {/* Main calendar */}
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         {/* Toolbar */}
         <div
           className={cn(
             'flex shrink-0 flex-wrap items-center justify-between gap-3 border-b px-5 py-3',
             dash.border,
-            'bg-[#F7F7F5] dark:bg-[#202124]'
+            'bg-[#F5F4F0] dark:bg-[#202124]'
           )}
         >
           <div className="flex items-center gap-2">
@@ -470,12 +517,12 @@ export function CalendarView({ onRegisterRefresh }: { onRegisterRefresh?: (fn: (
         </div>
 
         {/* Month grid */}
-        <div className="flex-1 overflow-auto p-3">
+        <div className="min-h-0 flex-1 overflow-auto p-3">
           <div className="grid min-h-full grid-cols-7 gap-1.5">
             {Array.from({ length: firstDay }).map((_, i) => (
               <div
                 key={`empty-${i}`}
-                className={cn('min-h-[108px] rounded-xl', 'bg-[#F7F7F5]/60 dark:bg-[#292a2d]/40')}
+                className={cn('min-h-[108px] rounded-xl', 'bg-[#EBEAE5]/70 dark:bg-[#292a2d]/40')}
               />
             ))}
             {Array.from({ length: daysInMonth }).map((_, i) => {
@@ -495,9 +542,9 @@ export function CalendarView({ onRegisterRefresh }: { onRegisterRefresh?: (fn: (
                   className={cn(
                     'group relative flex min-h-[108px] flex-col rounded-xl border p-2 text-left transition-all duration-150',
                     isSelected
-                      ? 'border-[#2383E2]/50 bg-[#2383E2]/8 ring-1 ring-[#2383E2]/25 dark:border-[#8ab4f8]/60 dark:bg-[#8ab4f8]/10 dark:ring-[#8ab4f8]/30'
-                      : cn('border-transparent', dash.hover, 'hover:border-[#E9E9E7] dark:hover:border-[#3c4043]'),
-                    isToday && !isSelected && 'bg-[#2383E2]/5 dark:bg-[#8ab4f8]/5'
+                      ? 'border-[#0D9488]/50 bg-[#0D9488]/8 ring-1 ring-[#0D9488]/25 dark:border-[#8ab4f8]/60 dark:bg-[#8ab4f8]/10 dark:ring-[#8ab4f8]/30'
+                      : cn('border-transparent', dash.hover, 'hover:border-[#D8D5CE] dark:hover:border-[#3c4043]'),
+                    isToday && !isSelected && 'bg-[#0D9488]/5 dark:bg-[#8ab4f8]/5'
                   )}
                 >
                   <div className="mb-1.5 flex items-center justify-between">
@@ -505,7 +552,7 @@ export function CalendarView({ onRegisterRefresh }: { onRegisterRefresh?: (fn: (
                       className={cn(
                         'flex h-7 w-7 items-center justify-center rounded-full text-sm font-medium',
                         isToday
-                          ? 'bg-[#2383E2] font-semibold text-white dark:bg-[#8ab4f8] dark:text-[#202124]'
+                          ? 'bg-[#0D9488] font-semibold text-white dark:bg-[#8ab4f8] dark:text-[#202124]'
                           : isSelected
                             ? cn(dash.text, 'font-semibold')
                             : dash.textMuted
@@ -568,7 +615,7 @@ export function CalendarView({ onRegisterRefresh }: { onRegisterRefresh?: (fn: (
         className={cn(
           'flex w-[300px] shrink-0 flex-col overflow-hidden border-l',
           dash.border,
-          'bg-[#F7F7F5] dark:bg-[#292a2d]'
+          'bg-[#F5F4F0] dark:bg-[#292a2d]'
         )}
       >
         {/* Selected day */}
@@ -652,21 +699,10 @@ export function CalendarView({ onRegisterRefresh }: { onRegisterRefresh?: (fn: (
 
           <div className="flex-1 space-y-2 overflow-y-auto p-3">
             {loading && events.length === 0 ? (
-              <div className="space-y-2">
-                {[1, 2, 3, 4].map((i) => (
-                  <div
-                    key={i}
-                    className={cn('h-[72px] animate-pulse rounded-xl', dash.progressTrack)}
-                  />
-                ))}
-              </div>
+              <CalendarEventsLoader rows={4} />
             ) : upcomingEvents.length === 0 ? (
-              <div className="flex flex-col items-center justify-center px-4 py-10 text-center">
-                <div className={cn('mb-3 flex h-12 w-12 items-center justify-center rounded-2xl', dash.accentSoftBg)}>
-                  <CalendarDays size={22} className={dash.accent} />
-                </div>
-                <p className={cn('text-sm font-medium', dash.text)}>Your schedule is clear</p>
-                <p className={cn('mt-1 text-xs', dash.textMuted)}>Create an event to get started</p>
+              <div className="px-2 py-4">
+                <DashboardIllustration variant="calendar" size="sm" />
               </div>
             ) : (
               upcomingEvents.map((e, idx) => {

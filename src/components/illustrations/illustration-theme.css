@@ -1,0 +1,50 @@
+/* Theme-aware illustration tokens — teal / coral / emerald (no blue/purple/brown) */
+.ill-theme {
+  --ill-line: #2c2b28;
+  --ill-line-muted: #7a7770;
+  --ill-surface: #f5f4f0;
+  --ill-surface-2: #e8e6e1;
+  --ill-accent: #0d9488;
+  --ill-accent-2: #ea580c;
+  --ill-accent-3: #059669;
+  --ill-highlight: #d97706;
+}
+
+.dark .ill-theme {
+  --ill-line: #e8eaed;
+  --ill-line-muted: #9aa0a6;
+  --ill-surface: #3c4043;
+  --ill-surface-2: #292a2d;
+  --ill-accent: #2dd4bf;
+  --ill-accent-2: #fb923c;
+  --ill-accent-3: #34d399;
+  --ill-highlight: #fde047;
+}
+
+@keyframes ill-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.ill-float {
+  animation: ill-float 4.5s ease-in-out infinite;
+}
+
+@keyframes ill-drift {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(4px);
+  }
+}
+
+.ill-drift {
+  animation: ill-drift 3.8s ease-in-out infinite;
+}

@@ -251,7 +251,7 @@ export function EmailDetail({
         <iframe
           srcDoc={body.html}
           sandbox="allow-same-origin"
-          className="min-h-[200px] w-full rounded-xl border-0 bg-white"
+          className="min-h-[200px] w-full rounded-xl border-0 bg-[#FAF9F6] dark:bg-[#292a2d]"
           style={{ colorScheme: 'light' }}
           onLoad={(e) => {
             const iframe = e.currentTarget;
@@ -381,7 +381,7 @@ export function EmailDetail({
 
   return (
     <div
-      className={cn('flex h-full flex-1 flex-col overflow-hidden border-l', dash.surface, dash.border)}
+      className={cn('flex min-h-0 flex-1 flex-col overflow-hidden border-l', dash.surface, dash.border)}
     >
       <div
         className={cn(
@@ -448,7 +448,7 @@ export function EmailDetail({
         </motion.button>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="min-h-0 flex-1 overflow-y-auto p-6">
         <motion.h1
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}

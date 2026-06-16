@@ -22,7 +22,7 @@ export function ThemeToggle({ className }: { className?: string }) {
         'relative flex h-9 w-9 items-center justify-center rounded-lg transition-colors',
         dash.hover,
         dash.textMuted,
-        'hover:text-[#2383E2] dark:hover:text-[#8ab4f8]',
+        dash.accentHover,
         className
       )}
     >

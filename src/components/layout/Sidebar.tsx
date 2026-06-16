@@ -23,6 +23,7 @@ import { dash } from '@/components/dashboard/theme';
 import { prefetchFolderEmails } from '@/hooks/useFolderEmails';
 import { prefetchCalendarEvents } from '@/hooks/useCalendarEvents';
 import { prefetchJson } from '@/lib/client-cache';
+import { ShimmerButton } from '@/components/ui/shimmer-button';
 
 export function Sidebar({
   activeFolder,
@@ -84,7 +85,7 @@ export function Sidebar({
           strokeWidth={1.75}
           className={cn(
             'relative z-10 shrink-0 transition-colors',
-            active ? 'text-[#2383E2] dark:text-[#8ab4f8]' : ''
+            active ? dash.accent : ''
           )}
         />
         <AnimatePresence>
@@ -156,7 +157,7 @@ export function Sidebar({
     <motion.aside
       initial={false}
       animate={{ width: collapsed ? 72 : 256 }}
-      transition={{ type: 'tween', duration: 0.2 }}
+      transition={{ type: 'spring', stiffness: 400, damping: 35 }}
       className={cn(
         'relative z-20 flex h-screen shrink-0 flex-col border-r',
         dash.sidebar,
@@ -168,28 +169,25 @@ export function Sidebar({
           <BrandMark size={28} variant="auto" />
           {!collapsed && (
             <span className={cn('text-lg font-semibold tracking-tight', dash.text)}>
-              Relvion<span className="text-[#2383E2] dark:text-[#8ab4f8]">.</span>
+              Relvion<span className={dash.accent}>.</span>
             </span>
           )}
         </Link>
       </div>
 
       <div className={cn('px-3 pb-2', collapsed && 'px-2')}>
-        <motion.button
-          type="button"
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.97 }}
+        <ShimmerButton
           onClick={() => onComposeClick?.()}
+          title="Compose new email (C)"
           className={cn(
-            'flex w-full items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-medium transition-all',
+            'flex w-full items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-medium transition-all duration-100',
             dash.compose,
             collapsed ? 'px-0' : 'px-4'
           )}
-          title="Compose"
         >
           <PenLine size={18} />
           {!collapsed && <span>Compose</span>}
-        </motion.button>
+        </ShimmerButton>
       </div>
 
       <div className="flex-1 space-y-6 overflow-y-auto px-2 py-2">

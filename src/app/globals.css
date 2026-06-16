@@ -34,8 +34,8 @@
 }
 
 body {
-  background-color: #ffffff;
-  color: #37352f;
+  background-color: #eeede8;
+  color: #2c2b28;
   font-family: var(--font-sans);
   margin: 0;
   padding: 0;
@@ -64,6 +64,21 @@ body {
 @keyframes shimmer {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
+}
+
+@keyframes dashShimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes orbitSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes thinkingWave {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.45; }
+  30% { transform: translateY(-4px); opacity: 1; }
 }
 
 .animate-shimmer {
@@ -142,4 +157,17 @@ body {
 }
 .dark ::-webkit-scrollbar-thumb:hover {
   background: rgba(138, 180, 248, 0.35);
+}
+
+/* cmdk command palette */
+[cmdk-root] {
+  outline: none;
+}
+[cmdk-item][data-disabled='true'] {
+  opacity: 0.45;
+  pointer-events: none;
+}
+[cmdk-item] {
+  cursor: pointer;
+  outline: none;
 }

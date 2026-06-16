@@ -26,6 +26,7 @@ type UseKeyboardShortcutsOptions = {
   onFocusSearch?: () => void;
   onNavigateSettings?: () => void;
   onNavigateAnalytics?: () => void;
+  onShowShortcuts?: () => void;
   emailShortcutsRef?: MutableRefObject<EmailShortcutHandlers | null>;
 };
 
@@ -36,6 +37,7 @@ export function useKeyboardShortcuts({
   onFocusSearch,
   onNavigateSettings,
   onNavigateAnalytics,
+  onShowShortcuts,
   emailShortcutsRef,
 }: UseKeyboardShortcutsOptions) {
   const pendingG = useRef(false);
@@ -46,12 +48,14 @@ export function useKeyboardShortcuts({
   const onFocusSearchRef = useRef(onFocusSearch);
   const onNavigateSettingsRef = useRef(onNavigateSettings);
   const onNavigateAnalyticsRef = useRef(onNavigateAnalytics);
+  const onShowShortcutsRef = useRef(onShowShortcuts);
 
   onComposeRef.current = onCompose;
   onFolderChangeRef.current = onFolderChange;
   onFocusSearchRef.current = onFocusSearch;
   onNavigateSettingsRef.current = onNavigateSettings;
   onNavigateAnalyticsRef.current = onNavigateAnalytics;
+  onShowShortcutsRef.current = onShowShortcuts;
 
   useEffect(() => {
     if (!enabled) return;
@@ -86,6 +90,12 @@ export function useKeyboardShortcuts({
       if (e.key === '/') {
         e.preventDefault();
         onFocusSearchRef.current?.();
+        return;
+      }
+
+      if (e.key === '?' || (e.shiftKey && key === '/')) {
+        e.preventDefault();
+        onShowShortcutsRef.current?.();
         return;
       }
 

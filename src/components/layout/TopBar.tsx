@@ -6,7 +6,9 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { dash } from '@/components/dashboard/theme';
+import { openCommandPalette } from '@/lib/command-palette-events';
 import { ThemeToggle } from '@/components/dashboard/ThemeToggle';
+import { DashboardIllustration } from '@/components/illustrations/DashboardIllustration';
 import { GMAIL_SEARCH_HINTS } from '@/lib/gmail-search-parser';
 
 interface SearchResult {
@@ -104,6 +106,25 @@ export function TopBar({
     };
   }, [query]);
 
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return;
+      const active = document.activeElement;
+      if (
+        active instanceof HTMLInputElement ||
+        active instanceof HTMLTextAreaElement ||
+        (active instanceof HTMLElement && active.isContentEditable)
+      ) {
+        if (active !== inputRef.current) return;
+        return;
+      }
+      e.preventDefault();
+      openCommandPalette();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [inputRef]);
+
   const fetchNotifications = async () => {
     setLoadingNotifs(true);
     try {
@@ -150,7 +171,7 @@ export function TopBar({
   return (
     <header
       className={cn(
-        'relative flex h-[56px] shrink-0 items-center gap-3 px-4',
+        'relative z-40 flex h-[56px] shrink-0 items-center gap-3 px-4',
         dash.glassToolbar
       )}
     >
@@ -216,14 +237,17 @@ export function TopBar({
               <X size={16} />
             </button>
           )}
-          <kbd
+          <button
+            type="button"
+            onClick={() => openCommandPalette()}
             className={cn(
-              'absolute right-3 hidden rounded border px-1.5 py-0.5 text-[10px] font-medium sm:inline-block',
-              cn(dash.border, dash.textMuted)
+              'absolute right-3 hidden rounded border px-1.5 py-0.5 text-[10px] font-medium transition-colors sm:inline-block',
+              cn(dash.border, dash.textMuted, dash.hover)
             )}
+            title="Open command palette"
           >
             /
-          </kbd>
+          </button>
         </div>
 
         <AnimatePresence>
@@ -233,7 +257,7 @@ export function TopBar({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}
               className={cn(
-                'absolute top-full left-0 right-0 z-50 mt-2 overflow-hidden rounded-2xl border shadow-2xl',
+                'absolute top-full left-0 right-0 z-[200] mt-2 overflow-hidden rounded-2xl border shadow-2xl',
                 dash.elevated,
                 dash.border
               )}
@@ -273,7 +297,7 @@ export function TopBar({
               exit={{ opacity: 0, y: -6 }}
               transition={{ duration: 0.15 }}
               className={cn(
-                'absolute top-full left-0 right-0 z-50 mt-2 overflow-hidden rounded-2xl border shadow-2xl',
+                'absolute top-full left-0 right-0 z-[200] mt-2 overflow-hidden rounded-2xl border shadow-2xl',
                 dash.elevated,
                 dash.border,
                 'dark:shadow-[0_4px_16px_rgba(0,0,0,0.5)]'
@@ -375,7 +399,9 @@ export function TopBar({
                   </div>
                 </>
               ) : !searching ? (
-                <div className={cn('px-4 py-8 text-center text-sm', dash.textMuted)}>No results</div>
+                <div className="px-4 py-6">
+                  <DashboardIllustration variant="search" size="sm" />
+                </div>
               ) : null}
             </motion.div>
           )}
@@ -385,7 +411,7 @@ export function TopBar({
       {/* Right actions */}
       <div className="flex w-[120px] shrink-0 items-center justify-end gap-0.5">
         <ThemeToggle />
-        <div className="relative" ref={notifRef}>
+        <div className="relative z-40" ref={notifRef}>
           <button
             type="button"
             onClick={handleBellClick}
@@ -404,7 +430,7 @@ export function TopBar({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 6 }}
                 className={cn(
-                  'absolute right-0 top-full z-50 mt-2 w-80 overflow-hidden rounded-2xl border shadow-2xl',
+                  'absolute right-0 top-full z-[200] mt-2 w-80 overflow-hidden rounded-2xl border shadow-2xl',
                   dash.elevated,
                   dash.border,
                   'dark:shadow-[0_4px_16px_rgba(0,0,0,0.5)]'

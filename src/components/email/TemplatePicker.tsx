@@ -43,7 +43,7 @@ export function TemplatePicker({
           'flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors',
           dash.border,
           dash.textMuted,
-          'hover:border-[#2383E2]/40 hover:text-[#2383E2] dark:hover:border-[#8ab4f8]/40 dark:hover:text-[#8ab4f8]'
+          'hover:border-[#0D9488]/40 hover:text-[#0D9488] dark:hover:border-[#8ab4f8]/40 dark:hover:text-[#8ab4f8]'
         )}
       >
         <FileText size={13} />

@@ -5,6 +5,10 @@ import { RefreshCw, TrendingUp, Clock, CalendarDays, Inbox, Sparkles } from 'luc
 import toast from 'react-hot-toast';
 import { getCached, setCached } from '@/lib/client-cache';
 import { subscribeAppEvents } from '@/lib/app-events';
+import { AnalyticsLoader } from '@/components/dashboard/loading/DashboardLoaders';
+import { PageEnter } from '@/components/dashboard/loading/PageEnter';
+import { DashboardIllustration } from '@/components/illustrations/DashboardIllustration';
+import { BlurFade } from '@/components/ui/blur-fade';
 import { ContentProgress } from '@/components/ui/ContentProgress';
 import { cn } from '@/lib/utils';
 import { dash } from '@/components/dashboard/theme';
@@ -140,7 +144,7 @@ export default function AnalyticsPage() {
     : 1;
 
   return (
-      <div className={cn('relative mx-auto max-w-5xl overflow-y-auto px-6 py-8', dash.bg)}>
+      <div className={cn('relative mx-auto min-h-0 flex-1 overflow-y-auto px-6 py-8 max-w-5xl', dash.bg)}>
         <ContentProgress active={refreshing} />
 
         <header className="mb-8 flex items-start justify-between gap-4">
@@ -171,42 +175,46 @@ export default function AnalyticsPage() {
         </header>
 
         {loading && !data ? (
-          <div className="grid animate-pulse grid-cols-1 gap-4 md:grid-cols-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className={cn('h-28 rounded-2xl', dash.elevated)} />
-            ))}
-          </div>
+          <AnalyticsLoader />
         ) : data ? (
-          <div className={cn('space-y-5', refreshing && 'opacity-90 transition-opacity')}>
+          <PageEnter>
+          <div className={cn('space-y-5', refreshing && 'opacity-90 transition-opacity duration-300')}>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <StatCard
-                icon={TrendingUp}
-                label="Sent this week"
-                value={data.emailsSentThisWeek}
-                sub={
-                  data.sentDeltaPercent >= 0
-                    ? `↑ ${data.sentDeltaPercent}% vs last week`
-                    : `↓ ${Math.abs(data.sentDeltaPercent)}% vs last week`
-                }
-              />
-              <StatCard
-                icon={Clock}
-                label="Avg response time"
-                value={data.avgResponseHours != null ? `${data.avgResponseHours}h` : '—'}
-                sub={
-                  data.avgResponseHours != null
-                    ? 'Time from receive to reply'
-                    : 'Reply to emails to track this'
-                }
-              />
-              <StatCard
-                icon={CalendarDays}
-                label="Meetings this week"
-                value={data.meetingsThisWeek}
-                sub={`${data.emailsReceivedThisWeek} received this week`}
-              />
+              <BlurFade delay={0.04}>
+                <StatCard
+                  icon={TrendingUp}
+                  label="Sent this week"
+                  value={data.emailsSentThisWeek}
+                  sub={
+                    data.sentDeltaPercent >= 0
+                      ? `↑ ${data.sentDeltaPercent}% vs last week`
+                      : `↓ ${Math.abs(data.sentDeltaPercent)}% vs last week`
+                  }
+                />
+              </BlurFade>
+              <BlurFade delay={0.08}>
+                <StatCard
+                  icon={Clock}
+                  label="Avg response time"
+                  value={data.avgResponseHours != null ? `${data.avgResponseHours}h` : '—'}
+                  sub={
+                    data.avgResponseHours != null
+                      ? 'Time from receive to reply'
+                      : 'Reply to emails to track this'
+                  }
+                />
+              </BlurFade>
+              <BlurFade delay={0.12}>
+                <StatCard
+                  icon={CalendarDays}
+                  label="Meetings this week"
+                  value={data.meetingsThisWeek}
+                  sub={`${data.emailsReceivedThisWeek} received this week`}
+                />
+              </BlurFade>
             </div>
 
+            <BlurFade delay={0.14}>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <section className={cn('rounded-2xl border p-5', dash.elevated, dash.border)}>
                 <div className="mb-4 flex items-center gap-2">
@@ -220,7 +228,7 @@ export default function AnalyticsPage() {
                     { label: 'FYI', value: data.priorityBreakdown.FYI },
                   ]}
                   max={priorityMax}
-                  barClass="bg-[#2383E2] dark:bg-[#8ab4f8]"
+                  barClass="bg-[#0D9488] dark:bg-[#8ab4f8]"
                 />
                 <p className={cn('mt-4 text-xs', dash.textSubtle)}>
                   {data.indexedEmails.toLocaleString()} emails indexed for vector search
@@ -240,11 +248,13 @@ export default function AnalyticsPage() {
                     { label: 'Starred', value: data.starredTotal },
                   ]}
                   max={mailboxMax}
-                  barClass="bg-[#1a6fc2] dark:bg-[#669df6]"
+                  barClass="bg-[#059669] dark:bg-[#669df6]"
                 />
               </section>
             </div>
+            </BlurFade>
 
+            <BlurFade delay={0.18}>
             <section className={cn('rounded-2xl border p-5', dash.elevated, dash.border)}>
               <h2 className={cn('mb-4 text-base font-medium', dash.text)}>Activity — last 7 days</h2>
               {data.dailyActivity.length === 0 ? (
@@ -256,7 +266,7 @@ export default function AnalyticsPage() {
                   {data.dailyActivity.map((day) => (
                     <div key={day.date} className="flex flex-1 flex-col items-center gap-2">
                       <div
-                        className="w-full min-h-[4px] rounded-t-md bg-[#2383E2] transition-all dark:bg-[#8ab4f8]"
+                        className="w-full min-h-[4px] rounded-t-md bg-[#0D9488] transition-all dark:bg-[#8ab4f8]"
                         style={{ height: `${Math.max((day.total / activityMax) * 100, 4)}%` }}
                         title={`${day.total} events`}
                       />
@@ -268,17 +278,18 @@ export default function AnalyticsPage() {
                 </div>
               )}
             </section>
+            </BlurFade>
           </div>
+          </PageEnter>
         ) : (
           <div
             className={cn(
-              'rounded-2xl border p-10 text-center text-sm',
+              'flex flex-col items-center rounded-2xl border py-12',
               dash.elevated,
-              dash.border,
-              dash.textMuted
+              dash.border
             )}
           >
-            Connect Gmail and Calendar to view analytics.
+            <DashboardIllustration variant="analytics" size="lg" />
           </div>
         )}
       </div>

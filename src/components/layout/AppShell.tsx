@@ -9,6 +9,7 @@ import { ComposeModal } from '@/components/email/ComposeModal';
 import { CommandPalette } from '@/components/ui/CommandPalette';
 import { DensityProvider } from '@/components/dashboard/DensityProvider';
 import { ThemeProvider } from '@/components/dashboard/ThemeProvider';
+import { KeyboardShortcutsDialog } from '@/components/dashboard/KeyboardShortcutsDialog';
 import { DashboardAmbient } from '@/components/dashboard/DashboardAmbient';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { emailShortcutsRef } from '@/lib/email-shortcuts-ref';
@@ -19,15 +20,17 @@ import { dash } from '@/components/dashboard/theme';
 function AppShellInner({ children }: { children: React.ReactNode }) {
   const { activeFolder, navigateFolder, routerReady } = useWorkspaceNav();
   const [showCompose, setShowCompose] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   useKeyboardShortcuts({
-    enabled: routerReady && !showCompose,
+    enabled: routerReady && !showCompose && !showShortcuts,
     onCompose: () => setShowCompose(true),
     onFolderChange: navigateFolder,
     onFocusSearch: () => searchInputRef.current?.focus(),
     onNavigateSettings: () => navigateFolder('settings'),
     onNavigateAnalytics: () => navigateFolder('analytics'),
+    onShowShortcuts: () => setShowShortcuts(true),
     emailShortcutsRef,
   });
 
@@ -35,23 +38,23 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
     <div className={cn('relative flex h-screen w-full overflow-hidden font-sans', dash.bg, dash.text)}>
       <DashboardAmbient />
 
-      <div className="relative z-10 flex h-full w-full">
+      <div className="relative z-10 flex h-full min-h-0 w-full">
         <Sidebar
           activeFolder={activeFolder}
           onFolderChange={navigateFolder}
           onComposeClick={() => setShowCompose(true)}
         />
 
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <div
             className={cn(
-              'flex min-h-0 flex-1 flex-col overflow-hidden border-l',
+              'flex min-h-0 flex-1 flex-col border-l',
               dash.border,
               dash.mainPanel
             )}
           >
             <TopBar searchInputRef={searchInputRef} />
-            <main className="relative min-h-0 flex-1 overflow-hidden">{children}</main>
+            <main className="relative flex min-h-0 flex-1 flex-col overflow-hidden">{children}</main>
           </div>
         </div>
 
@@ -65,6 +68,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
         onFolderChange={routerReady ? navigateFolder : undefined}
         onComposeClick={() => setShowCompose(true)}
       />
+      <KeyboardShortcutsDialog open={showShortcuts} onClose={() => setShowShortcuts(false)} />
     </div>
   );
 }

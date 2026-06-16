@@ -3,7 +3,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { EmailList } from '@/components/email/EmailList';
 import { CalendarView } from '@/components/calendar/CalendarView';
-import { BrandMark } from '@/components/brand/BrandMark';
+import { DashboardIllustration } from '@/components/illustrations/DashboardIllustration';
+import { PageLoader } from '@/components/dashboard/loading/DashboardLoaders';
+import { PageEnter } from '@/components/dashboard/loading/PageEnter';
 import { cn } from '@/lib/utils';
 import { dash } from '@/components/dashboard/theme';
 import { prefetchFolderEmails } from '@/hooks/useFolderEmails';
@@ -60,9 +62,13 @@ function DashboardContent() {
     refreshHandlers.current.calendar = fn;
   }, []);
 
-  if (authChecked && needsGoogle) {
+  if (!authChecked) {
+    return <PageLoader label="Preparing your workspace…" />;
+  }
+
+  if (needsGoogle) {
     return (
-      <div className={cn('relative flex h-full w-full items-center justify-center overflow-hidden', dash.bg)}>
+      <div className={cn('relative flex min-h-0 flex-1 items-center justify-center overflow-hidden', dash.bg)}>
         <div
           className={cn(
             'relative z-10 w-full max-w-md rounded-3xl border p-8 text-center shadow-2xl',
@@ -70,7 +76,7 @@ function DashboardContent() {
             dash.border
           )}
         >
-          <BrandMark size={48} variant="auto" className="mx-auto mb-4" />
+          <DashboardIllustration variant="connect" size="md" showText={false} className="mb-2" />
           <h2 className={cn('mb-2 text-2xl font-bold', dash.text)}>Connect Google</h2>
           <p className={cn('mb-8 text-sm', dash.textMuted)}>
             Relvion needs access to your Gmail and Calendar to power your workspace.
@@ -93,7 +99,7 @@ function DashboardContent() {
   }
 
   return (
-    <>
+    <PageEnter layoutKey={activeFolder} className="min-h-0 flex-1">
       {activeFolder === 'calendar' ? (
         <CalendarView onRegisterRefresh={registerCalendarRefresh} />
       ) : (
@@ -106,7 +112,7 @@ function DashboardContent() {
           }}
         />
       )}
-    </>
+    </PageEnter>
   );
 }
 

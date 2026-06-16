@@ -1,10 +1,13 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Send, Paperclip, Zap, X, Image, FileText, Film, Music, File, Copy, Check } from 'lucide-react';
+import { Send, Paperclip, Zap, X, Image, FileText, Film, Music, File } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { getAgentSessionMessages, setAgentSessionMessages } from '@/lib/agent-session';
 import { cn } from '@/lib/utils';
 import { dash } from '@/components/dashboard/theme';
+import { ThinkingLoader } from '@/components/dashboard/loading/DashboardLoaders';
+import { ChatMessage } from '@/components/ui/chat-message';
 
 const STORAGE_KEY = 'relvion_agent_history';
 const WIDTH_STORAGE_KEY = 'relvion_agent_width';
@@ -34,83 +37,6 @@ function getFileIcon(type: string) {
   if (type.startsWith('audio/')) return Music;
   if (type.includes('pdf') || type.includes('document') || type.includes('text')) return FileText;
   return File;
-}
-
-function CopyMessageButton({ text, isUser }: { text: string; isUser: boolean }) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      toast.success(isUser ? 'Prompt copied' : 'Response copied');
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      toast.error('Could not copy to clipboard');
-    }
-  }, [text, isUser]);
-
-  return (
-    <button
-      type="button"
-      onClick={handleCopy}
-      title={isUser ? 'Copy prompt' : 'Copy response'}
-      className={cn(
-        'absolute -top-2 rounded-md p-1 opacity-0 shadow-sm transition-opacity group-hover/message:opacity-100',
-        dash.chatCopyBtn,
-        isUser ? '-left-1' : '-right-1'
-      )}
-    >
-      {copied ? <Check size={12} /> : <Copy size={12} />}
-    </button>
-  );
-}
-
-function ChatBubble({ message }: { message: ChatMessage }) {
-  const isUser = message.role === 'user';
-
-  return (
-    <div
-      className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} animate-[fadeSlideIn_0.35s_ease-out]`}
-    >
-      {message.attachments && message.attachments.length > 0 && (
-        <div
-          className={`mb-1.5 flex max-w-[90%] flex-wrap gap-1.5 ${isUser ? 'justify-end' : 'justify-start'}`}
-        >
-          {message.attachments.map((att, j) => (
-            <div key={j} className="group relative transition-transform duration-200 hover:scale-105">
-              {att.type.startsWith('image/') && att.preview ? (
-                <div className={cn('h-[80px] w-[80px] overflow-hidden rounded-lg transition-all duration-200', dash.chatAttachment)}>
-                  <img src={att.preview} alt={att.name} className="h-full w-full object-cover" />
-                </div>
-              ) : (
-                <div className={cn('flex items-center gap-1.5 rounded-lg px-2 py-1.5 transition-all duration-200', dash.chatAttachment)}>
-                  {(() => {
-                    const Icon = getFileIcon(att.type);
-                    return <Icon size={12} className={cn('shrink-0', dash.accent)} />;
-                  })()}
-                  <span className={cn('max-w-[60px] truncate text-[10px]', dash.text)}>{att.name}</span>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-      {message.content && (
-        <div className={`group/message relative max-w-[90%] ${isUser ? 'pr-1' : 'pl-1'}`}>
-          <CopyMessageButton text={message.content} isUser={isUser} />
-          <div
-            className={cn(
-              'whitespace-pre-wrap break-words rounded-2xl px-4 py-2 text-sm [overflow-wrap:anywhere] transition-all duration-200',
-              isUser ? cn('rounded-br-sm', dash.chatUser) : cn('rounded-bl-sm', dash.chatAgent)
-            )}
-          >
-            {message.content}
-          </div>
-        </div>
-      )}
-    </div>
-  );
 }
 
 export function AgentPanel() {
@@ -332,20 +258,22 @@ export function AgentPanel() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((m, i) => (
-          <ChatBubble key={i} message={m} />
-        ))}
+      <div className="flex-1 overflow-y-auto p-4 space-y-5">
+        <AnimatePresence initial={false}>
+          {messages.map((m, i) => (
+            <ChatMessage key={`${i}-${m.content.slice(0, 24)}`} message={m} index={i} />
+          ))}
+        </AnimatePresence>
         {sending && (
-          <div className="flex items-start animate-[fadeSlideIn_0.3s_ease-out]">
-            <div className={cn('rounded-2xl rounded-bl-sm px-4 py-2 text-sm', dash.chatAgent)}>
-              <span className="inline-flex gap-1">
-                <span className={cn('animate-bounce', dash.accent)} style={{ animationDelay: '0ms' }}>●</span>
-                <span className={cn('animate-bounce', dash.accent)} style={{ animationDelay: '150ms' }}>●</span>
-                <span className={cn('animate-bounce', dash.accent)} style={{ animationDelay: '300ms' }}>●</span>
-              </span>
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-start pl-11"
+          >
+            <div className={cn('rounded-2xl rounded-bl-md border px-4 py-2.5 text-sm backdrop-blur-sm', dash.chatAgent)}>
+              <ThinkingLoader />
             </div>
-          </div>
+          </motion.div>
         )}
         <div ref={messagesEndRef} />
       </div>
@@ -381,8 +309,8 @@ export function AgentPanel() {
         </div>
       )}
 
-      <div className={cn('border-t p-4', dash.glassToolbar, dash.border)}>
-        <div className="relative flex items-center gap-1">
+      <div className={cn('border-t p-4 backdrop-blur-md', dash.glassToolbar, dash.border)}>
+        <div className={cn('relative flex items-center gap-1 rounded-2xl border p-1 shadow-sm backdrop-blur-sm dark:shadow-[0_2px_16px_rgba(0,0,0,0.3)]', dash.border)}>
           <button
             onClick={() => fileInputRef.current?.click()}
             className={cn('relative shrink-0 rounded-lg p-1.5 transition-all duration-200 hover:scale-110', dash.textMuted, dash.hover, dash.accentHover)}
@@ -414,7 +342,8 @@ export function AgentPanel() {
               'flex-1 rounded-xl border py-2.5 pl-3 pr-8 text-sm transition-all focus:outline-none disabled:opacity-50',
               dash.input,
               dash.text,
-              'placeholder:text-[#9B9A97] focus:ring-2 focus:ring-[#2383E2]/20 dark:placeholder:text-white/40 dark:focus:ring-[#8ab4f8]/20'
+              'placeholder:text-[#7A7770] focus:ring-2 dark:placeholder:text-white/40',
+              dash.accentRing,
             )}
           />
           <button
@@ -437,19 +366,6 @@ export function AgentPanel() {
           )}
         </div>
       </div>
-
-      <style jsx global>{`
-        @keyframes fadeSlideIn {
-          from {
-            opacity: 0;
-            transform: translateY(6px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
     </aside>
   );
 }

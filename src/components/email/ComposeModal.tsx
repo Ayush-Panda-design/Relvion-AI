@@ -73,7 +73,7 @@ function FieldRow({
         {children}
       </div>
       <motion.div
-        className="absolute bottom-0 left-14 right-4 h-0.5 origin-left rounded-full bg-[#2383E2] dark:bg-[#8ab4f8]"
+        className="absolute bottom-0 left-14 right-4 h-0.5 origin-left rounded-full bg-[#0D9488] dark:bg-[#8ab4f8]"
         initial={false}
         animate={{ scaleX: focused ? 1 : 0, opacity: focused ? 1 : 0 }}
         transition={{ duration: 0.2 }}
@@ -270,9 +270,9 @@ export function ComposeModal({ onClose, draftId: initialDraftId }: ComposeModalP
         <BorderBeam size={180} duration={10} colorFrom="#8ab4f8" colorTo="#669df6" borderWidth={1.5} />
 
         {/* Header */}
-        <div className="relative overflow-hidden border-b border-[#2383E2]/15 bg-gradient-to-r from-[#2383E2]/8 via-transparent to-[#1a6fc2]/8 dark:border-[#8ab4f8]/20 dark:from-[#8ab4f8]/15 dark:to-[#394457]/40">
+        <div className="relative overflow-hidden border-b border-[#0D9488]/15 bg-gradient-to-r from-[#0D9488]/8 via-transparent to-[#059669]/8 dark:border-[#8ab4f8]/20 dark:from-[#8ab4f8]/15 dark:to-[#394457]/40">
           <div className="absolute inset-0 opacity-30">
-            <AnimatedGridPattern numSquares={24} maxOpacity={0.08} className="text-[#2383E2] dark:text-[#8ab4f8]" />
+            <AnimatedGridPattern numSquares={24} maxOpacity={0.08} className="text-[#0D9488] dark:text-[#8ab4f8]" />
           </div>
           <div className="relative flex items-center justify-between px-4 py-3.5">
             <div className="flex items-center gap-3">
@@ -280,7 +280,7 @@ export function ComposeModal({ onClose, draftId: initialDraftId }: ComposeModalP
                 initial={{ scale: 0.8, rotate: -8 }}
                 animate={{ scale: 1, rotate: 0 }}
                 transition={{ type: 'spring', stiffness: 400, damping: 18 }}
-                className={cn('flex h-10 w-10 items-center justify-center rounded-xl ring-1 ring-[#2383E2]/20 dark:ring-[#8ab4f8]/30', dash.accentSelected)}
+                className={cn('flex h-10 w-10 items-center justify-center rounded-xl ring-1 ring-[#0D9488]/20 dark:ring-[#8ab4f8]/30', dash.accentSelected)}
               >
                 <Mail size={18} strokeWidth={1.75} />
               </motion.div>
@@ -394,7 +394,7 @@ export function ComposeModal({ onClose, draftId: initialDraftId }: ComposeModalP
             transition={{ delay: 0.15 }}
             className="relative min-h-[260px] flex-1"
           >
-            <AnimatedGridPattern numSquares={30} maxOpacity={0.06} className="text-[#2383E2]/40 dark:text-[#8ab4f8]/40" />
+            <AnimatedGridPattern numSquares={30} maxOpacity={0.06} className="text-[#0D9488]/40 dark:text-[#8ab4f8]/40" />
             <textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
@@ -432,7 +432,7 @@ export function ComposeModal({ onClose, draftId: initialDraftId }: ComposeModalP
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.9 }}
-                      className={cn('flex items-center gap-2 rounded-xl border px-3 py-1.5 text-xs', dash.accentSoftBg, 'border-[#2383E2]/20 dark:border-[#8ab4f8]/25')}
+                      className={cn('flex items-center gap-2 rounded-xl border px-3 py-1.5 text-xs', dash.accentSoftBg, 'border-[#0D9488]/20 dark:border-[#8ab4f8]/25')}
                     >
                       {file.type.startsWith('image/') ? (
                         <ImageIcon size={13} />
@@ -471,7 +471,7 @@ export function ComposeModal({ onClose, draftId: initialDraftId }: ComposeModalP
             'flex items-center justify-between border-t px-4 py-3',
             dash.surface,
             dash.border,
-            'bg-gradient-to-t from-[#2383E2]/5 to-transparent dark:from-[#8ab4f8]/10'
+            'bg-gradient-to-t from-[#0D9488]/5 to-transparent dark:from-[#8ab4f8]/10'
           )}
         >
           <div className="flex items-center gap-2">
@@ -482,7 +482,7 @@ export function ComposeModal({ onClose, draftId: initialDraftId }: ComposeModalP
               onClick={handleSend}
               disabled={isSending}
               className={cn(
-                'relative flex items-center gap-2 overflow-hidden rounded-xl px-6 py-2.5 text-sm font-semibold shadow-lg shadow-[#2383E2]/15 disabled:opacity-50 dark:shadow-[#8ab4f8]/20',
+                'relative flex items-center gap-2 overflow-hidden rounded-xl px-6 py-2.5 text-sm font-semibold shadow-lg shadow-[#0D9488]/15 disabled:opacity-50 dark:shadow-[#8ab4f8]/20',
                 dash.accentBg
               )}
             >

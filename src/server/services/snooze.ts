@@ -92,3 +92,17 @@ export async function clearSnooze(tenantId: string, emailId: string): Promise<vo
     emailId,
   ]);
 }
+
+export async function countSnoozedForTenant(tenantId: string): Promise<number> {
+  if (!process.env.DATABASE_URL) return 0;
+  try {
+    const res = await db.query<{ count: string }>(
+      `SELECT COUNT(*)::text AS count FROM snoozed_emails
+       WHERE tenant_id = $1 AND snooze_until > NOW()`,
+      [tenantId]
+    );
+    return parseInt(res.rows[0]?.count || '0', 10);
+  } catch {
+    return 0;
+  }
+}

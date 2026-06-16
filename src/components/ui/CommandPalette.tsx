@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
+import { Command } from 'cmdk';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
   Mail,
@@ -13,16 +15,20 @@ import {
   Send,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { DashboardIllustration } from '@/components/illustrations/DashboardIllustration';
 import { dash } from '@/components/dashboard/theme';
+import { Badge } from '@/components/ui/badge';
 import { eventKey } from '@/lib/keyboard';
+import { subscribeCommandPalette } from '@/lib/command-palette-events';
 
 interface Action {
   id: string;
   title: string;
   subtitle?: string;
-  icon: React.ComponentType<{ size?: number }>;
-  type: string;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  type: 'Navigation' | 'Action';
   shortcut?: string;
+  keywords?: string;
   action: () => void;
 }
 
@@ -33,9 +39,6 @@ interface CommandPaletteProps {
 
 export function CommandPalette({ onFolderChange, onComposeClick }: CommandPaletteProps) {
   const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState('');
-  const [selected, setSelected] = useState(0);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -46,8 +49,6 @@ export function CommandPalette({ onFolderChange, onComposeClick }: CommandPalett
         e.preventDefault();
         e.stopPropagation();
         setOpen((o) => !o);
-        setQuery('');
-        setSelected(0);
       }
       if (e.key === 'Escape') setOpen(false);
     };
@@ -56,8 +57,13 @@ export function CommandPalette({ onFolderChange, onComposeClick }: CommandPalett
   }, []);
 
   useEffect(() => {
-    if (open) setTimeout(() => inputRef.current?.focus(), 50);
-  }, [open]);
+    return subscribeCommandPalette({
+      onToggle: () => setOpen((o) => !o),
+      onOpen: () => setOpen(true),
+    });
+  }, []);
+
+  const close = () => setOpen(false);
 
   const actions: Action[] = [
     {
@@ -67,9 +73,10 @@ export function CommandPalette({ onFolderChange, onComposeClick }: CommandPalett
       icon: Mail,
       type: 'Navigation',
       shortcut: 'g i',
+      keywords: 'mail messages',
       action: () => {
         onFolderChange?.('inbox');
-        setOpen(false);
+        close();
       },
     },
     {
@@ -79,9 +86,10 @@ export function CommandPalette({ onFolderChange, onComposeClick }: CommandPalett
       icon: Send,
       type: 'Action',
       shortcut: 'c',
+      keywords: 'write new send',
       action: () => {
         onComposeClick?.();
-        setOpen(false);
+        close();
       },
     },
     {
@@ -91,7 +99,7 @@ export function CommandPalette({ onFolderChange, onComposeClick }: CommandPalett
       type: 'Navigation',
       action: () => {
         onFolderChange?.('drafts');
-        setOpen(false);
+        close();
       },
     },
     {
@@ -102,7 +110,7 @@ export function CommandPalette({ onFolderChange, onComposeClick }: CommandPalett
       shortcut: 'g s',
       action: () => {
         onFolderChange?.('sent');
-        setOpen(false);
+        close();
       },
     },
     {
@@ -114,7 +122,7 @@ export function CommandPalette({ onFolderChange, onComposeClick }: CommandPalett
       shortcut: 'g c',
       action: () => {
         onFolderChange?.('calendar');
-        setOpen(false);
+        close();
       },
     },
     {
@@ -125,7 +133,7 @@ export function CommandPalette({ onFolderChange, onComposeClick }: CommandPalett
       shortcut: 'g a',
       action: () => {
         onFolderChange?.('analytics');
-        setOpen(false);
+        close();
       },
     },
     {
@@ -136,7 +144,7 @@ export function CommandPalette({ onFolderChange, onComposeClick }: CommandPalett
       shortcut: 'g e',
       action: () => {
         onFolderChange?.('settings');
-        setOpen(false);
+        close();
       },
     },
     {
@@ -146,7 +154,7 @@ export function CommandPalette({ onFolderChange, onComposeClick }: CommandPalett
       type: 'Navigation',
       action: () => {
         onFolderChange?.('starred');
-        setOpen(false);
+        close();
       },
     },
     {
@@ -157,7 +165,7 @@ export function CommandPalette({ onFolderChange, onComposeClick }: CommandPalett
       shortcut: 'g t',
       action: () => {
         onFolderChange?.('trash');
-        setOpen(false);
+        close();
       },
     },
     {
@@ -167,43 +175,10 @@ export function CommandPalette({ onFolderChange, onComposeClick }: CommandPalett
       type: 'Navigation',
       action: () => {
         onFolderChange?.('spam');
-        setOpen(false);
+        close();
       },
     },
   ];
-
-  const filtered = query.trim()
-    ? actions.filter(
-        (a) =>
-          a.title.toLowerCase().includes(query.toLowerCase()) ||
-          a.subtitle?.toLowerCase().includes(query.toLowerCase())
-      )
-    : actions;
-
-  useEffect(() => {
-    setSelected(0);
-  }, [query]);
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setSelected((s) => Math.min(s + 1, filtered.length - 1));
-    }
-    if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setSelected((s) => Math.max(s - 1, 0));
-    }
-    if (e.key === 'Enter' && filtered[selected]) {
-      filtered[selected].action();
-    }
-  };
-
-  if (!open) return null;
-
-  const typeColors: Record<string, string> = {
-    Navigation: cn(dash.accentSoftBg),
-    Action: cn(dash.accentSelected),
-  };
 
   const kbdClass = cn(
     'rounded border px-1.5 py-0.5 font-mono text-[10px]',
@@ -213,106 +188,121 @@ export function CommandPalette({ onFolderChange, onComposeClick }: CommandPalett
   );
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 px-4 pt-[10vh] backdrop-blur-sm"
-      onClick={() => setOpen(false)}
-    >
-      <div
-        className={cn(
-          'flex w-full max-w-2xl flex-col overflow-hidden rounded-2xl border shadow-2xl',
-          dash.elevated,
-          dash.border,
-          'dark:shadow-[0_8px_32px_rgba(0,0,0,0.55)]'
-        )}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className={cn('flex items-center border-b px-4 py-3', dash.border)}>
-          <Search size={18} className={cn('mr-3 shrink-0', dash.accent)} strokeWidth={1.75} />
-          <input
-            ref={inputRef}
-            className={cn(
-              'flex-1 bg-transparent text-base focus:outline-none',
-              dash.text,
-              'placeholder:text-[#9B9A97] dark:placeholder:text-[#9aa0a6]'
-            )}
-            placeholder="Search commands…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={handleKeyDown}
-          />
-          <kbd className={kbdClass}>esc</kbd>
-        </div>
-
-        <div className="max-h-96 overflow-y-auto py-1.5">
-          {filtered.length === 0 ? (
-            <div className={cn('py-10 text-center text-sm', dash.textMuted)}>No matching commands</div>
-          ) : (
-            filtered.map((action, i) => {
-              const Icon = action.icon;
-              const isSelected = selected === i;
-              return (
-                <button
-                  key={action.id}
-                  type="button"
-                  onClick={action.action}
-                  onMouseEnter={() => setSelected(i)}
-                  className={cn(
-                    'flex w-full items-center gap-3 px-4 py-3 text-left transition-colors',
-                    isSelected ? dash.rowActive : dash.hover
-                  )}
-                >
-                  <div
-                    className={cn(
-                      'rounded-lg p-1.5',
-                      isSelected ? dash.accentSelected : dash.accentSoftBg
-                    )}
-                  >
-                    <Icon size={16} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className={cn('text-sm font-medium', dash.text)}>{action.title}</div>
-                    {action.subtitle && (
-                      <div className={cn('text-xs', dash.textMuted)}>{action.subtitle}</div>
-                    )}
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    {action.shortcut && <kbd className={kbdClass}>{action.shortcut}</kbd>}
-                    <span
-                      className={cn(
-                        'rounded-full px-2 py-0.5 text-xs font-medium',
-                        typeColors[action.type] || cn(dash.textMuted, dash.chip)
-                      )}
-                    >
-                      {action.type}
-                    </span>
-                  </div>
-                </button>
-              );
-            })
-          )}
-        </div>
-
-        <div
-          className={cn(
-            'flex items-center gap-4 border-t px-4 py-2.5 text-xs',
-            dash.border,
-            dash.textSubtle
-          )}
+    <AnimatePresence>
+      {open && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
+          className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 px-4 pt-[10vh] backdrop-blur-sm"
+          onClick={close}
         >
-          <span>
-            <kbd className={kbdClass}>↑↓</kbd> Navigate
-          </span>
-          <span>
-            <kbd className={kbdClass}>↵</kbd> Select
-          </span>
-          <span>
-            <kbd className={kbdClass}>esc</kbd> Close
-          </span>
-          <span className="ml-auto">
-            <kbd className={kbdClass}>⌘K</kbd> Toggle
-          </span>
-        </div>
-      </div>
-    </div>
+          <motion.div
+            initial={{ opacity: 0, y: -12, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -8, scale: 0.98 }}
+            transition={{ duration: 0.2, ease: [0.21, 0.47, 0.32, 0.98] }}
+            className={cn(
+              'flex w-full max-w-2xl flex-col overflow-hidden rounded-2xl border shadow-2xl',
+              dash.elevated,
+              dash.border,
+              'dark:shadow-[0_8px_32px_rgba(0,0,0,0.55)]'
+            )}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Command
+              label="Relvion command palette"
+              className="flex flex-col"
+              loop
+            >
+              <div className={cn('flex items-center border-b px-4 py-3', dash.border)}>
+                <Search size={18} className={cn('mr-3 shrink-0', dash.accent)} strokeWidth={1.75} />
+                <Command.Input
+                  placeholder="Type a command or search…"
+                  className={cn(
+                    'flex-1 bg-transparent text-base focus:outline-none',
+                    dash.text,
+                    'placeholder:text-[#9B9A97] dark:placeholder:text-[#9aa0a6]'
+                  )}
+                />
+                <kbd className={kbdClass}>esc</kbd>
+              </div>
+
+              <Command.List className="max-h-96 overflow-y-auto p-2">
+                <Command.Empty>
+                  <div className="py-6">
+                    <DashboardIllustration
+                      variant="search"
+                      size="sm"
+                      title="No matching commands"
+                      subtitle="Try a different keyword."
+                    />
+                  </div>
+                </Command.Empty>
+
+                <Command.Group
+                  heading="Quick actions"
+                  className="[&_[cmdk-group-heading]]:mb-1 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-[11px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider [&_[cmdk-group-heading]]:text-[#7A7770] dark:[&_[cmdk-group-heading]]:text-[#9aa0a6]"
+                >
+                  {actions.map((action) => {
+                    const Icon = action.icon;
+                    return (
+                      <Command.Item
+                        key={action.id}
+                        value={`${action.title} ${action.subtitle ?? ''} ${action.keywords ?? ''}`}
+                        onSelect={action.action}
+                        className={cn(
+                          'flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors outline-none',
+                          dash.hover,
+                          'data-[selected=true]:bg-[rgba(13,148,136,0.08)] data-[selected=true]:shadow-[inset_3px_0_0_0_#0D9488] dark:data-[selected=true]:bg-[#3c4043]/60 dark:data-[selected=true]:shadow-[inset_3px_0_0_0_#8ab4f8]'
+                        )}
+                      >
+                        <div className={cn('rounded-lg p-1.5', dash.accentSoftBg)}>
+                          <Icon size={16} className={dash.accent} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className={cn('text-sm font-medium', dash.text)}>{action.title}</div>
+                          {action.subtitle && (
+                            <div className={cn('text-xs', dash.textMuted)}>{action.subtitle}</div>
+                          )}
+                        </div>
+                        <div className="flex shrink-0 items-center gap-2">
+                          {action.shortcut && <kbd className={kbdClass}>{action.shortcut}</kbd>}
+                          <Badge variant={action.type === 'Action' ? 'accent' : 'outline'}>
+                            {action.type}
+                          </Badge>
+                        </div>
+                      </Command.Item>
+                    );
+                  })}
+                </Command.Group>
+              </Command.List>
+
+              <div
+                className={cn(
+                  'flex items-center gap-4 border-t px-4 py-2.5 text-xs',
+                  dash.border,
+                  dash.textSubtle
+                )}
+              >
+                <span>
+                  <kbd className={kbdClass}>↑↓</kbd> Navigate
+                </span>
+                <span>
+                  <kbd className={kbdClass}>↵</kbd> Select
+                </span>
+                <span>
+                  <kbd className={kbdClass}>/</kbd> Open
+                </span>
+                <span className="ml-auto">
+                  <kbd className={kbdClass}>⌘K</kbd> Toggle
+                </span>
+              </div>
+            </Command>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

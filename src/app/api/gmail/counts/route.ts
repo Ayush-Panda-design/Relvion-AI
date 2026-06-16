@@ -1,24 +1,27 @@
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth/getSession';
 import { corsairForTenant } from '@/lib/auth/corsairForTenant';
+import { getTenantCache, setTenantCache } from '@/lib/tenant-cache';
 
-// Cache counts for 60s to avoid hammering Gmail on every sidebar render
-let cachedCounts: Record<string, number> | null = null;
-let cacheExpiry = 0;
+const CACHE_KEY = 'gmail-label-counts';
+const CACHE_TTL_MS = 60_000;
 
 export async function GET() {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const corsair = corsairForTenant(session.tenantId);
 
-  const now = Date.now();
-  if (cachedCounts && now < cacheExpiry) {
-    return NextResponse.json(cachedCounts);
+  const { tenantId } = session;
+  const cached = getTenantCache<Record<string, number>>(tenantId, CACHE_KEY);
+  if (cached) {
+    return NextResponse.json(cached);
   }
+
+  const corsair = corsairForTenant(tenantId);
 
   try {
     const labelsRes = await corsair.gmail.api.labels.list({ userId: 'me' });
-    const labels: any[] = labelsRes?.labels || [];
+    const labels: { id?: string; messagesTotal?: number; messagesUnread?: number }[] =
+      labelsRes?.labels || [];
 
     const wantedIds: Record<string, string> = {
       INBOX: 'inbox',
@@ -36,10 +39,11 @@ export async function GET() {
       trash: 0,
       spam: 0,
       starred: 0,
+      snoozed: 0,
     };
 
     for (const label of labels) {
-      const key = wantedIds[label.id];
+      const key = label.id ? wantedIds[label.id] : undefined;
       if (key) {
         counts[key] =
           key === 'inbox'
@@ -50,12 +54,18 @@ export async function GET() {
       }
     }
 
-    cachedCounts = counts;
-    cacheExpiry = now + 60_000;
+    try {
+      const { countSnoozedForTenant } = await import('@/server/services/snooze');
+      counts.snoozed = await countSnoozedForTenant(tenantId);
+    } catch {
+      counts.snoozed = 0;
+    }
+
+    setTenantCache(tenantId, CACHE_KEY, counts, CACHE_TTL_MS);
     return NextResponse.json(counts);
-  } catch (error: any) {
-    console.error('[gmail/counts] failed:', error.message);
-    // Return zeros rather than 500 — sidebar degrades gracefully
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'counts failed';
+    console.error('[gmail/counts] failed:', msg);
     return NextResponse.json({
       inbox: 0,
       drafts: 0,
@@ -63,6 +73,7 @@ export async function GET() {
       trash: 0,
       spam: 0,
       starred: 0,
+      snoozed: 0,
     });
   }
 }

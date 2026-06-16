@@ -21,6 +21,7 @@ import { dash, type Density } from '@/components/dashboard/theme';
 import { useDensity } from '@/components/dashboard/DensityProvider';
 import { useTheme } from '@/components/dashboard/ThemeProvider';
 import { Sun, Moon } from 'lucide-react';
+import { PageEnter } from '@/components/dashboard/loading/PageEnter';
 
 interface WebhookConfig {
   baseUrl: string | null;
@@ -152,7 +153,8 @@ export default function SettingsPage() {
   const displayName = profile?.email?.split('@')[0] || 'User';
 
   return (
-      <div className={cn('mx-auto max-w-3xl overflow-y-auto px-6 py-8', dash.bg)}>
+    <PageEnter className="min-h-0 flex-1">
+      <div className={cn('mx-auto min-h-0 flex-1 overflow-y-auto px-6 py-8 max-w-3xl', dash.bg)}>
         <header className="mb-8">
           <h1 className={cn('text-2xl font-normal tracking-tight', dash.text)}>Settings</h1>
           <p className={cn('mt-1 text-sm', dash.textMuted)}>
@@ -239,7 +241,7 @@ export default function SettingsPage() {
                 className={cn(
                   'mb-4 space-y-1.5 rounded-xl border p-3 text-xs',
                   dash.border,
-                  'bg-[#F7F7F5] dark:bg-[#303134]/40'
+                  'bg-[#EBEAE5] dark:bg-[#303134]/40'
                 )}
               >
                 <div className="flex items-center gap-2">
@@ -297,7 +299,7 @@ export default function SettingsPage() {
             <div className="grid grid-cols-2 gap-3">
               {(
                 [
-                  { id: 'light' as const, label: 'Light', desc: 'Clean & minimal', icon: Sun },
+                  { id: 'light' as const, label: 'Light', desc: 'Warm & eye-safe', icon: Sun },
                   { id: 'dark' as const, label: 'Dark', desc: 'Gmail neutrals', icon: Moon },
                 ] as const
               ).map(({ id, label, desc, icon: Icon }) => (
@@ -311,13 +313,13 @@ export default function SettingsPage() {
                   className={cn(
                     'flex flex-col items-start gap-2 rounded-xl border p-4 text-left transition-all',
                     theme === id
-                      ? 'border-[#2383E2] bg-[#F7F7F5] shadow-sm dark:border-[#8ab4f8] dark:bg-[#8ab4f8]/10'
+                      ? cn('border-[#0D9488]', dash.filterActive)
                       : cn(dash.border, dash.hover)
                   )}
                 >
                   <Icon
                     size={20}
-                    className={theme === id ? 'text-[#2383E2] dark:text-[#8ab4f8]' : dash.textMuted}
+                    className={theme === id ? dash.accent : dash.textMuted}
                   />
                   <div>
                     <p className={cn('text-sm font-medium', dash.text)}>{label}</p>
@@ -346,7 +348,7 @@ export default function SettingsPage() {
                   className={cn(
                     'rounded-xl border px-3 py-3 text-sm capitalize transition-all',
                     density === d
-                      ? 'border-[#2383E2] bg-[#F7F7F5] text-[#2383E2] dark:border-[#8ab4f8] dark:bg-[#8ab4f8]/10 dark:text-[#8ab4f8]'
+                      ? 'border-[#0D9488] bg-[#E0F2F1] text-[#0D9488] dark:border-[#8ab4f8] dark:bg-[#8ab4f8]/10 dark:text-[#8ab4f8]'
                       : cn(dash.border, dash.textMuted, dash.hover)
                   )}
                 >
@@ -419,5 +421,6 @@ export default function SettingsPage() {
           </SettingsCard>
         </div>
       </div>
+    </PageEnter>
   );
 }
