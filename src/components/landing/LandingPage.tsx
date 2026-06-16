@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowRight,
   Bot,
@@ -11,41 +11,32 @@ import {
   Command,
   Inbox,
   Mail,
-  Search,
   Sparkles,
-  Clock,
   Filter,
   PenLine,
   BarChart3,
   Users,
   Check,
-  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { SessionPayload } from "@/lib/auth/session";
 import { BlurFade } from "@/components/ui/blur-fade";
-import { FlipWords } from "@/components/ui/flip-words";
-import { AnimatedShinyText } from "@/components/ui/animated-shiny-text";
-import { TextGenerateEffect } from "@/components/ui/text-generate-effect";
-import { NumberTicker } from "@/components/ui/number-ticker";
-import { BorderBeam } from "@/components/ui/border-beam";
-import { Card3D } from "@/components/ui/card-3d";
-import { TypewriterEffect } from "@/components/ui/typewriter-effect";
 import { TracingBeam } from "@/components/ui/tracing-beam";
 import { TextRevealCard } from "@/components/ui/text-reveal-card";
 import { InfiniteMovingCards } from "@/components/ui/infinite-moving-cards";
-import { AnimatedGridPattern } from "@/components/ui/animated-grid-pattern";
-import { Meteors } from "@/components/ui/meteors";
+import { BorderBeam } from "@/components/ui/border-beam";
+import { Card3D } from "@/components/ui/card-3d";
 import { BrandMark } from "@/components/brand/BrandMark";
 import { WorkflowDiagram, ArchitectureDiagram, BeforeAfterFlow } from "@/components/landing/visuals/Diagrams";
 import { ImageShowcase, FeatureImage, DayInLifeDiagram } from "@/components/landing/visuals/Showcase";
+import { HeroSection } from "@/components/landing/HeroSection";
 import {
-  ghostButton,
   landingSurface,
   landingText,
+  landingSectionBg,
   primaryButton,
   sectionLabel,
-  type LandingTheme,
+  type LandingTone,
 } from "./theme";
 import { LandingNav } from "./LandingNav";
 import {
@@ -58,8 +49,12 @@ import {
   ChangelogSection,
   ChangelogFloatingWidget,
 } from "./sections/ExtendedSections";
+import { PainPointsSection } from "./sections/PainPointsSection";
+import { ProductPreviewSection } from "./sections/ProductPreviewSection";
+import { KeyboardShortcutsSection } from "./sections/KeyboardShortcutsSection";
 
-/* ─── Data ─────────────────────────────────────────────── */
+import { SectionFloatingOrbs } from "@/components/landing/motion/SectionFloatingOrbs";
+import { LandingIllustration } from "@/components/landing/illustrations/LandingIllustration";
 
 const navLinks = [
   { href: "#product", label: "Product" },
@@ -184,6 +179,8 @@ const shortcuts = [
   { keys: ["/"], action: "Search" },
 ];
 
+const useCaseIllustrations = ['team', 'inbox', 'agent'] as const;
+
 const useCases = [
   {
     icon: Users,
@@ -225,191 +222,44 @@ const testimonials = [
   { quote: "Finally an AI tool that stays inside my workflow instead of another tab.", name: "Tom Ellis", role: "Design director" },
 ];
 
-const staggerContainer = {
-  hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { staggerChildren: 0.08 } },
-};
-
-const staggerItem = {
-  hidden: { opacity: 0, x: -12 },
-  show: { opacity: 1, x: 0, transition: { type: "spring" as const, stiffness: 120, damping: 18 } },
-};
-
 /* ─── Sub-components ───────────────────────────────────── */
 
-function Marquee({ isDark }: { isDark: boolean }) {
+function Marquee({ tone }: { tone: LandingTone }) {
   const items = [...marqueeItems, ...marqueeItems];
   return (
-    <div className={cn("overflow-hidden border-y py-4", isDark ? "border-white/[0.06]" : "border-stone-300/60")}>
+    <div className={cn("relative overflow-hidden border-y py-4", landingSectionBg("gray"))}>
+      <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-[#F8F9FA] to-transparent" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-[#F8F9FA] to-transparent" />
       <motion.div
         className="flex w-max gap-10"
         animate={{ x: ["0%", "-50%"] }}
         transition={{ duration: 35, repeat: Infinity, ease: "linear" }}
       >
         {items.map((item, i) => (
-          <span
+          <motion.span
             key={`${item}-${i}`}
-            className={cn("flex items-center gap-10 text-sm font-medium whitespace-nowrap", landingText(isDark, "muted"))}
+            initial={{ opacity: 0.6 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            className={cn("flex items-center gap-10 text-sm font-medium whitespace-nowrap", landingText(tone, "muted"))}
           >
             {item}
-            <span className="text-orange-600">·</span>
-          </span>
+            <motion.span
+              className="text-[#34A853]"
+              animate={{ scale: [1, 1.4, 1] }}
+              transition={{ duration: 2, repeat: Infinity, delay: (i % marqueeItems.length) * 0.15 }}
+            >
+              ·
+            </motion.span>
+          </motion.span>
         ))}
       </motion.div>
     </div>
   );
 }
 
-function ProductPreview({ isDark }: { isDark: boolean }) {
-  const [active, setActive] = useState<(typeof productTabs)[number]["id"]>("inbox");
-  const tab = productTabs.find((t) => t.id === active)!;
-  const inboxTab = productTabs.find((t) => t.id === "inbox")!;
-  const calendarTab = productTabs.find((t) => t.id === "calendar")!;
-  const agentTab = productTabs.find((t) => t.id === "agent")!;
-
-  return (
-    <Card3D containerClassName="w-full">
-      <div className={cn("relative overflow-hidden rounded-xl border", landingSurface(isDark, "card"))}>
-        <BorderBeam size={180} duration={10} colorFrom="#ea580c" colorTo="#fdba74" />
-        <div className={cn("relative flex gap-1 border-b p-2", isDark ? "border-white/[0.06]" : "border-stone-300/60")}>
-          <LayoutGroup>
-            {productTabs.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setActive(t.id)}
-                className={cn(
-                  "relative flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors",
-                  active === t.id ? "text-white" : landingText(isDark, "muted"),
-                  active !== t.id && (isDark ? "hover:bg-white/5" : "hover:bg-stone-900/5")
-                )}
-              >
-                {active === t.id && (
-                  <motion.span
-                    layoutId="product-tab-pill"
-                    className="absolute inset-0 rounded-lg bg-orange-600"
-                    transition={{ type: "spring", stiffness: 380, damping: 32 }}
-                  />
-                )}
-                <t.icon className="relative z-10 h-4 w-4" />
-                <span className="relative z-10">{t.label}</span>
-              </button>
-            ))}
-          </LayoutGroup>
-        </div>
-
-        <div className="relative p-6">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={active}
-              initial={{ opacity: 0, y: 12, filter: "blur(4px)" }}
-              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-              exit={{ opacity: 0, y: -12, filter: "blur(4px)" }}
-              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-            >
-              <h3 className={cn("text-lg font-semibold", landingText(isDark, "primary"))}>{tab.headline}</h3>
-              <p className={cn("mt-1 text-sm", landingText(isDark, "muted"))}>{tab.copy}</p>
-
-              {active === "agent" && (
-                <p className={cn("mt-3 font-mono text-xs", landingText(isDark, "subtle"))}>
-                  <TypewriterEffect
-                    words={[
-                      { text: "Summarize my urgent threads..." },
-                      { text: "Draft a reply to Sarah..." },
-                      { text: "Schedule 30 min Thursday..." },
-                    ]}
-                  />
-                </p>
-              )}
-
-              <motion.div
-                className="mt-5 space-y-2"
-                variants={staggerContainer}
-                initial="hidden"
-                animate="show"
-                key={`list-${active}`}
-              >
-                {active === "inbox" &&
-                  inboxTab.rows.map((row, i) => (
-                    <motion.div
-                      key={i}
-                      variants={staggerItem}
-                      whileHover={{ scale: 1.01, x: 4 }}
-                      className={cn(
-                        "flex items-center gap-3 rounded-lg border px-4 py-3 transition-colors",
-                        row.unread
-                          ? isDark
-                            ? "border-orange-600/30 bg-orange-600/5"
-                            : "border-orange-300 bg-orange-50/80"
-                          : isDark
-                            ? "border-white/[0.04] bg-white/[0.02]"
-                            : "border-stone-300/40 bg-[#f5f0e8]/50"
-                      )}
-                    >
-                      <div className={cn("h-2 w-2 shrink-0 rounded-full", row.unread ? "bg-orange-500" : "bg-transparent")} />
-                      <div className="min-w-0 flex-1">
-                        <p className={cn("truncate text-sm font-medium", landingText(isDark, "primary"))}>{row.from}</p>
-                        <p className={cn("truncate text-xs", landingText(isDark, "muted"))}>{row.subject}</p>
-                      </div>
-                      <span className={cn("shrink-0 rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide", isDark ? "bg-white/5 text-stone-400" : "bg-stone-200 text-stone-600")}>
-                        {row.tag}
-                      </span>
-                    </motion.div>
-                  ))}
-
-                {active === "calendar" &&
-                  calendarTab.events.map((ev, i) => (
-                    <motion.div
-                      key={i}
-                      variants={staggerItem}
-                      whileHover={{ x: 6 }}
-                      className={cn("flex items-center gap-4 rounded-lg border px-4 py-3", isDark ? "border-white/[0.04]" : "border-stone-300/40")}
-                    >
-                      <span className="w-16 shrink-0 text-xs font-mono text-orange-600">{ev.time}</span>
-                      <div className="flex-1">
-                        <p className={cn("text-sm font-medium", landingText(isDark, "primary"))}>{ev.title}</p>
-                      </div>
-                      <span className={cn("text-xs", landingText(isDark, "subtle"))}>{ev.type}</span>
-                    </motion.div>
-                  ))}
-
-                {active === "agent" &&
-                  agentTab.messages.map((msg, i) => (
-                    <motion.div
-                      key={i}
-                      variants={staggerItem}
-                      initial={{ opacity: 0, scale: 0.96 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: i * 0.12 }}
-                      className={cn(
-                        "rounded-lg px-4 py-3 text-sm leading-relaxed",
-                        msg.role === "user"
-                          ? isDark
-                            ? "ml-8 bg-white/5 text-stone-300"
-                            : "ml-8 bg-stone-200/60 text-stone-700"
-                          : isDark
-                            ? "mr-4 border border-orange-600/20 bg-orange-600/5 text-stone-200"
-                            : "mr-4 border border-orange-200 bg-orange-50 text-stone-800"
-                      )}
-                    >
-                      {msg.role === "agent" && (
-                        <span className="mb-1 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-orange-600">
-                          <Bot className="h-3 w-3" /> Relvion Agent
-                        </span>
-                      )}
-                      {msg.text}
-                    </motion.div>
-                  ))}
-              </motion.div>
-            </motion.div>
-          </AnimatePresence>
-        </div>
-      </div>
-    </Card3D>
-  );
-}
-
-function FAQItem({ q, a, isDark }: { q: string; a: string; isDark: boolean }) {
+function FAQItem({ q, a, tone }: { q: string; a: string; tone: LandingTone }) {
+  const isDark = false;
   const [open, setOpen] = useState(false);
   return (
     <div className={cn("border-b", isDark ? "border-white/[0.06]" : "border-stone-300/60")}>
@@ -418,8 +268,8 @@ function FAQItem({ q, a, isDark }: { q: string; a: string; isDark: boolean }) {
         onClick={() => setOpen(!open)}
         className="flex w-full items-center justify-between gap-4 py-5 text-left"
       >
-        <span className={cn("text-base font-medium", landingText(isDark, "primary"))}>{q}</span>
-        <ChevronDown className={cn("h-5 w-5 shrink-0 transition-transform text-orange-600", open && "rotate-180")} />
+        <span className={cn("text-base font-medium", landingText(tone, "primary"))}>{q}</span>
+        <ChevronDown className={cn("h-5 w-5 shrink-0 transition-transform text-[#1a73e8]", open && "rotate-180")} />
       </button>
       <AnimatePresence>
         {open && (
@@ -430,7 +280,7 @@ function FAQItem({ q, a, isDark }: { q: string; a: string; isDark: boolean }) {
             transition={{ type: "spring", stiffness: 300, damping: 28 }}
             className="overflow-hidden"
           >
-            <p className={cn("pb-5 text-sm leading-relaxed", landingText(isDark, "muted"))}>{a}</p>
+            <p className={cn("pb-5 text-sm leading-relaxed", landingText(tone, "muted"))}>{a}</p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -438,217 +288,39 @@ function FAQItem({ q, a, isDark }: { q: string; a: string; isDark: boolean }) {
   );
 }
 
-function ShortcutChip({
-  keys,
-  action,
-  isDark,
-  active,
-  onClick,
-}: {
-  keys: string[];
-  action: string;
-  isDark: boolean;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <motion.button
-      type="button"
-      onClick={onClick}
-      layout
-      whileHover={{ y: -2 }}
-      whileTap={{ scale: 0.97 }}
-      className={cn(
-        "flex flex-col items-start gap-2 rounded-xl border p-4 text-left transition-all",
-        active
-          ? isDark
-            ? "border-orange-600 bg-orange-600/10"
-            : "border-orange-500 bg-orange-50"
-          : isDark
-            ? "border-white/[0.06] hover:border-white/15"
-            : "border-stone-300/60 hover:border-stone-400"
-      )}
-    >
-      <div className="flex gap-1">
-        {keys.map((k) => (
-          <kbd
-            key={k}
-            className={cn(
-              "rounded border px-2 py-0.5 font-mono text-xs",
-              isDark ? "border-white/10 bg-white/5" : "border-stone-400/50 bg-[#f5f0e8]"
-            )}
-          >
-            {k}
-          </kbd>
-        ))}
-      </div>
-      <span className={cn("text-sm", landingText(isDark, "muted"))}>{action}</span>
-    </motion.button>
-  );
-}
-
 /* ─── Main ─────────────────────────────────────────────── */
 
 export default function LandingPage({ session }: { session: SessionPayload | null }) {
-  const [theme, setTheme] = useState<LandingTheme>("dark");
-  const [mounted, setMounted] = useState(false);
   const [activeShortcut, setActiveShortcut] = useState(0);
   const [showcaseIndex, setShowcaseIndex] = useState(0);
-  const isDark = theme === "dark";
-
-  useEffect(() => {
-    setMounted(true);
-    const stored = localStorage.getItem("relvion-landing-theme") as LandingTheme | null;
-    if (stored === "light" || stored === "dark") setTheme(stored);
-  }, []);
-
-  useEffect(() => {
-    if (!mounted) return;
-    localStorage.setItem("relvion-landing-theme", theme);
-    document.documentElement.classList.toggle("dark", theme === "dark");
-  }, [theme, mounted]);
 
   const ctaHref = session ? "/dashboard" : "/signin";
   const ctaLabel = session ? "Open Dashboard" : "Sign In with Google";
 
+  const isDark = false;
+  const tone = "light" as const;
+
   return (
-    <div
-      suppressHydrationWarning
-      className={cn(
-        "relative min-h-screen scroll-pt-20 overflow-x-hidden transition-colors duration-300",
-        landingSurface(isDark, "page"),
-        landingText(isDark, "primary")
-      )}
-    >
-      <AnimatedGridPattern className={cn(isDark ? "opacity-40" : "opacity-25")} numSquares={28} />
-      {isDark && <Meteors number={10} />}
+    <div suppressHydrationWarning className="relative min-h-screen scroll-pt-20 overflow-x-hidden bg-white">
+      <LandingNav session={!!session} ctaHref={ctaHref} ctaLabel={ctaLabel} />
 
-      {/* Nav — fixed, always visible */}
-      <LandingNav
-        isDark={isDark}
-        onThemeToggle={() => setTheme(isDark ? "light" : "dark")}
-        session={!!session}
-        ctaHref={ctaHref}
-        ctaLabel={ctaLabel}
-      />
+      <HeroSection ctaHref={ctaHref} ctaLabel={ctaLabel} />
 
-      {/* Hero */}
-      <section className="relative z-10 mx-auto max-w-6xl px-6 pb-20 pt-8 lg:pt-12">
-        <div className="flex flex-col gap-12 lg:flex-row lg:items-center lg:gap-16">
-          <div className="flex-1">
-            <BlurFade delay={0.1}>
-              <p className={cn(sectionLabel(), "inline-flex rounded-full border px-3 py-1", isDark ? "border-orange-600/30" : "border-orange-300")}>
-                <AnimatedShinyText className={isDark ? "text-stone-300" : "text-stone-700"}>
-                  Early access · AI workspace
-                </AnimatedShinyText>
-              </p>
-            </BlurFade>
-            <BlurFade delay={0.2}>
-              <h1 className={cn("mt-4 text-4xl font-bold leading-[1.08] tracking-tight sm:text-5xl lg:text-[3.25rem]", landingText(isDark, "primary"))}>
-                Email, calendar, and{" "}
-                <FlipWords words={["intelligence.", "focus.", "clarity.", "momentum."]} />
-                <br />
-                Finally in one place.
-              </h1>
-            </BlurFade>
-            <BlurFade delay={0.35}>
-              <TextGenerateEffect
-                words="Relvion is a focused workspace for people who live in their inbox. Triage faster, draft smarter, and schedule without leaving the thread."
-                className={cn("mt-6 max-w-lg text-lg font-normal leading-relaxed", landingText(isDark, "muted"))}
-                duration={0.35}
-              />
-            </BlurFade>
-            <BlurFade delay={0.5}>
-            <div className="mt-8 flex flex-wrap items-center gap-3">
-              <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.98 }}>
-                <Link href={ctaHref} className={primaryButton(isDark)}>
-                  {ctaLabel}
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </motion.div>
-              <Link href="#product" className={ghostButton(isDark)}>
-                See the product
-              </Link>
-            </div>
-            </BlurFade>
-            <BlurFade delay={0.65}>
-            <dl className="mt-12 flex flex-wrap gap-x-10 gap-y-4">
-              <div>
-                <dt className="text-2xl font-bold text-orange-600">
-                  <NumberTicker value={2} suffix="×" />
-                </dt>
-                <dd className={cn("text-sm", landingText(isDark, "subtle"))}>Faster triage</dd>
-              </div>
-              <div>
-                <dt className="text-2xl font-bold text-orange-600">&lt;1s</dt>
-                <dd className={cn("text-sm", landingText(isDark, "subtle"))}>Agent latency</dd>
-              </div>
-              <div>
-                <dt className="text-2xl font-bold text-orange-600">
-                  <NumberTicker value={100} suffix="%" />
-                </dt>
-                <dd className={cn("text-sm", landingText(isDark, "subtle"))}>Keyboard navigable</dd>
-              </div>
-            </dl>
-            </BlurFade>
-          </div>
+      <Marquee tone="light" />
 
-          <BlurFade delay={0.25} yOffset={24} className="flex-1 lg:max-w-xl">
-            <ProductPreview isDark={isDark} />
-          </BlurFade>
-        </div>
-      </section>
+      <PainPointsSection items={painPoints} />
 
-      <Marquee isDark={isDark} />
-
-      {/* Pain points */}
-      <section className="relative z-10 mx-auto max-w-6xl px-6 py-20">
-        <BlurFade>
-          <p className={sectionLabel()}>The problem</p>
-          <h2 className={cn("mt-3 max-w-2xl text-3xl font-bold tracking-tight sm:text-4xl", landingText(isDark, "primary"))}>
-            Your tools weren&apos;t built for how you actually work.
-          </h2>
-        </BlurFade>
-        <div className="mt-12 space-y-0">
-          {painPoints.map((item, i) => (
-            <BlurFade key={item.problem} delay={i * 0.1}>
-            <motion.div
-              whileInView={{ backgroundColor: isDark ? "rgba(234,88,12,0.03)" : "rgba(234,88,12,0.06)" }}
-              className={cn(
-                "flex flex-col gap-6 border-t py-10 transition-colors sm:flex-row sm:items-start sm:justify-between",
-                isDark ? "border-white/[0.06]" : "border-stone-300/60"
-              )}
-            >
-              <div className="flex max-w-md items-start gap-4">
-                <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-500/10">
-                  <X className="h-4 w-4 text-red-500" />
-                </div>
-                <div>
-                  <h3 className={cn("font-semibold", landingText(isDark, "primary"))}>{item.problem}</h3>
-                  <p className={cn("mt-1 text-sm", landingText(isDark, "muted"))}>{item.detail}</p>
-                </div>
-              </div>
-              <div className="flex max-w-md items-start gap-4 sm:text-right">
-                <div className="mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 sm:order-2">
-                  <Check className="h-4 w-4 text-emerald-500" />
-                </div>
-                <p className={cn("text-sm leading-relaxed sm:order-1", landingText(isDark, "muted"))}>{item.solution}</p>
-              </div>
-            </motion.div>
-            </BlurFade>
-          ))}
-        </div>
-      </section>
 
       {/* Visual showcase */}
-      <section className={cn("relative z-10 border-y py-20", isDark ? "border-white/[0.06] bg-[#0d0d0d]" : "border-stone-300/60 bg-[#e8e2d8]/50")}>
-        <div className="mx-auto max-w-6xl px-6">
+<section className={cn("relative z-10 border-y py-20", landingSectionBg("white"))}>
+        <SectionFloatingOrbs />
+        <div className="relative mx-auto max-w-6xl px-6">
           <BlurFade>
-            <p className={sectionLabel()}>See it in action</p>
-            <h2 className={cn("mt-3 text-3xl font-bold tracking-tight sm:text-4xl", landingText(isDark, "primary"))}>
+            <p className={sectionLabel(tone)}>See it in action</p>
+            <h2 className={cn("mt-3 text-3xl font-bold tracking-tight sm:text-4xl", landingText(tone, "primary"))}>
               Every surface, one workspace.
             </h2>
-            <p className={cn("mt-4 max-w-2xl text-lg", landingText(isDark, "muted"))}>
+            <p className={cn("mt-4 max-w-2xl text-lg", landingText(tone, "muted"))}>
               Click through real workflow views — inbox triage, calendar sync, agent actions, and analytics.
             </p>
           </BlurFade>
@@ -657,22 +329,32 @@ export default function LandingPage({ session }: { session: SessionPayload | nul
           </BlurFade>
         </div>
       </section>
-
       <IntegrationGrid isDark={isDark} />
 
       {/* Workflow diagrams */}
-      <section id="workflow" className="relative z-10 mx-auto max-w-6xl px-6 py-20">
+<section id="workflow" className={cn("relative z-10 mx-auto max-w-6xl px-6 py-20", landingSectionBg("green"))}>
         <BlurFade>
-          <p className={sectionLabel()}>Workflow</p>
-          <h2 className={cn("mt-3 text-3xl font-bold tracking-tight sm:text-4xl", landingText(isDark, "primary"))}>
+          <p className={sectionLabel(tone)}>Workflow</p>
+          <h2 className={cn("mt-3 text-3xl font-bold tracking-tight sm:text-4xl", landingText(tone, "primary"))}>
             From inbox to done — visually.
           </h2>
-          <p className={cn("mt-4 max-w-2xl text-lg", landingText(isDark, "muted"))}>
+          <p className={cn("mt-4 max-w-2xl text-lg", landingText(tone, "muted"))}>
             See how a single email moves through Relvion, and how your day changes when everything lives in one pipeline.
           </p>
         </BlurFade>
 
         <BlurFade delay={0.1} className="mt-12">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.55 }}
+          >
+            <LandingIllustration id="workflow" isDark={isDark} frame float interactive />
+          </motion.div>
+        </BlurFade>
+
+        <BlurFade delay={0.15} className="mt-10">
           <WorkflowDiagram isDark={isDark} />
         </BlurFade>
 
@@ -681,15 +363,16 @@ export default function LandingPage({ session }: { session: SessionPayload | nul
         </BlurFade>
       </section>
 
+
       {/* Architecture */}
-      <section className={cn("relative z-10 border-y py-20", isDark ? "border-white/[0.06] bg-[#0d0d0d]" : "border-stone-300/60 bg-[#e8e2d8]/50")}>
+<section className={cn("relative z-10 border-y py-20", landingSectionBg("cream"))}>
         <div className="mx-auto max-w-6xl px-6">
           <BlurFade>
-            <p className={sectionLabel()}>Architecture</p>
-            <h2 className={cn("mt-3 text-3xl font-bold tracking-tight sm:text-4xl", landingText(isDark, "primary"))}>
+            <p className={sectionLabel(tone)}>Architecture</p>
+            <h2 className={cn("mt-3 text-3xl font-bold tracking-tight sm:text-4xl", landingText(tone, "primary"))}>
               How Relvion connects to your stack.
             </h2>
-            <p className={cn("mt-4 max-w-2xl text-lg", landingText(isDark, "muted"))}>
+            <p className={cn("mt-4 max-w-2xl text-lg", landingText(tone, "muted"))}>
               Your data stays in Google. Relvion is the intelligent layer — triage, drafts, and scheduling without migrating your mail.
             </p>
           </BlurFade>
@@ -699,31 +382,31 @@ export default function LandingPage({ session }: { session: SessionPayload | nul
         </div>
       </section>
 
+
       {/* Product deep-dive */}
-      <section id="product" className={cn("relative z-10 border-y py-20", isDark ? "border-white/[0.06] bg-[#0d0d0d]" : "border-stone-300/60 bg-[#e8e2d8]/50")}>
+<section id="product" className={cn("relative z-10 border-y py-20", landingSectionBg("gray"))}>
         <div className="mx-auto max-w-6xl px-6">
           <BlurFade>
-          <p className={sectionLabel()}>Product</p>
-          <h2 className={cn("mt-3 text-3xl font-bold tracking-tight sm:text-4xl", landingText(isDark, "primary"))}>
+          <p className={sectionLabel(tone)}>Product</p>
+          <h2 className={cn("mt-3 text-3xl font-bold tracking-tight sm:text-4xl", landingText(tone, "primary"))}>
             Three surfaces. One flow.
           </h2>
-          <p className={cn("mt-4 max-w-2xl text-lg", landingText(isDark, "muted"))}>
+          <p className={cn("mt-4 max-w-2xl text-lg", landingText(tone, "muted"))}>
             Switch between inbox, calendar, and agent without losing context. Explore each module below.
           </p>
           </BlurFade>
           <BlurFade delay={0.15} className="mt-14">
-            <ProductPreview isDark={isDark} />
+            <ProductPreviewSection tone={tone} tabs={productTabs} />
           </BlurFade>
         </div>
       </section>
-
       <AgentSandbox isDark={isDark} />
 
       {/* Features */}
-      <section id="features" className="relative z-10 mx-auto max-w-6xl px-6 py-20">
+<section id="features" className={cn("relative z-10 mx-auto max-w-6xl px-6 py-20", landingSectionBg("blue"))}>
         <BlurFade>
-          <p className={sectionLabel()}>Features</p>
-          <h2 className={cn("mt-3 text-3xl font-bold tracking-tight sm:text-4xl", landingText(isDark, "primary"))}>
+          <p className={sectionLabel(tone)}>Features</p>
+          <h2 className={cn("mt-3 text-3xl font-bold tracking-tight sm:text-4xl", landingText(tone, "primary"))}>
             Built for depth, not checkbox lists.
           </h2>
         </BlurFade>
@@ -744,14 +427,14 @@ export default function LandingPage({ session }: { session: SessionPayload | nul
                   viewport={{ once: true }}
                   transition={{ duration: 0.5 }}
                 >
-                <div className="flex items-center gap-2 text-orange-600">
+                <div className="flex items-center gap-2 text-[#1a73e8]">
                   <row.icon className="h-4 w-4" />
                   <span className="text-xs font-semibold uppercase tracking-widest">{row.eyebrow}</span>
                 </div>
-                <h3 className={cn("mt-3 text-2xl font-bold tracking-tight sm:text-3xl", landingText(isDark, "primary"))}>
+                <h3 className={cn("mt-3 text-2xl font-bold tracking-tight sm:text-3xl", landingText(tone, "primary"))}>
                   {row.title}
                 </h3>
-                <p className={cn("mt-4 text-base leading-relaxed", landingText(isDark, "muted"))}>{row.body}</p>
+                <p className={cn("mt-4 text-base leading-relaxed", landingText(tone, "muted"))}>{row.body}</p>
                 <ul className="mt-6 space-y-2">
                   {row.bullets.map((b, bi) => (
                     <motion.li
@@ -760,9 +443,9 @@ export default function LandingPage({ session }: { session: SessionPayload | nul
                       whileInView={{ opacity: 1, x: 0 }}
                       viewport={{ once: true }}
                       transition={{ delay: bi * 0.08 }}
-                      className={cn("flex items-center gap-2 text-sm", landingText(isDark, "muted"))}
+                      className={cn("flex items-center gap-2 text-sm", landingText(tone, "muted"))}
                     >
-                      <Check className="h-4 w-4 shrink-0 text-orange-600" />
+                      <Check className="h-4 w-4 shrink-0 text-[#1a73e8]" />
                       {b}
                     </motion.li>
                   ))}
@@ -778,62 +461,20 @@ export default function LandingPage({ session }: { session: SessionPayload | nul
         </div>
       </section>
 
-      {/* Interactive shortcuts */}
-      <section className={cn("border-y py-20", isDark ? "border-white/[0.06] bg-[#0d0d0d]" : "border-stone-300/60 bg-[#e8e2d8]/50")}>
-        <div className="mx-auto max-w-6xl px-6">
-          <div className="flex flex-col gap-10 lg:flex-row lg:items-start">
-            <div className="lg:w-2/5">
-              <p className={sectionLabel()}>Keyboard-first</p>
-              <h2 className={cn("mt-3 text-3xl font-bold tracking-tight", landingText(isDark, "primary"))}>
-                Speed is a feature.
-              </h2>
-              <p className={cn("mt-4 text-base leading-relaxed", landingText(isDark, "muted"))}>
-                Click a shortcut below to preview the action. Relvion is designed for people who keep their hands on the keyboard.
-              </p>
-              <motion.div
-                key={activeShortcut}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ type: "spring", stiffness: 200, damping: 22 }}
-                className={cn("mt-6 flex items-center gap-2 rounded-lg border px-4 py-3", landingSurface(isDark, "card"))}
-              >
-                <Search className="h-4 w-4 text-orange-600" />
-                <span className={cn("text-sm", landingText(isDark, "muted"))}>
-                  {shortcuts[activeShortcut].action}
-                </span>
-                <span className="ml-auto font-mono text-xs text-orange-600">
-                  {shortcuts[activeShortcut].keys.join(" ")}
-                </span>
-              </motion.div>
-            </div>
-            <div className="flex flex-1 flex-wrap gap-3">
-              <LayoutGroup>
-              {shortcuts.map((s, i) => (
-                <motion.div key={s.action} layout whileTap={{ scale: 0.96 }}>
-                <ShortcutChip
-                  key={s.action}
-                  keys={s.keys}
-                  action={s.action}
-                  isDark={isDark}
-                  active={activeShortcut === i}
-                  onClick={() => setActiveShortcut(i)}
-                />
-                </motion.div>
-              ))}
-              </LayoutGroup>
-            </div>
-          </div>
-        </div>
-      </section>
 
+      <KeyboardShortcutsSection
+        tone={tone}
+        shortcuts={shortcuts}
+        activeShortcut={activeShortcut}
+        onSelect={setActiveShortcut}
+      />
       <SecuritySection isDark={isDark} />
-
       <ComparisonTable isDark={isDark} />
 
       {/* Use cases */}
-      <section className="mx-auto max-w-6xl px-6 py-20">
-        <p className={sectionLabel()}>Use cases</p>
-        <h2 className={cn("mt-3 text-3xl font-bold tracking-tight", landingText(isDark, "primary"))}>
+<section className={cn("mx-auto max-w-6xl px-6 py-20", landingSectionBg("green"))}>
+        <p className={sectionLabel(tone)}>Use cases</p>
+        <h2 className={cn("mt-3 text-3xl font-bold tracking-tight", landingText(tone, "primary"))}>
           Made for people with too much inbox.
         </h2>
         <div className="mt-12 flex flex-col gap-4">
@@ -842,13 +483,25 @@ export default function LandingPage({ session }: { session: SessionPayload | nul
             <TextRevealCard
               text={uc.text}
               revealText={`Built for ${uc.role.toLowerCase()} who need speed without sacrificing control.`}
-              className={landingSurface(isDark, "card")}
+              className={landingSurface(tone, "card")}
             >
-              <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-orange-600/10 text-orange-600">
-                  <uc.icon className="h-5 w-5" />
+              <div className="flex items-center gap-4">
+                <div className="hidden w-24 shrink-0 sm:block">
+                  <LandingIllustration
+                    id={useCaseIllustrations[i]}
+                    isDark={isDark}
+                    frame={false}
+                    float
+                    interactive
+                    compact
+                  />
                 </div>
-                <h3 className={cn("font-semibold", landingText(isDark, "primary"))}>{uc.role}</h3>
+                <div className="flex items-center gap-3">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[#1a73e8]/10 text-[#1a73e8] lg:hidden">
+                    <uc.icon className="h-5 w-5" />
+                  </div>
+                  <h3 className={cn("font-semibold", landingText(tone, "primary"))}>{uc.role}</h3>
+                </div>
               </div>
             </TextRevealCard>
             </BlurFade>
@@ -856,12 +509,13 @@ export default function LandingPage({ session }: { session: SessionPayload | nul
         </div>
       </section>
 
+
       {/* How it works — vertical timeline */}
-      <section id="how-it-works" className={cn("border-t py-20", isDark ? "border-white/[0.06] bg-[#0d0d0d]" : "border-stone-300/60 bg-[#e8e2d8]/50")}>
+<section id="how-it-works" className={cn("border-t py-20", landingSectionBg("cream"))}>
         <div className="mx-auto max-w-6xl px-6">
           <BlurFade>
-            <p className={sectionLabel()}>How it works</p>
-            <h2 className={cn("mt-3 text-3xl font-bold tracking-tight", landingText(isDark, "primary"))}>
+            <p className={sectionLabel(tone)}>How it works</p>
+            <h2 className={cn("mt-3 text-3xl font-bold tracking-tight", landingText(tone, "primary"))}>
               Live in four steps.
             </h2>
           </BlurFade>
@@ -879,13 +533,13 @@ export default function LandingPage({ session }: { session: SessionPayload | nul
                     >
                       <motion.div
                         whileHover={{ scale: 1.1, rotate: 5 }}
-                        className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-orange-600 bg-orange-600 text-sm font-bold text-white shadow-lg shadow-orange-600/20"
+                        className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-[#4285F4] bg-[#4285F4] text-sm font-bold text-white shadow-lg shadow-[#4285F4]/25"
                       >
                         {step.num}
                       </motion.div>
                       <div className="pt-1">
-                        <h3 className={cn("text-lg font-semibold", landingText(isDark, "primary"))}>{step.title}</h3>
-                        <p className={cn("mt-2 text-sm leading-relaxed", landingText(isDark, "muted"))}>{step.desc}</p>
+                        <h3 className={cn("text-lg font-semibold", landingText(tone, "primary"))}>{step.title}</h3>
+                        <p className={cn("mt-2 text-sm leading-relaxed", landingText(tone, "muted"))}>{step.desc}</p>
                       </div>
                     </motion.div>
                     </BlurFade>
@@ -899,16 +553,14 @@ export default function LandingPage({ session }: { session: SessionPayload | nul
           </div>
         </div>
       </section>
-
       <PricingSection isDark={isDark} ctaHref={ctaHref} />
-
       <TeamSocialProof isDark={isDark} />
 
       {/* Testimonials */}
-      <section className="relative z-10 mx-auto max-w-6xl overflow-hidden px-6 py-20">
+<section className={cn("relative z-10 mx-auto max-w-6xl overflow-hidden px-6 py-20", landingSectionBg("gray"))}>
         <BlurFade>
-          <p className={sectionLabel()}>Early users</p>
-          <h2 className={cn("mt-3 text-3xl font-bold tracking-tight", landingText(isDark, "primary"))}>
+          <p className={sectionLabel(tone)}>Early users</p>
+          <h2 className={cn("mt-3 text-3xl font-bold tracking-tight", landingText(tone, "primary"))}>
             What people are saying.
           </h2>
         </BlurFade>
@@ -917,43 +569,40 @@ export default function LandingPage({ session }: { session: SessionPayload | nul
           <InfiniteMovingCards items={[...testimonials].reverse()} direction="right" speed="slow" isDark={isDark} />
         </BlurFade>
       </section>
-
       <ChangelogSection isDark={isDark} />
 
       {/* FAQ */}
-      <section id="faq" className={cn("border-t py-20", isDark ? "border-white/[0.06]" : "border-stone-300/60")}>
+<section id="faq" className={cn("border-t py-20", landingSectionBg("blue"))}>
         <div className="mx-auto max-w-2xl px-6">
-          <p className={cn("text-center", sectionLabel())}>FAQ</p>
-          <h2 className={cn("mt-3 text-center text-3xl font-bold tracking-tight", landingText(isDark, "primary"))}>
+          <p className={cn("text-center", sectionLabel(tone))}>FAQ</p>
+          <h2 className={cn("mt-3 text-center text-3xl font-bold tracking-tight", landingText(tone, "primary"))}>
             Common questions
           </h2>
           <div className="mt-10">
             {faqs.map((f) => (
-              <FAQItem key={f.q} q={f.q} a={f.a} isDark={isDark} />
+              <FAQItem key={f.q} q={f.q} a={f.a} tone={tone} />
             ))}
           </div>
         </div>
       </section>
 
+
       {/* CTA */}
-      <section className="relative z-10 mx-auto max-w-6xl px-6 py-20">
+<section className={cn("relative z-10 mx-auto max-w-6xl px-6 py-20", landingSectionBg("white"))}>
         <BlurFade>
-        <div className={cn("relative overflow-hidden rounded-2xl border p-10 text-center sm:p-14", landingSurface(isDark, "elevated"))}>
-          <BorderBeam size={220} duration={12} delay={2} />
-          <motion.div
-            animate={{ rotate: [0, 8, -8, 0] }}
-            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-          >
-            <Clock className="mx-auto h-8 w-8 text-orange-600" />
-          </motion.div>
-          <h2 className={cn("mt-4 text-3xl font-bold tracking-tight", landingText(isDark, "primary"))}>
+        <div className={cn("relative overflow-hidden rounded-2xl border p-10 text-center sm:p-14", landingSurface(tone, "elevated"))}>
+          <BorderBeam size={220} duration={12} delay={2} colorFrom="#4285F4" colorTo="#34A853" />
+          <div className="mx-auto max-w-xs">
+            <LandingIllustration id="connect" isDark={isDark} frame={false} float interactive />
+          </div>
+          <h2 className={cn("mt-4 text-3xl font-bold tracking-tight", landingText(tone, "primary"))}>
             Ready to reclaim your inbox?
           </h2>
-          <p className={cn("mx-auto mt-3 max-w-md text-base", landingText(isDark, "muted"))}>
+          <p className={cn("mx-auto mt-3 max-w-md text-base", landingText(tone, "muted"))}>
             Join early access. Free during beta — founding members keep preferential pricing when we launch paid plans.
           </p>
           <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.98 }} className="mt-8 inline-block">
-          <Link href={ctaHref} className={primaryButton(isDark)}>
+          <Link href={ctaHref} className={primaryButton(tone)}>
             {ctaLabel}
             <ArrowRight className="h-4 w-4" />
           </Link>
@@ -962,35 +611,37 @@ export default function LandingPage({ session }: { session: SessionPayload | nul
         </BlurFade>
       </section>
 
+
       {/* Footer */}
-      <footer className={cn("border-t px-6 py-10", isDark ? "border-white/[0.06]" : "border-stone-300/60")}>
+<footer className={cn("border-t px-6 py-10", landingSectionBg("green"))}>
         <div className="mx-auto flex max-w-6xl flex-col gap-8 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <div className="flex items-center gap-2">
-              <BrandMark size={20} variant={isDark ? "dark" : "light"} />
-              <span className="font-semibold">Relvion AI</span>
+              <BrandMark size={20} variant="light" />
+              <span className="font-semibold text-[#202124]">Relvion AI</span>
             </div>
-            <p className={cn("mt-2 max-w-xs text-sm", landingText(isDark, "subtle"))}>
+            <p className={cn("mt-2 max-w-xs text-sm", landingText(tone, "subtle"))}>
               Intelligent email and calendar workspace. Built for focus.
             </p>
           </div>
           <div className="flex flex-wrap gap-8 text-sm">
             {navLinks.map((l) => (
-              <Link key={l.href} href={l.href} className={cn("hover:text-orange-600", landingText(isDark, "muted"))}>
+              <Link key={l.href} href={l.href} className={cn("hover:text-[#1a73e8]", landingText(tone, "muted"))}>
                 {l.label}
               </Link>
             ))}
-            <Link href="/signin" className={cn("hover:text-orange-600", landingText(isDark, "muted"))}>
+            <Link href="/signin" className={cn("hover:text-[#1a73e8]", landingText(tone, "muted"))}>
               Sign In
             </Link>
           </div>
         </div>
-        <p className={cn("mx-auto mt-8 max-w-6xl text-xs", landingText(isDark, "subtle"))}>
+        <p className={cn("mx-auto mt-8 max-w-6xl text-xs", landingText(tone, "subtle"))}>
           © {new Date().getFullYear()} Relvion AI. All rights reserved.
         </p>
       </footer>
 
-      <ChangelogFloatingWidget isDark={isDark} />
+
+      <ChangelogFloatingWidget isDark={false} />
     </div>
   );
 }

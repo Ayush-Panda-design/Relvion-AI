@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import {
   RefreshCw,
-  Webhook,
   User,
   Mail,
   Calendar,
@@ -15,6 +14,8 @@ import {
   AlertCircle,
   ExternalLink,
   Palette,
+  Zap,
+  ChevronDown,
 } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -22,6 +23,7 @@ import { dash, type Density } from '@/components/dashboard/theme';
 import { useDensity } from '@/components/dashboard/DensityProvider';
 import { useTheme, DASHBOARD_THEMES } from '@/components/dashboard/ThemeProvider';
 import { PageEnter } from '@/components/dashboard/loading/PageEnter';
+import { ContactAvatar } from '@/components/ui/ContactAvatar';
 
 interface WebhookConfig {
   baseUrl: string | null;
@@ -72,6 +74,42 @@ function SettingsCard({
       </div>
       <div className="px-6 py-5">{children}</div>
     </section>
+  );
+}
+
+function SyncServiceRow({
+  name,
+  icon: Icon,
+  connected,
+  detail,
+}: {
+  name: string;
+  icon: typeof Mail;
+  connected: boolean;
+  detail?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        'flex items-center justify-between gap-3 rounded-xl border px-4 py-3',
+        dash.border,
+        dash.surface
+      )}
+    >
+      <div className="flex min-w-0 items-center gap-3">
+        <div className={cn('rounded-lg p-2', dash.iconWell)}>
+          <Icon size={16} className={dash.accent} />
+        </div>
+        <div className="min-w-0">
+          <p className={cn('text-sm font-medium', dash.text)}>{name}</p>
+          {detail && <p className={cn('truncate text-xs', dash.textSubtle)}>{detail}</p>}
+        </div>
+      </div>
+      <StatusBadge
+        ok={connected}
+        label={connected ? 'Connected' : 'Not connected'}
+      />
+    </div>
   );
 }
 
@@ -139,9 +177,11 @@ export default function SettingsPage() {
       if (data.error && !data.gmail) throw new Error(data.error);
       setWebhookResult(data);
       if (data.gmail?.ok && data.calendar?.ok) {
-        toast.success('Live sync enabled for Gmail & Calendar');
+        toast.success('Gmail and Calendar will now update automatically');
+      } else if (data.gmail?.ok || data.calendar?.ok) {
+        toast.error('Only part of your account connected — try again');
       } else {
-        toast.error('Some webhooks failed — check status below');
+        toast.error('Could not turn on updates — try again in a moment');
       }
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Registration failed');
@@ -170,14 +210,12 @@ export default function SettingsPage() {
             description="Your connected Gmail and Calendar identity"
           >
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-              <div
-                className={cn(
-                  'flex h-16 w-16 shrink-0 items-center justify-center rounded-full text-xl font-medium uppercase',
-                  dash.avatar
-                )}
-              >
-                {displayName.charAt(0)}
-              </div>
+              <ContactAvatar
+                name={profile?.email || displayName}
+                initials={displayName.charAt(0)}
+                sizeClass="h-16 w-16 text-xl"
+                variant="theme"
+              />
               <div className="min-w-0 flex-1">
                 <p className={cn('text-lg font-medium', dash.text)}>{displayName}</p>
                 <p className={cn('truncate text-sm', dash.textMuted)}>{profile?.email || 'Loading…'}</p>
@@ -208,54 +246,56 @@ export default function SettingsPage() {
             </div>
           </SettingsCard>
 
-          {/* Live sync */}
+          {/* Instant updates */}
           <SettingsCard
-            icon={Webhook}
-            title="Live sync"
-            description="Get new emails and calendar updates without refreshing"
+            icon={Zap}
+            title="Instant updates"
+            description="See new emails and calendar changes without refreshing"
           >
-            <p className={cn('mb-4 text-sm leading-relaxed', dash.textMuted)}>
-              Relvion uses Google push notifications to update your inbox in real time. For local
-              development, expose your app with a public URL (e.g. ngrok) and set{' '}
-              <code className={cn('rounded px-1.5 py-0.5 text-xs', dash.code)}>
-                WEBHOOK_BASE_URL
-              </code>{' '}
-              in your environment. Watches expire after ~7 days — re-enable below when needed.
+            <p className={cn('mb-5 text-sm leading-relaxed', dash.textMuted)}>
+              When this is on, your inbox and calendar stay in sync with Google in the background.
+              You&apos;ll see new mail and event changes as they happen.
             </p>
 
-            <div className="mb-4 flex flex-wrap gap-2">
-              <StatusBadge
-                ok={!!webhookConfig?.configured}
-                label={webhookConfig?.configured ? 'URL configured' : 'URL not set'}
+            <div className="mb-5 space-y-2">
+              <SyncServiceRow
+                name="Gmail"
+                icon={Mail}
+                connected={!!webhookResult?.gmail.ok}
+                detail={
+                  webhookResult?.gmail.expiresAt
+                    ? `Active until ${new Date(webhookResult.gmail.expiresAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}`
+                    : webhookResult
+                      ? undefined
+                      : 'Turn on updates below to connect'
+                }
               />
-              {webhookResult && (
-                <>
-                  <StatusBadge ok={webhookResult.gmail.ok} label="Gmail push" />
-                  <StatusBadge ok={webhookResult.calendar.ok} label="Calendar watch" />
-                </>
-              )}
+              <SyncServiceRow
+                name="Google Calendar"
+                icon={Calendar}
+                connected={!!webhookResult?.calendar.ok}
+                detail={
+                  webhookResult?.calendar.expiresAt
+                    ? `Active until ${new Date(webhookResult.calendar.expiresAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}`
+                    : webhookResult
+                      ? undefined
+                      : 'Turn on updates below to connect'
+                }
+              />
             </div>
 
-            {webhookConfig?.baseUrl && (
+            {!webhookConfig?.configured && (
               <div
                 className={cn(
-                  'mb-4 space-y-1.5 rounded-xl border p-3 text-xs',
-                  dash.border,
-                  dash.surface
+                  'mb-5 flex gap-3 rounded-xl border px-4 py-3 text-sm',
+                  'border-amber-500/25 bg-amber-500/5 text-amber-700 dark:text-amber-300'
                 )}
               >
-                <div className="flex items-center gap-2">
-                  <Mail size={12} className={dash.accent} />
-                  <span className={cn('truncate font-mono', dash.textSubtle)}>
-                    {webhookConfig.endpoints.gmail || 'Gmail endpoint pending'}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Calendar size={12} className={dash.accent} />
-                  <span className={cn('truncate font-mono', dash.textSubtle)}>
-                    {webhookConfig.endpoints.calendar || 'Calendar endpoint pending'}
-                  </span>
-                </div>
+                <AlertCircle size={18} className="mt-0.5 shrink-0" />
+                <p>
+                  Instant updates aren&apos;t available on this workspace yet. If you&apos;re the
+                  person who set up Relvion, check the advanced section below.
+                </p>
               </div>
             )}
 
@@ -271,22 +311,52 @@ export default function SettingsPage() {
               {registering ? (
                 <RefreshCw size={16} className="animate-spin" />
               ) : (
-                <Webhook size={16} />
+                <Zap size={16} />
               )}
-              {registering ? 'Enabling…' : 'Enable live sync'}
+              {registering
+                ? 'Connecting…'
+                : webhookResult?.gmail.ok && webhookResult?.calendar.ok
+                  ? 'Reconnect'
+                  : 'Turn on instant updates'}
             </button>
 
-            {webhookResult && (
-              <div className={cn('mt-4 space-y-1 text-xs', dash.textSubtle)}>
-                {webhookResult.gmail.expiresAt && (
-                  <p>Gmail expires {new Date(webhookResult.gmail.expiresAt).toLocaleDateString()}</p>
-                )}
-                {webhookResult.calendar.expiresAt && (
+            {webhookResult?.gmail.ok && webhookResult?.calendar.ok && webhookResult.gmail.expiresAt && (
+              <p className={cn('mt-3 text-xs', dash.textSubtle)}>
+                Tap reconnect before{' '}
+                {new Date(webhookResult.gmail.expiresAt).toLocaleDateString(undefined, {
+                  month: 'long',
+                  day: 'numeric',
+                })}{' '}
+                to keep updates running smoothly.
+              </p>
+            )}
+
+            {webhookConfig?.configured && (
+              <details className={cn('mt-5 rounded-xl border', dash.border)}>
+                <summary
+                  className={cn(
+                    'flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-sm font-medium',
+                    dash.textMuted,
+                    '[&::-webkit-details-marker]:hidden'
+                  )}
+                >
+                  <span>Advanced (for developers)</span>
+                  <ChevronDown size={16} className="opacity-60" />
+                </summary>
+                <div className={cn('space-y-3 border-t px-4 py-3 text-xs', dash.border, dash.textSubtle)}>
                   <p>
-                    Calendar expires {new Date(webhookResult.calendar.expiresAt).toLocaleDateString()}
+                    Requires a public app URL configured by your administrator. Connections refresh
+                    automatically about once a week.
                   </p>
-                )}
-              </div>
+                  {webhookConfig.baseUrl && (
+                    <div className={cn('space-y-1.5 rounded-lg border p-3', dash.border, dash.surface)}>
+                      <p className={cn('font-medium', dash.text)}>Service endpoints</p>
+                      <p className="truncate font-mono">{webhookConfig.endpoints.gmail || 'Gmail — pending'}</p>
+                      <p className="truncate font-mono">{webhookConfig.endpoints.calendar || 'Calendar — pending'}</p>
+                    </div>
+                  )}
+                </div>
+              </details>
             )}
           </SettingsCard>
 

@@ -72,6 +72,8 @@
   --dash-divider: #e2e8f0;
   --dash-scrollbar-thumb: rgba(15, 23, 42, 0.15);
   --dash-scrollbar-thumb-hover: rgba(15, 23, 42, 0.28);
+  --dash-toast-success-bg: #ffffff;
+  --dash-toast-success-border: rgba(37, 99, 235, 0.28);
   --dash-ambient-1: transparent;
   --dash-ambient-2: transparent;
   --dash-workspace-radius: 0px;
@@ -150,6 +152,8 @@
   --dash-divider: #e5e5e5;
   --dash-scrollbar-thumb: rgba(23, 23, 23, 0.12);
   --dash-scrollbar-thumb-hover: rgba(220, 38, 38, 0.25);
+  --dash-toast-success-bg: #ffffff;
+  --dash-toast-success-border: rgba(220, 38, 38, 0.22);
   --dash-ambient-1: transparent;
   --dash-ambient-2: transparent;
   --dash-workspace-radius: 0px;
@@ -228,6 +232,8 @@
   --dash-divider: #dde3ed;
   --dash-scrollbar-thumb: rgba(27, 31, 42, 0.14);
   --dash-scrollbar-thumb-hover: rgba(59, 130, 246, 0.3);
+  --dash-toast-success-bg: #ffffff;
+  --dash-toast-success-border: rgba(59, 130, 246, 0.28);
   --dash-ambient-1: transparent;
   --dash-ambient-2: transparent;
   --dash-workspace-radius: 12px;
@@ -306,6 +312,8 @@
   --dash-divider: rgba(229, 212, 160, 0.55);
   --dash-scrollbar-thumb: rgba(212, 160, 23, 0.25);
   --dash-scrollbar-thumb-hover: rgba(212, 160, 23, 0.45);
+  --dash-toast-success-bg: rgba(255, 255, 255, 0.95);
+  --dash-toast-success-border: rgba(245, 158, 11, 0.4);
   --dash-ambient-1: rgba(254, 243, 199, 0.7);
   --dash-ambient-2: rgba(253, 230, 138, 0.5);
   --dash-workspace-radius: 24px;

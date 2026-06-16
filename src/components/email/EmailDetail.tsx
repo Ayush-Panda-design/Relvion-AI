@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { dash } from '@/components/dashboard/theme';
 import type { EmailShortcutHandlers } from '@/hooks/useKeyboardShortcuts';
 import { TemplatePicker } from './TemplatePicker';
+import { ContactAvatar } from '@/components/ui/ContactAvatar';
 
 interface FullBody {
   text: string;
@@ -299,9 +300,7 @@ export function EmailDetail({
                     dash.hover
                   )}
                 >
-                  <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold uppercase', dash.avatar)}>
-                    {msg.from.charAt(0)}
-                  </div>
+                  <ContactAvatar name={msg.from} sizeClass="h-9 w-9 text-xs" />
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className={cn('text-sm font-semibold', dash.text)}>{msg.from}</span>
@@ -459,9 +458,10 @@ export function EmailDetail({
           transition={{ delay: 0.05 }}
           className="mb-6 flex items-start gap-4"
         >
-          <div className={cn('flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-bold uppercase', dash.avatar)}>
-            {(fullMeta?.from || email.data?.from || 'U').charAt(0)}
-          </div>
+          <ContactAvatar
+            name={fullMeta?.from || email.data?.from || 'Unknown'}
+            sizeClass="h-11 w-11 text-sm"
+          />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <span className={cn('font-semibold', dash.text)}>

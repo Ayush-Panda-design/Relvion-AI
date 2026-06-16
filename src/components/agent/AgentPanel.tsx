@@ -1,29 +1,36 @@
 'use client';
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { Send, Paperclip, Zap, X, Image, FileText, Film, Music, File } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { X, Image, FileText, Film, Music, File } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getAgentSessionMessages, setAgentSessionMessages } from '@/lib/agent-session';
+import {
+  buildTranscript,
+  loadAgentSessions,
+  saveAgentSessions,
+  sessionLabelFromMessages,
+  type StoredAgentSession,
+} from '@/lib/agent-sessions-storage';
 import { cn } from '@/lib/utils';
 import { dash } from '@/components/dashboard/theme';
-import { ThinkingLoader } from '@/components/dashboard/loading/DashboardLoaders';
-import { ChatMessage } from '@/components/ui/chat-message';
+import { ChatMessage, type ChatMessageData } from '@/components/ui/chat-message';
+import { AgentHeader, type AgentStatus } from '@/components/agent/AgentHeader';
+import { AgentEmptyState } from '@/components/agent/AgentEmptyState';
+import { AgentInputBar } from '@/components/agent/AgentInputBar';
+import { LastActionPanel } from '@/components/agent/LastActionPanel';
+import {
+  formatAgentTime,
+  parseToolResultForPanel,
+  type AgentStep,
+  type AgentStreamEvent,
+  type LastActionData,
+} from '@/lib/agent-stream';
 
 const STORAGE_KEY = 'relvion_agent_history';
 const WIDTH_STORAGE_KEY = 'relvion_agent_width';
 const MIN_PANEL_WIDTH = 260;
 const MAX_PANEL_WIDTH = 640;
 const DEFAULT_PANEL_WIDTH = 300;
-
-interface ChatMessage {
-  role: 'user' | 'agent';
-  content: string;
-  attachments?: { name: string; type: string; preview?: string }[];
-}
-
-const DEFAULT_MESSAGES: ChatMessage[] = [
-  { role: 'agent', content: 'Hello! I\'m your Relvion AI Assistant. You can send me images, documents, or other files and I\'ll analyze them for you. How can I help you today?' }
-];
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -39,28 +46,65 @@ function getFileIcon(type: string) {
   return File;
 }
 
+function isRealChat(messages: ChatMessageData[]) {
+  return messages.some((m) => m.role === 'user');
+}
+
+function newSessionId() {
+  return `sess_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+}
+
+async function consumeAgentStream(
+  res: Response,
+  onEvent: (event: AgentStreamEvent) => void
+): Promise<void> {
+  const reader = res.body?.getReader();
+  if (!reader) throw new Error('No response body');
+
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const parts = buffer.split('\n\n');
+    buffer = parts.pop() || '';
+    for (const part of parts) {
+      const line = part.trim();
+      if (!line.startsWith('data:')) continue;
+      try {
+        onEvent(JSON.parse(line.slice(5).trim()) as AgentStreamEvent);
+      } catch {}
+    }
+  }
+}
+
 export function AgentPanel() {
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState<ChatMessage[]>(
-    () => getAgentSessionMessages() ?? DEFAULT_MESSAGES
+  const [messages, setMessages] = useState<ChatMessageData[]>(
+    () => getAgentSessionMessages() ?? []
   );
   const [loaded, setLoaded] = useState(() => getAgentSessionMessages() !== null);
   const [sending, setSending] = useState(false);
+  const [agentStatus, setAgentStatus] = useState<AgentStatus>('idle');
+  const [lastAction, setLastAction] = useState<LastActionData | null>(null);
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const [filePreviews, setFilePreviews] = useState<Map<string, string>>(new Map());
   const [panelWidth, setPanelWidth] = useState(DEFAULT_PANEL_WIDTH);
   const [isResizing, setIsResizing] = useState(false);
+  const [sessions, setSessions] = useState<StoredAgentSession[]>([]);
+  const [currentSessionId, setCurrentSessionId] = useState(() => newSessionId());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const liveStepsRef = useRef<AgentStep[]>([]);
 
   useEffect(() => {
     try {
       const saved = localStorage.getItem(WIDTH_STORAGE_KEY);
       if (saved) {
         const w = Number.parseInt(saved, 10);
-        if (!Number.isNaN(w)) {
-          setPanelWidth(Math.min(MAX_PANEL_WIDTH, Math.max(MIN_PANEL_WIDTH, w)));
-        }
+        if (!Number.isNaN(w)) setPanelWidth(Math.min(MAX_PANEL_WIDTH, Math.max(MIN_PANEL_WIDTH, w)));
       }
     } catch {}
   }, []);
@@ -78,19 +122,14 @@ export function AgentPanel() {
 
   useEffect(() => {
     if (!isResizing) return;
-
     const onMove = (e: MouseEvent) => {
-      const next = window.innerWidth - e.clientX;
-      setPanelWidth(Math.min(MAX_PANEL_WIDTH, Math.max(MIN_PANEL_WIDTH, next)));
+      setPanelWidth(Math.min(MAX_PANEL_WIDTH, Math.max(MIN_PANEL_WIDTH, window.innerWidth - e.clientX)));
     };
-
     const onUp = () => setIsResizing(false);
-
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
-
     return () => {
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup', onUp);
@@ -99,11 +138,6 @@ export function AgentPanel() {
     };
   }, [isResizing]);
 
-  const resetPanelWidth = useCallback(() => {
-    setPanelWidth(DEFAULT_PANEL_WIDTH);
-  }, []);
-
-  // Load persisted history on first mount only (session cache avoids reload on route changes)
   useEffect(() => {
     if (loaded) return;
     try {
@@ -119,7 +153,6 @@ export function AgentPanel() {
     setLoaded(true);
   }, [loaded]);
 
-  // Persist history whenever it changes (skip until initial load has run)
   useEffect(() => {
     if (!loaded) return;
     setAgentSessionMessages(messages);
@@ -128,81 +161,192 @@ export function AgentPanel() {
     } catch {}
   }, [messages, loaded]);
 
-  // Auto-scroll to bottom
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (!loaded) return;
+    setSessions(loadAgentSessions());
+  }, [loaded]);
+
+  useEffect(() => {
+    if (!loaded || !isRealChat(messages)) return;
+    const label = sessionLabelFromMessages(messages);
+    const snapshot = messages.filter((m) => !m.streaming);
+    setSessions((prev) => {
+      const next = [...prev];
+      const idx = next.findIndex((s) => s.id === currentSessionId);
+      const entry: StoredAgentSession = {
+        id: currentSessionId,
+        label,
+        updatedAt: Date.now(),
+        messages: snapshot,
+      };
+      if (idx >= 0) next[idx] = entry;
+      else next.unshift(entry);
+      next.sort((a, b) => b.updatedAt - a.updatedAt);
+      saveAgentSessions(next);
+      return next;
+    });
+  }, [messages, loaded, currentSessionId]);
+
+  const sessionLabel = useMemo(
+    () => (isRealChat(messages) ? sessionLabelFromMessages(messages) : 'New conversation'),
+    [messages]
+  );
+
+  const historyItems = useMemo(
+    () =>
+      messages
+        .filter((m) => m.role === 'user' && m.content.trim())
+        .map((m, i) => ({
+          id: `hist_${i}_${m.timestamp ?? ''}`,
+          preview: m.content.trim(),
+          timestamp: m.timestamp,
+        })),
+    [messages]
+  );
+
+  const persistCurrentSession = useCallback(() => {
+    if (!isRealChat(messages)) return;
+    const snapshot = messages.filter((m) => !m.streaming);
+    setSessions((prev) => {
+      const next = [...prev];
+      const idx = next.findIndex((s) => s.id === currentSessionId);
+      const entry: StoredAgentSession = {
+        id: currentSessionId,
+        label: sessionLabelFromMessages(snapshot),
+        updatedAt: Date.now(),
+        messages: snapshot,
+      };
+      if (idx >= 0) next[idx] = entry;
+      else next.unshift(entry);
+      next.sort((a, b) => b.updatedAt - a.updatedAt);
+      saveAgentSessions(next);
+      return next;
+    });
+  }, [messages, currentSessionId]);
+
+  const startNewConversation = useCallback(() => {
+    persistCurrentSession();
+    setMessages([]);
+    setAgentSessionMessages([]);
+    setInput('');
+    setAttachedFiles([]);
+    setLastAction(null);
+    setAgentStatus('idle');
+    setCurrentSessionId(newSessionId());
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
+    } catch {}
+  }, [persistCurrentSession]);
+
+  const loadSession = useCallback(
+    (id: string) => {
+      const session = sessions.find((s) => s.id === id);
+      if (!session) return;
+      persistCurrentSession();
+      setMessages(session.messages);
+      setAgentSessionMessages(session.messages);
+      setCurrentSessionId(id);
+      setLastAction(null);
+      setAgentStatus('idle');
+    },
+    [sessions, persistCurrentSession]
+  );
+
+  const copyTranscript = useCallback(async () => {
+    const text = buildTranscript(messages.filter((m) => !m.streaming));
+    if (!text.trim()) {
+      toast.error('Nothing to copy yet');
+      return;
+    }
+    await navigator.clipboard.writeText(text);
+    toast.success('Transcript copied');
   }, [messages]);
 
-  // Generate previews for image files
+  const shareTranscript = useCallback(async () => {
+    const text = buildTranscript(messages.filter((m) => !m.streaming));
+    if (!text.trim()) {
+      toast.error('Nothing to share yet');
+      return;
+    }
+    if (navigator.share) {
+      await navigator.share({ title: 'Relvion conversation', text });
+      toast.success('Shared');
+    } else {
+      await navigator.clipboard.writeText(text);
+      toast.success('Transcript copied to clipboard');
+    }
+  }, [messages]);
+
+  const clearChat = useCallback(() => {
+    setMessages([]);
+    setAgentSessionMessages([]);
+    setLastAction(null);
+    setAgentStatus('idle');
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
+    } catch {}
+    toast.success('Chat cleared');
+  }, []);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, sending]);
+
   useEffect(() => {
     const newPreviews = new Map<string, string>();
-    attachedFiles.forEach(file => {
+    attachedFiles.forEach((file) => {
       if (file.type.startsWith('image/')) {
-        const url = URL.createObjectURL(file);
-        newPreviews.set(file.name + file.size, url);
+        newPreviews.set(file.name + file.size, URL.createObjectURL(file));
       }
     });
     setFilePreviews(newPreviews);
-
-    return () => {
-      newPreviews.forEach(url => URL.revokeObjectURL(url));
-    };
+    return () => newPreviews.forEach((url) => URL.revokeObjectURL(url));
   }, [attachedFiles]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
-
-    // Limit total to 5 files, 10MB each
-    const validFiles = files.filter(f => f.size <= 10 * 1024 * 1024);
-    if (validFiles.length < files.length) {
-      // Some files were too large - silently skip them
-    }
-
-    setAttachedFiles(prev => [...prev, ...validFiles].slice(0, 5));
-    e.target.value = ''; // Reset input
+    const files = Array.from(e.target.files || []).filter((f) => f.size <= 10 * 1024 * 1024);
+    setAttachedFiles((prev) => [...prev, ...files].slice(0, 5));
+    e.target.value = '';
   };
 
-  const removeFile = (index: number) => {
-    setAttachedFiles(prev => prev.filter((_, i) => i !== index));
-  };
+  const sendMessage = async (text: string, files = attachedFiles) => {
+    if (!text.trim() && files.length === 0) return;
 
-  const handleSend = async () => {
-    if (!input.trim() && attachedFiles.length === 0) return;
-
-    // Build the user message for display
-    const userMsg: ChatMessage = {
+    const userMsg: ChatMessageData = {
       role: 'user',
-      content: input,
-      attachments: attachedFiles.map(f => ({
+      content: text,
+      timestamp: formatAgentTime(),
+      attachments: files.map((f) => ({
         name: f.name,
         type: f.type,
         preview: filePreviews.get(f.name + f.size),
       })),
     };
 
-    const newMsgs = [...messages, userMsg];
-    setMessages(newMsgs);
-    const currentInput = input;
-    const currentFiles = [...attachedFiles];
+    const historyForApi = messages.filter((m) => !m.streaming);
+    const agentPlaceholder: ChatMessageData = {
+      role: 'agent',
+      content: '',
+      streaming: true,
+      steps: [],
+      timestamp: formatAgentTime(),
+    };
+
+    liveStepsRef.current = [];
+    setMessages((prev) => [...prev, userMsg, agentPlaceholder]);
     setInput('');
     setAttachedFiles([]);
     setSending(true);
+    setAgentStatus('thinking');
 
     try {
-      // Convert files to base64 for the API
       const fileData = await Promise.all(
-        currentFiles.map(async (file) => {
+        files.map(async (file) => {
           const buffer = await file.arrayBuffer();
           const base64 = btoa(
             new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
           );
-          return {
-            name: file.name,
-            mimeType: file.type || 'application/octet-stream',
-            data: base64,
-            size: file.size,
-          };
+          return { name: file.name, mimeType: file.type || 'application/octet-stream', data: base64, size: file.size };
         })
       );
 
@@ -210,97 +354,203 @@ export function AgentPanel() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: currentInput || (fileData.length > 0 ? `I'm sharing ${fileData.length} file(s): ${fileData.map(f => f.name).join(', ')}. Please analyze them.` : ''),
-          history: messages.map(m => ({
+          message:
+            text ||
+            (fileData.length > 0
+              ? `I'm sharing ${fileData.length} file(s): ${fileData.map((f) => f.name).join(', ')}.`
+              : ''),
+          history: historyForApi.map((m) => ({
             role: m.role === 'user' ? 'user' : 'model',
             parts: [{ text: m.content }],
           })),
           attachments: fileData.length > 0 ? fileData : undefined,
         }),
       });
-      const data = await res.json();
-      setMessages([...newMsgs, { role: 'agent', content: data.reply || 'Sorry, I encountered an error.' }]);
-    } catch (e) {
-      setMessages([...newMsgs, { role: 'agent', content: 'Network error.' }]);
+
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('text/event-stream')) {
+        const data = await res.json();
+        setMessages((prev) => {
+          const next = [...prev];
+          next[next.length - 1] = {
+            role: 'agent',
+            content: data.reply || 'Sorry, something went wrong.',
+            timestamp: formatAgentTime(),
+          };
+          return next;
+        });
+        setAgentStatus('done');
+        return;
+      }
+
+      let streamedText = '';
+
+      await consumeAgentStream(res, (event) => {
+        if (event.type === 'step') {
+          const idx = liveStepsRef.current.findIndex((s) => s.id === event.id);
+          const step: AgentStep = {
+            id: event.id,
+            label: event.label,
+            icon: event.icon,
+            status: event.status === 'active' ? 'active' : event.status === 'done' ? 'done' : 'error',
+            timestamp: formatAgentTime(),
+          };
+          if (idx >= 0) liveStepsRef.current[idx] = { ...liveStepsRef.current[idx], ...step };
+          else liveStepsRef.current.push(step);
+
+          if (event.label.toLowerCase().includes('gmail') || event.label.toLowerCase().includes('inbox')) {
+            setAgentStatus('using-gmail');
+          } else if (event.label.toLowerCase().includes('calendar')) {
+            setAgentStatus('using-calendar');
+          } else if (event.status === 'active') {
+            setAgentStatus('thinking');
+          }
+
+          setMessages((prev) => {
+            const next = [...prev];
+            const last = next[next.length - 1];
+            if (last?.role === 'agent') {
+              next[next.length - 1] = { ...last, steps: [...liveStepsRef.current] };
+            }
+            return next;
+          });
+        }
+
+        if (event.type === 'tool_result') {
+          const panel = parseToolResultForPanel(
+            event.name,
+            JSON.stringify(event.result),
+            event.status
+          );
+          panel.summary = event.summary || panel.summary;
+          setLastAction(panel);
+
+          liveStepsRef.current = liveStepsRef.current.map((s) =>
+            s.toolName ? s : { ...s, toolName: event.name, detail: event.label }
+          );
+        }
+
+        if (event.type === 'token') {
+          streamedText += event.text;
+          setMessages((prev) => {
+            const next = [...prev];
+            const last = next[next.length - 1];
+            if (last?.role === 'agent') {
+              next[next.length - 1] = {
+                ...last,
+                content: streamedText,
+                streaming: true,
+                steps: [...liveStepsRef.current],
+              };
+            }
+            return next;
+          });
+        }
+
+        if (event.type === 'error') {
+          streamedText += event.message;
+        }
+
+        if (event.type === 'done') {
+          setMessages((prev) => {
+            const next = [...prev];
+            next[next.length - 1] = {
+              role: 'agent',
+              content: streamedText || 'Done.',
+              streaming: false,
+              steps: liveStepsRef.current.map((s) => ({ ...s, status: s.status === 'active' ? 'done' : s.status })),
+              timestamp: formatAgentTime(),
+            };
+            return next;
+          });
+          setAgentStatus('done');
+          setTimeout(() => setAgentStatus('idle'), 2000);
+        }
+      });
+    } catch {
+      setMessages((prev) => {
+        const next = [...prev];
+        next[next.length - 1] = {
+          role: 'agent',
+          content: 'Network error — please try again.',
+          streaming: false,
+          timestamp: formatAgentTime(),
+        };
+        return next;
+      });
+      setAgentStatus('idle');
     } finally {
       setSending(false);
     }
   };
 
+  const handleSend = () => sendMessage(input, attachedFiles);
+  const showEmpty = !isRealChat(messages) && !sending;
+
   return (
     <aside
       style={{ width: panelWidth }}
-      className={cn(
-        'relative z-20 flex h-screen shrink-0 flex-col border-l',
-        dash.agentPanel,
-        dash.border
-      )}
+      className={cn('relative z-20 flex h-screen shrink-0 flex-col border-l overflow-hidden', dash.agentPanel, dash.border)}
     >
       <div
         role="separator"
         aria-orientation="vertical"
-        aria-label="Resize AI assistant panel"
         onMouseDown={startResize}
-        onDoubleClick={resetPanelWidth}
-        title="Drag to resize · double-click to reset"
+        onDoubleClick={() => setPanelWidth(DEFAULT_PANEL_WIDTH)}
         className={cn(
-          'absolute left-0 top-0 z-10 h-full w-3 -translate-x-1/2 cursor-col-resize transition-colors',
-          isResizing ? dash.resizeHandleActive : cn('bg-transparent', dash.resizeHandle)
+          'absolute left-0 top-0 z-10 h-full w-3 -translate-x-1/2 cursor-col-resize',
+          isResizing ? dash.resizeHandleActive : dash.resizeHandle
         )}
       />
 
-      <div className={cn('flex h-14 shrink-0 items-center gap-2 border-b px-4', dash.glassToolbar, dash.border)}>
-        <Zap size={18} className={cn('animate-pulse', dash.accent)} />
-        <h2 className={cn('truncate font-semibold tracking-tight', dash.text)}>AI Assistant</h2>
-        <div className="relative ml-auto flex h-2.5 w-2.5 items-center justify-center">
-          <span className={cn('absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping', dash.online)} />
-          <span className={cn('relative inline-flex h-2 w-2 rounded-full', dash.online)} />
+      <AgentHeader
+        status={agentStatus}
+        sessionLabel={sessionLabel}
+        sessions={sessions.map((s) => ({ id: s.id, label: s.label, updatedAt: s.updatedAt }))}
+        currentSessionId={currentSessionId}
+        historyItems={historyItems}
+        onNewConversation={startNewConversation}
+        onSelectSession={loadSession}
+        onHistorySelect={(id) => {
+          const item = historyItems.find((h) => h.id === id);
+          if (item) setInput(item.preview);
+        }}
+        onShare={shareTranscript}
+        onClear={clearChat}
+        onCopyTranscript={copyTranscript}
+      />
+
+      <div className="relative z-0 min-h-0 flex-1 overflow-hidden">
+        <div className="h-full overflow-y-auto p-3 space-y-5">
+          {showEmpty ? (
+            <AgentEmptyState onQuickAction={(p) => sendMessage(p, [])} />
+          ) : (
+            <>
+              {messages.map((m, i) => (
+                <div key={`${i}-${m.timestamp}`}>
+                  <ChatMessage message={m} index={i} />
+                </div>
+              ))}
+            </>
+          )}
+          <div ref={messagesEndRef} />
         </div>
+
+        <LastActionPanel action={lastAction} onClose={() => setLastAction(null)} />
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-5">
-        <AnimatePresence initial={false}>
-          {messages.map((m, i) => (
-            <ChatMessage key={`${i}-${m.content.slice(0, 24)}`} message={m} index={i} />
-          ))}
-        </AnimatePresence>
-        {sending && (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex items-start pl-11"
-          >
-            <div className={cn('rounded-2xl rounded-bl-md border px-4 py-2.5 text-sm backdrop-blur-sm', dash.chatAgent)}>
-              <ThinkingLoader />
-            </div>
-          </motion.div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Attached files preview */}
       {attachedFiles.length > 0 && (
-        <div className={cn('animate-[fadeSlideIn_0.25s_ease-out] border-t px-4 py-2', dash.glassToolbar, dash.border)}>
+        <div className={cn('border-t px-3 py-2', dash.glassToolbar, dash.border)}>
           <div className="flex flex-wrap gap-1.5">
             {attachedFiles.map((file, i) => {
               const Icon = getFileIcon(file.type);
               const preview = filePreviews.get(file.name + file.size);
               return (
-                <div key={i} className={cn('group relative flex items-center gap-1.5 rounded-lg px-2 py-1 transition-all duration-200 hover:scale-[1.03]', dash.chatAttachment)}>
-                  {preview ? (
-                    <img src={preview} alt={file.name} className="h-5 w-5 rounded object-cover" />
-                  ) : (
-                    <Icon size={12} className={cn('shrink-0', dash.accent)} />
-                  )}
-                  <div className="flex flex-col">
-                    <span className={cn('max-w-[80px] truncate text-[10px] leading-tight', dash.text)}>{file.name}</span>
-                    <span className="text-[9px] leading-tight text-[#16a34a] dark:text-[#22c55e]">{formatFileSize(file.size)}</span>
-                  </div>
-                  <button
-                    onClick={() => removeFile(i)}
-                    className={cn('ml-0.5 transition-colors duration-200 hover:rotate-90', dash.textMuted, dash.accentHover)}
-                  >
-                    <X size={10} />
+                <div key={i} className={cn('flex items-center gap-1.5 rounded-lg border px-2 py-1 text-[10px]', dash.chatAttachment)}>
+                  {preview ? <img src={preview} alt="" className="h-4 w-4 rounded object-cover" /> : <Icon size={12} className={dash.accent} />}
+                  <span className={cn('max-w-[72px] truncate', dash.text)}>{file.name}</span>
+                  <button type="button" onClick={() => setAttachedFiles((p) => p.filter((_, j) => j !== i))}>
+                    <X size={10} className={dash.textMuted} />
                   </button>
                 </div>
               );
@@ -309,63 +559,19 @@ export function AgentPanel() {
         </div>
       )}
 
-      <div className={cn('border-t p-4 backdrop-blur-md', dash.glassToolbar, dash.border)}>
-        <div className={cn('relative flex items-center gap-1 rounded-2xl border p-1 shadow-sm backdrop-blur-sm', dash.border)}>
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className={cn('relative shrink-0 rounded-lg p-1.5 transition-all duration-200 hover:scale-110', dash.textMuted, dash.hover, dash.accentHover)}
-            title="Attach files (images, docs, etc.)"
-          >
-            <Paperclip size={16} />
-            {attachedFiles.length > 0 && (
-              <span className={cn('absolute -right-0.5 -top-0.5 flex h-3.5 w-3.5 animate-[fadeSlideIn_0.2s_ease-out] items-center justify-center rounded-full text-[8px] font-bold text-white', dash.accentBg)}>
-                {attachedFiles.length}
-              </span>
-            )}
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            accept="image/*,application/pdf,.doc,.docx,.txt,.csv,.json,.md,video/*,audio/*"
-            className="hidden"
-            onChange={handleFileSelect}
-          />
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
-            placeholder={attachedFiles.length > 0 ? 'Add a message...' : 'Ask anything...'}
-            disabled={sending}
-            className={cn(
-              'flex-1 rounded-xl border py-2.5 pl-3 pr-8 text-sm transition-all focus:outline-none disabled:opacity-50',
-              dash.input,
-              dash.text,
-              'placeholder:text-[var(--dash-text-subtle)] focus:ring-2',
-              dash.accentRing,
-            )}
-          />
-          <button
-            onClick={handleSend}
-            disabled={sending && !input.trim() && attachedFiles.length === 0}
-            className={cn('absolute right-2 top-1/2 -translate-y-1/2 p-1 transition-all duration-150 hover:scale-110 active:scale-95 disabled:opacity-30', dash.accent, dash.accentHover)}
-          >
-            <Send size={16} />
-          </button>
-        </div>
-        <div className="flex items-center justify-between mt-1.5 px-1">
-          <span className={cn('text-[9px]', dash.textSubtle)}>Images, PDFs, docs up to 10MB</span>
-          {attachedFiles.length > 0 && (
-            <button
-              onClick={() => setAttachedFiles([])}
-              className={cn('text-[9px] transition-colors duration-200', dash.accent, dash.accentHover)}
-            >
-              Clear all
-            </button>
-          )}
-        </div>
-      </div>
+      <AgentInputBar
+        input={input}
+        setInput={setInput}
+        sending={sending}
+        attachedCount={attachedFiles.length}
+        onAttach={() => fileInputRef.current?.click()}
+        onSend={handleSend}
+        onClearFiles={() => setAttachedFiles([])}
+        fileInputRef={fileInputRef}
+        onFileSelect={handleFileSelect}
+        showQuickActions={!input.trim() && attachedFiles.length === 0}
+        onQuickAction={(p) => sendMessage(p, [])}
+      />
     </aside>
   );
 }

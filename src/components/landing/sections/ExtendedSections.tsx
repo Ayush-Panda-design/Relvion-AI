@@ -27,10 +27,13 @@ import { InfiniteMovingCards } from "@/components/ui/infinite-moving-cards";
 import {
   landingSurface,
   landingText,
+  landingSectionBg,
   sectionLabel,
   primaryButton,
 } from "@/components/landing/theme";
 import Link from "next/link";
+import { LandingIllustration } from "@/components/landing/illustrations/LandingIllustration";
+import { GradientAgentIllustration, GeometricSecurityIllustration } from "@/components/landing/illustrations/animated";
 
 /* ─── Data ─────────────────────────────────────────────── */
 
@@ -50,21 +53,29 @@ const securityItems = [
     icon: Lock,
     title: "OAuth-only access",
     body: "We never see your Google password. Permissions are scoped to what you approve — Gmail read/write and Calendar access only.",
+    color: "#4285F4",
+    bg: "#E8F0FE",
   },
   {
     icon: Shield,
     title: "Encryption in transit & at rest",
     body: "All API traffic uses TLS 1.3. Session tokens are signed and httpOnly. Credentials are stored encrypted server-side.",
+    color: "#34A853",
+    bg: "#E6F4EA",
   },
   {
     icon: EyeOff,
     title: "We never train on your mail",
     body: "Your emails are processed to power your workspace — not to train foundation models. Data stays tied to your account.",
+    color: "#FBBC04",
+    bg: "#FEF7E0",
   },
   {
     icon: Server,
     title: "Your data stays in Google",
     body: "Relvion is a workspace layer. Messages and events remain in Gmail and Google Calendar — we don't migrate or resell your data.",
+    color: "#EA4335",
+    bg: "#FCE8E6",
   },
 ];
 
@@ -185,7 +196,7 @@ const sandboxCommands = [
 function CellIcon({ value }: { value: boolean | string }) {
   if (value === true) return <Check className="mx-auto h-5 w-5 text-emerald-500" />;
   if (value === false) return <X className="mx-auto h-5 w-5 text-red-400/80" />;
-  return <span className="text-xs font-medium text-orange-600">Partial</span>;
+  return <span className="text-xs font-medium text-[#1a73e8]">Partial</span>;
 }
 
 /* ─── Integration grid ─────────────────────────────────── */
@@ -194,15 +205,18 @@ export function IntegrationGrid({ isDark }: { isDark: boolean }) {
   const [hovered, setHovered] = useState<string | null>(null);
 
   return (
-    <section id="integrations" className="relative z-10 mx-auto max-w-6xl px-6 py-20">
+    <section id="integrations" className={cn("relative z-10 mx-auto max-w-6xl px-6 py-20", landingSectionBg(isDark))}>
       <div className="text-center">
-        <p className={sectionLabel()}>Integrations</p>
+        <p className={sectionLabel(isDark)}>Integrations</p>
         <h2 className={cn("mt-3 text-3xl font-bold tracking-tight sm:text-4xl", landingText(isDark, "primary"))}>
           Plugs into the tools you already use.
         </h2>
         <p className={cn("mx-auto mt-4 max-w-2xl text-lg", landingText(isDark, "muted"))}>
           Gmail and Calendar are live today. More connectors are on the roadmap — hover to explore.
         </p>
+        <div className="mx-auto mt-8 max-w-lg">
+          <LandingIllustration id="integrations" isDark={isDark} frame float={false} />
+        </div>
       </div>
 
       <div className="mt-14 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
@@ -221,7 +235,7 @@ export function IntegrationGrid({ isDark }: { isDark: boolean }) {
               className={cn(
                 "group relative overflow-hidden rounded-2xl border p-5 transition-all duration-300",
                 landingSurface(isDark, "card"),
-                isHovered && "scale-[1.02] shadow-lg shadow-orange-600/10"
+                isHovered && "scale-[1.02] shadow-lg shadow-[#4285F4]/10"
               )}
             >
               {isHovered && <BorderBeam size={120} duration={6} colorFrom="#ea580c" colorTo="#fdba74" />}
@@ -238,7 +252,7 @@ export function IntegrationGrid({ isDark }: { isDark: boolean }) {
                       "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
                       item.status === "live"
                         ? "bg-emerald-500/15 text-emerald-500"
-                        : "bg-orange-600/15 text-orange-600"
+                        : "bg-[#1a73e8]/15 text-[#1a73e8]"
                     )}
                   >
                     {item.status === "live" ? "Live" : "Soon"}
@@ -299,17 +313,20 @@ export function AgentSandbox({ isDark }: { isDark: boolean }) {
   };
 
   return (
-    <section id="demo" className={cn("relative z-10 border-y py-20", isDark ? "border-white/[0.06] bg-[#0d0d0d]" : "border-stone-300/60 bg-[#e8e2d8]/50")}>
+    <section id="demo" className={cn("relative z-10 border-y py-20", landingSectionBg(isDark))}>
       <div className="mx-auto max-w-6xl px-6">
         <div className="flex flex-col gap-12 lg:flex-row lg:items-start">
           <div className="lg:w-2/5">
-            <p className={sectionLabel()}>Live demo</p>
+            <p className={sectionLabel(isDark)}>Live demo</p>
             <h2 className={cn("mt-3 text-3xl font-bold tracking-tight sm:text-4xl", landingText(isDark, "primary"))}>
               Try the agent — no sign-in required.
             </h2>
             <p className={cn("mt-4 text-base leading-relaxed", landingText(isDark, "muted"))}>
               Type a command or pick a suggestion below. Responses are simulated to match the real Relvion Agent in your dashboard.
             </p>
+            <div className="mt-6 max-w-sm">
+              <GradientAgentIllustration />
+            </div>
             <div className="mt-6 flex flex-wrap gap-2">
               {sandboxCommands.map((c) => (
                 <button
@@ -319,7 +336,7 @@ export function AgentSandbox({ isDark }: { isDark: boolean }) {
                   onClick={() => runCommand(c.prompt)}
                   className={cn(
                     "rounded-full border px-3 py-1.5 text-left text-xs transition-colors disabled:opacity-50",
-                    isDark ? "border-white/10 hover:border-orange-600/40 hover:bg-orange-600/5" : "border-stone-300 hover:border-orange-400",
+                    isDark ? "border-white/10 hover:border-[#1a73e8]/40 hover:bg-[#1a73e8]/5" : "border-stone-300 hover:border-[#4285F4]",
                     landingText(isDark, "muted")
                   )}
                 >
@@ -333,7 +350,7 @@ export function AgentSandbox({ isDark }: { isDark: boolean }) {
             <div className={cn("relative overflow-hidden rounded-2xl border", landingSurface(isDark, "card"))}>
               <BorderBeam size={200} duration={10} colorFrom="#ea580c" colorTo="#fdba74" />
               <div className={cn("flex items-center gap-2 border-b px-4 py-3", isDark ? "border-white/[0.06]" : "border-stone-300/60")}>
-                <Bot className="h-4 w-4 text-orange-600" />
+                <Bot className="h-4 w-4 text-[#1a73e8]" />
                 <span className={cn("text-sm font-medium", landingText(isDark, "primary"))}>Relvion Agent</span>
                 <span className="ml-auto flex items-center gap-1 text-[10px] text-emerald-500">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -357,17 +374,17 @@ export function AgentSandbox({ isDark }: { isDark: boolean }) {
                         "max-w-[90%] rounded-xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap",
                         msg.role === "user"
                           ? isDark ? "ml-auto bg-white/5 text-stone-300" : "ml-auto bg-stone-200/70 text-stone-700"
-                          : isDark ? "mr-4 border border-orange-600/20 bg-orange-600/5 text-stone-200" : "mr-4 border border-orange-200 bg-orange-50 text-stone-800"
+                          : isDark ? "mr-4 border border-[#1a73e8]/20 bg-[#1a73e8]/5 text-stone-200" : "mr-4 border border-[#A8C7FA] bg-[#E8F0FE] text-stone-800"
                       )}
                     >
                       {msg.role === "agent" && (
-                        <span className="mb-1 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-orange-600">
+                        <span className="mb-1 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-[#1a73e8]">
                           <Sparkles className="h-3 w-3" /> Agent
                         </span>
                       )}
                       {msg.text}
                       {msg.role === "agent" && streaming && i === messages.length - 1 && (
-                        <span className="ml-0.5 inline-block h-3 w-1 animate-pulse bg-orange-600" />
+                        <span className="ml-0.5 inline-block h-3 w-1 animate-pulse bg-[#1a73e8]" />
                       )}
                     </motion.div>
                   ))}
@@ -382,14 +399,14 @@ export function AgentSandbox({ isDark }: { isDark: boolean }) {
                     disabled={streaming}
                     placeholder="Ask the agent…"
                     className={cn(
-                      "flex-1 rounded-xl border px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-600/30 disabled:opacity-50",
+                      "flex-1 rounded-xl border px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#4285F4]/30 disabled:opacity-50",
                       isDark ? "border-white/10 bg-white/5 text-stone-100 placeholder:text-stone-500" : "border-stone-300 bg-white text-stone-900"
                     )}
                   />
                   <button
                     type="submit"
                     disabled={streaming || !input.trim()}
-                    className="rounded-xl bg-orange-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-orange-500 disabled:opacity-40"
+                    className="rounded-xl bg-[#1a73e8] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#1765cc] disabled:opacity-40"
                   >
                     Send
                   </button>
@@ -407,47 +424,80 @@ export function AgentSandbox({ isDark }: { isDark: boolean }) {
 
 export function SecuritySection({ isDark }: { isDark: boolean }) {
   return (
-    <section id="security" className="relative z-10 mx-auto max-w-6xl px-6 py-20">
-      <div className="text-center">
-        <p className={sectionLabel()}>Security & privacy</p>
-        <h2 className={cn("mt-3 text-3xl font-bold tracking-tight sm:text-4xl", landingText(isDark, "primary"))}>
-          Trust is non-negotiable when we touch your mail.
-        </h2>
-        <p className={cn("mx-auto mt-4 max-w-2xl text-lg", landingText(isDark, "muted"))}>
-          Relvion connects via Google OAuth — the same secure flow you use for any Google app. Here&apos;s how we handle your data.
-        </p>
+    <section id="security" className={cn("relative z-10 mx-auto max-w-6xl px-6 py-20", landingSectionBg("gray"))}>
+      <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
+        <div className="relative order-2 lg:order-1">
+          <div className="relative overflow-hidden rounded-[2rem] border border-[#E8EAED] bg-gradient-to-br from-[#E6F4EA] via-white to-[#E8F0FE] p-4 shadow-xl">
+            <BorderBeam size={200} duration={13} colorFrom="#34A853" colorTo="#4285F4" />
+            <GeometricSecurityIllustration />
+            <motion.div
+              className="absolute bottom-4 left-4 right-4 flex items-center justify-between rounded-2xl border border-[#E8EAED] bg-white/95 px-4 py-3 shadow-lg backdrop-blur-sm"
+              animate={{ y: [0, -3, 0] }}
+              transition={{ duration: 3, repeat: Infinity }}
+            >
+              <span className="flex items-center gap-2 text-xs font-semibold text-[#34A853]">
+                <Shield className="h-4 w-4" />
+                OAuth 2.0 secured
+              </span>
+              <span className="text-[10px] font-medium text-[#5F6368]">TLS 1.3 · No training</span>
+            </motion.div>
+          </div>
+        </div>
+
+        <div className="order-1 lg:order-2">
+          <p className={sectionLabel(isDark)}>Security & privacy</p>
+          <h2 className={cn("mt-3 text-3xl font-bold tracking-tight sm:text-4xl", landingText(isDark, "primary"))}>
+            Trust is non-negotiable when we touch your mail.
+          </h2>
+          <p className={cn("mt-4 text-lg", landingText(isDark, "muted"))}>
+            Relvion connects via Google OAuth — the same secure flow you use for any Google app.
+          </p>
+
+          <div className="mt-10 grid gap-4 sm:grid-cols-2">
+            {securityItems.map((item, i) => (
+              <motion.div
+                key={item.title}
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.08 }}
+                whileHover={{ y: -4, scale: 1.02 }}
+                className="relative overflow-hidden rounded-2xl border border-[#E8EAED] bg-white p-5 shadow-sm"
+                style={{ borderTopColor: item.color, borderTopWidth: 3 }}
+              >
+                <div
+                  className="flex h-11 w-11 items-center justify-center rounded-xl"
+                  style={{ backgroundColor: item.bg }}
+                >
+                  <item.icon className="h-5 w-5" style={{ color: item.color }} />
+                </div>
+                <h3 className={cn("mt-3 font-semibold", landingText(isDark, "primary"))}>{item.title}</h3>
+                <p className={cn("mt-1.5 text-sm leading-relaxed", landingText(isDark, "muted"))}>{item.body}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
       </div>
 
-      <div className="mt-14 grid gap-5 sm:grid-cols-2">
-        {securityItems.map((item, i) => (
-          <motion.div
-            key={item.title}
-            initial={{ opacity: 0, y: 12 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: i * 0.08 }}
-            className={cn("relative overflow-hidden rounded-2xl border p-6", landingSurface(isDark, "card"))}
-          >
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-orange-600/10">
-              <item.icon className="h-5 w-5 text-orange-600" />
-            </div>
-            <h3 className={cn("mt-4 font-semibold", landingText(isDark, "primary"))}>{item.title}</h3>
-            <p className={cn("mt-2 text-sm leading-relaxed", landingText(isDark, "muted"))}>{item.body}</p>
-          </motion.div>
-        ))}
-      </div>
-
-      <div className={cn("mt-8 flex flex-wrap items-center justify-center gap-6 rounded-2xl border px-6 py-4 text-center text-xs", landingSurface(isDark, "elevated"))}>
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        className={cn(
+          "mt-10 flex flex-wrap items-center justify-center gap-6 rounded-2xl border px-6 py-4 text-center text-xs",
+          landingSurface(isDark, "elevated")
+        )}
+      >
         <span className={cn("flex items-center gap-2", landingText(isDark, "muted"))}>
-          <Shield className="h-4 w-4 text-orange-600" /> SOC 2 Type II — in progress
+          <Shield className="h-4 w-4 text-[#1a73e8]" /> SOC 2 Type II — in progress
         </span>
         <span className={cn("flex items-center gap-2", landingText(isDark, "muted"))}>
-          <Lock className="h-4 w-4 text-orange-600" /> TLS 1.3 everywhere
+          <Lock className="h-4 w-4 text-[#34A853]" /> TLS 1.3 everywhere
         </span>
         <span className={cn("flex items-center gap-2", landingText(isDark, "muted"))}>
-          <EyeOff className="h-4 w-4 text-orange-600" /> No model training on your data
+          <EyeOff className="h-4 w-4 text-[#EA4335]" /> No model training on your data
         </span>
-      </div>
+      </motion.div>
     </section>
   );
 }
@@ -456,10 +506,10 @@ export function SecuritySection({ isDark }: { isDark: boolean }) {
 
 export function ComparisonTable({ isDark }: { isDark: boolean }) {
   return (
-    <section id="compare" className={cn("relative z-10 border-y py-20", isDark ? "border-white/[0.06] bg-[#0d0d0d]" : "border-stone-300/60 bg-[#e8e2d8]/50")}>
+    <section id="compare" className={cn("relative z-10 border-y py-20", landingSectionBg(isDark))}>
       <div className="mx-auto max-w-6xl px-6">
         <div className="text-center">
-          <p className={sectionLabel()}>Compare</p>
+          <p className={sectionLabel(isDark)}>Compare</p>
           <h2 className={cn("mt-3 text-3xl font-bold tracking-tight sm:text-4xl", landingText(isDark, "primary"))}>
             Relvion vs. the status quo.
           </h2>
@@ -475,7 +525,7 @@ export function ComparisonTable({ isDark }: { isDark: boolean }) {
                 <tr className={cn("border-b", isDark ? "border-white/[0.08] bg-[#111111]" : "border-stone-300 bg-[#e8e2d8]")}>
                   <th className={cn("px-5 py-4 text-left font-semibold", landingText(isDark, "muted"))}>Feature</th>
                   <th className="px-5 py-4 text-center">
-                    <span className="font-bold text-orange-600">Relvion</span>
+                    <span className="font-bold text-[#1a73e8]">Relvion</span>
                   </th>
                   <th className={cn("px-5 py-4 text-center font-semibold", landingText(isDark, "muted"))}>Gmail</th>
                   <th className={cn("px-5 py-4 text-center font-semibold", landingText(isDark, "muted"))}>Superhuman</th>
@@ -492,7 +542,7 @@ export function ComparisonTable({ isDark }: { isDark: boolean }) {
                     )}
                   >
                     <td className={cn("px-5 py-3.5", landingText(isDark, "primary"))}>{row.feature}</td>
-                    <td className="px-5 py-3.5 text-center bg-orange-600/5">
+                    <td className="px-5 py-3.5 text-center bg-[#1a73e8]/5">
                       <CellIcon value={row.relvion} />
                     </td>
                     <td className="px-5 py-3.5 text-center">
@@ -516,9 +566,9 @@ export function ComparisonTable({ isDark }: { isDark: boolean }) {
 
 export function PricingSection({ isDark, ctaHref }: { isDark: boolean; ctaHref: string }) {
   return (
-    <section id="pricing" className="relative z-10 mx-auto max-w-6xl px-6 py-20">
+    <section id="pricing" className={cn("relative z-10 mx-auto max-w-6xl px-6 py-20", landingSectionBg(isDark))}>
       <div className="text-center">
-        <p className={sectionLabel()}>Pricing</p>
+        <p className={sectionLabel(isDark)}>Pricing</p>
         <h2 className={cn("mt-3 text-3xl font-bold tracking-tight sm:text-4xl", landingText(isDark, "primary"))}>
           Free during beta. Pro when you&apos;re ready.
         </h2>
@@ -538,25 +588,25 @@ export function PricingSection({ isDark, ctaHref }: { isDark: boolean; ctaHref: 
             className={cn(
               "relative flex flex-col overflow-hidden rounded-2xl border p-6",
               landingSurface(isDark, plan.highlight ? "elevated" : "card"),
-              plan.highlight && "ring-1 ring-orange-600/40"
+              plan.highlight && "ring-1 ring-[#4285F4]/40"
             )}
           >
             {plan.highlight && <BorderBeam size={180} duration={12} colorFrom="#ea580c" colorTo="#fdba74" />}
             <div className="relative">
               <div className="flex items-center justify-between">
                 <h3 className={cn("text-lg font-bold", landingText(isDark, "primary"))}>{plan.name}</h3>
-                <span className="rounded-full bg-orange-600/15 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-orange-600">
+                <span className="rounded-full bg-[#1a73e8]/15 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#1a73e8]">
                   {plan.badge}
                 </span>
               </div>
               <div className="mt-4 flex items-baseline gap-1">
-                <span className="text-4xl font-bold text-orange-600">{plan.price}</span>
+                <span className="text-4xl font-bold text-[#1a73e8]">{plan.price}</span>
                 <span className={cn("text-sm", landingText(isDark, "muted"))}>{plan.period}</span>
               </div>
               <ul className="mt-6 flex-1 space-y-2.5">
                 {plan.features.map((f) => (
                   <li key={f} className={cn("flex items-start gap-2 text-sm", landingText(isDark, "muted"))}>
-                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-orange-600" />
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#1a73e8]" />
                     {f}
                   </li>
                 ))}
@@ -582,7 +632,7 @@ export function PricingSection({ isDark, ctaHref }: { isDark: boolean; ctaHref: 
             <thead>
               <tr className={cn("border-b", isDark ? "border-white/[0.08]" : "border-stone-300")}>
                 <th className={cn("px-5 py-3 text-left", landingText(isDark, "muted"))} />
-                <th className="px-5 py-3 text-center font-semibold text-orange-600">Beta</th>
+                <th className="px-5 py-3 text-center font-semibold text-[#1a73e8]">Beta</th>
                 <th className={cn("px-5 py-3 text-center", landingText(isDark, "muted"))}>Pro</th>
                 <th className={cn("px-5 py-3 text-center", landingText(isDark, "muted"))}>Team</th>
               </tr>
@@ -621,7 +671,7 @@ function ghostButton(isDark: boolean) {
 
 export function TeamSocialProof({ isDark }: { isDark: boolean }) {
   return (
-    <section className={cn("relative z-10 border-y py-16", isDark ? "border-white/[0.06] bg-[#0d0d0d]" : "border-stone-300/60 bg-[#e8e2d8]/50")}>
+    <section className={cn("relative z-10 border-y py-16", landingSectionBg(isDark))}>
       <div className="mx-auto max-w-6xl px-6 text-center">
         <p className={cn("text-sm", landingText(isDark, "muted"))}>
           Built by engineers who lived in Superhuman, Gmail, and Notion — now shipping one workspace.
@@ -639,7 +689,7 @@ export function TeamSocialProof({ isDark }: { isDark: boolean }) {
               {co}
             </span>
           ))}
-          <span className="text-xs text-orange-600">+ alumni network</span>
+          <span className="text-xs text-[#1a73e8]">+ alumni network</span>
         </div>
       </div>
       <div className="mt-10">
@@ -653,17 +703,17 @@ export function TeamSocialProof({ isDark }: { isDark: boolean }) {
 
 export function ChangelogSection({ isDark }: { isDark: boolean }) {
   return (
-    <section id="changelog" className="relative z-10 mx-auto max-w-6xl px-6 py-20">
+    <section id="changelog" className={cn("relative z-10 mx-auto max-w-6xl px-6 py-20", landingSectionBg(isDark))}>
       <div className="flex flex-col gap-10 lg:flex-row lg:items-start">
         <div className="lg:w-1/3">
-          <p className={sectionLabel()}>What&apos;s new</p>
+          <p className={sectionLabel(isDark)}>What&apos;s new</p>
           <h2 className={cn("mt-3 text-3xl font-bold tracking-tight", landingText(isDark, "primary"))}>
             Shipping every week.
           </h2>
           <p className={cn("mt-4 text-base leading-relaxed", landingText(isDark, "muted"))}>
             Beta means rapid iteration. Here&apos;s what landed recently — matching what you&apos;ll find in the dashboard today.
           </p>
-          <div className={cn("mt-6 flex items-center gap-2 text-sm text-orange-600")}>
+          <div className={cn("mt-6 flex items-center gap-2 text-sm text-[#1a73e8]")}>
             <Zap className="h-4 w-4" />
             <span>6 releases in the last 30 days</span>
           </div>
@@ -678,7 +728,7 @@ export function ChangelogSection({ isDark }: { isDark: boolean }) {
               viewport={{ once: true }}
               transition={{ delay: i * 0.06 }}
               className={cn(
-                "group flex gap-4 rounded-xl border p-4 transition-colors hover:border-orange-600/30",
+                "group flex gap-4 rounded-xl border p-4 transition-colors hover:border-[#1a73e8]/30",
                 landingSurface(isDark, "card")
               )}
             >
@@ -687,7 +737,7 @@ export function ChangelogSection({ isDark }: { isDark: boolean }) {
                 <span
                   className={cn(
                     "mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase",
-                    entry.tag === "New" ? "bg-emerald-500/15 text-emerald-500" : "bg-orange-600/15 text-orange-600"
+                    entry.tag === "New" ? "bg-emerald-500/15 text-emerald-500" : "bg-[#1a73e8]/15 text-[#1a73e8]"
                   )}
                 >
                   {entry.tag}
@@ -697,7 +747,7 @@ export function ChangelogSection({ isDark }: { isDark: boolean }) {
                 <h3 className={cn("font-semibold", landingText(isDark, "primary"))}>{entry.title}</h3>
                 <p className={cn("mt-1 text-sm", landingText(isDark, "muted"))}>{entry.desc}</p>
               </div>
-              <ChevronRight className="h-4 w-4 shrink-0 text-orange-600 opacity-0 transition-opacity group-hover:opacity-100" />
+              <ChevronRight className="h-4 w-4 shrink-0 text-[#1a73e8] opacity-0 transition-opacity group-hover:opacity-100" />
             </motion.div>
           ))}
         </div>
@@ -733,7 +783,7 @@ export function ChangelogFloatingWidget({ isDark }: { isDark: boolean }) {
                 </div>
               ))}
             </div>
-            <a href="#changelog" onClick={() => setOpen(false)} className="block border-t px-4 py-2.5 text-center text-xs font-medium text-orange-600 hover:bg-orange-600/5">
+            <a href="#changelog" onClick={() => setOpen(false)} className="block border-t px-4 py-2.5 text-center text-xs font-medium text-[#1a73e8] hover:bg-[#1a73e8]/5">
               View full changelog →
             </a>
           </motion.div>
@@ -745,12 +795,12 @@ export function ChangelogFloatingWidget({ isDark }: { isDark: boolean }) {
         className={cn(
           "flex items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-semibold shadow-lg transition-all hover:scale-105",
           landingSurface(isDark, "elevated"),
-          "hover:border-orange-600/40"
+          "hover:border-[#1a73e8]/40"
         )}
       >
-        <Sparkles className="h-4 w-4 text-orange-600" />
+        <Sparkles className="h-4 w-4 text-[#1a73e8]" />
         <span className={landingText(isDark, "primary")}>What&apos;s new</span>
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-orange-600 text-[10px] font-bold text-white">
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#1a73e8] text-[10px] font-bold text-white">
           {changelogEntries.length}
         </span>
       </button>

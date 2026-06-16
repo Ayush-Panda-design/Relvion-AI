@@ -1,6 +1,9 @@
 export type AgentChatMessage = {
   role: 'user' | 'agent';
   content: string;
+  timestamp?: string;
+  streaming?: boolean;
+  steps?: import('@/lib/agent-stream').AgentStep[];
   attachments?: { name: string; type: string; preview?: string }[];
 };
 

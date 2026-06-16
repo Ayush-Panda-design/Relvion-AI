@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { GoogleGenerativeAI, type FunctionDeclaration } from '@google/generative-ai';
+import { createAgentSseStream, runAgentStream, sseResponse } from '@/server/agent/runAgentStream';
+import type { FunctionDeclaration } from '@google/generative-ai';
 import { AnthropicProvider } from '@corsair-dev/mcp';
 import { Pool } from 'pg';
 import { getSession } from '@/lib/auth/getSession';
@@ -306,184 +307,21 @@ export async function POST(req: Request) {
     );
   }
 
-  // ── 4. Initialise Gemini with key rotation ───────────────────────────────────
   try {
-    let currentKeyIdx = keyIndex;
     const systemInstruction = await buildSystemPrompt(session.tenantId);
-
-    const makeModel = (apiKey: string) => {
-      const genAI = new GoogleGenerativeAI(apiKey);
-      return genAI.getGenerativeModel({
-        model: MODEL,
+    const stream = createAgentSseStream((emit) =>
+      runAgentStream({
+        message,
+        history,
+        attachments,
+        apiKeys,
+        geminiDeclarations,
+        handlerMap,
         systemInstruction,
-        tools: [{ functionDeclarations: geminiDeclarations }],
-        generationConfig: { temperature: 0.2 },
-      });
-    };
-
-    let model = makeModel(nextApiKey(apiKeys));
-    let chat = model.startChat({ history });
-    console.log(`[Agent] Using key pool of ${apiKeys.length} key(s)`);
-
-    // On 429: immediately rotate to next key. On 503: short wait.
-    async function sendWithRotation(fn: () => Promise<any>, label: string): Promise<any> {
-      let lastErr: unknown;
-      const maxAttempts = Math.max(apiKeys.length * 2, 4);
-      for (let attempt = 0; attempt < maxAttempts; attempt++) {
-        try {
-          return await fn();
-        } catch (err: unknown) {
-          lastErr = err;
-          const msg = (err as Error)?.message ?? '';
-          const is429 = msg.includes('429') || msg.includes('quota') || msg.includes('rate');
-          const is503 = msg.includes('503') || msg.includes('overloaded') || msg.includes('UNAVAILABLE');
-
-          if (!is429 && !is503) throw err;
-
-          if (is429 && apiKeys.length > 1) {
-            const newKey = nextApiKey(apiKeys);
-            console.warn(`[Agent] ${label} — 429, rotating to key #${keyIndex} of ${apiKeys.length}`);
-            currentKeyIdx = keyIndex;
-            model = makeModel(newKey);
-            chat = model.startChat({ history });
-          } else {
-            const waitMs = is503 ? (attempt + 1) * 5_000 : (attempt + 1) * 10_000;
-            console.warn(`[Agent] ${label} — ${is429 ? '429' : '503'} attempt ${attempt + 1}, waiting ${waitMs / 1000}s…`);
-            await new Promise(r => setTimeout(r, waitMs));
-          }
-        }
-      }
-      throw lastErr;
-    }
-
-    // ── 5. First turn (with optional multimodal attachments) ─────────────────
-    // Build message parts: text + inline data for any attachments
-    const messageParts: any[] = [];
-
-    if (message?.trim()) {
-      messageParts.push({ text: message });
-    }
-
-    // Add file attachments as inline data parts for Gemini multimodal
-    for (const att of attachments) {
-      // Supported by Gemini: images, PDFs, audio, video, text
-      messageParts.push({
-        inlineData: {
-          mimeType: att.mimeType,
-          data: att.data,
-        },
-      });
-      // Add a text label so the model knows the filename
-      messageParts.push({ text: `[Attached file: ${att.name} (${att.mimeType}, ${Math.round(att.size / 1024)}KB)]` });
-    }
-
-    if (messageParts.length === 0) {
-      messageParts.push({ text: message || 'Hello' });
-    }
-
-    console.log(`[Agent] Sending message with ${attachments.length} attachment(s)`);
-
-    let result = await sendWithRotation(
-      () => chat.sendMessage(messageParts),
-      'initial message'
+        emit,
+      })
     );
-
-    let call = result.response.functionCalls()?.[0];
-    console.log('[Agent] Initial response —', call ? `tool: ${call.name}` : 'text reply');
-
-    // ── 6. Tool-calling loop ─────────────────────────────────────────────────
-    let loops = 0;
-    while (call && loops < MAX_TOOL_LOOPS) {
-      loops++;
-
-      const handler = handlerMap.get(call.name);
-      if (!handler) {
-        console.warn(`[Agent] Unknown tool: ${call.name}`);
-        result = await sendWithRotation(
-          () => chat.sendMessage([{
-            functionResponse: {
-              name: call!.name,
-              response: { error: `Tool "${call!.name}" is not available.` },
-            },
-          }]),
-          `tool-response (unknown: ${call.name})`
-        );
-        call = result.response.functionCalls()?.[0];
-        continue;
-      }
-
-      console.log(`[Agent] [${loops}/${MAX_TOOL_LOOPS}] Calling: ${call.name}`);
-
-      let responseObj: Record<string, string>;
-      try {
-        const toolResult = await Promise.resolve(handler(call.args));
-        const raw = extractToolText(toolResult);
-        const truncated = raw.length > MAX_RESULT_CHARS
-          ? raw.slice(0, MAX_RESULT_CHARS) + '\n\n[... result truncated ...]'
-          : raw;
-        console.log(`[Agent] ${call.name} result: ${raw.length} chars`);
-        responseObj = { result: truncated };
-
-        // If a run_script call succeeded and looks like it mutated calendar/gmail,
-        // broadcast an SSE event so the UI refreshes immediately (don't rely on
-        // Google push webhooks / ngrok being configured).
-        if (call.name === 'run_script' && !raw.includes('"isError"') && !raw.includes('"error"')) {
-          const code = String((call.args as any)?.code ?? '');
-          try {
-            const { broadcastEvent } = await import('@/lib/eventBus');
-            if (/googlecalendar\.api\.events\.(create|update|delete)/.test(code)) {
-              broadcastEvent('CALENDAR_UPDATED', {});
-            }
-            if (/gmail\.api\.messages\.(send|modify|delete|trash)/.test(code)) {
-              broadcastEvent('EMAIL_UPDATED', {});
-            }
-          } catch {}
-        }
-      } catch (toolErr: unknown) {
-        const errMsg = (toolErr as Error)?.message ?? 'Tool execution failed';
-        console.error(`[Agent] Tool error (${call.name}):`, errMsg);
-        responseObj = { error: errMsg };
-      }
-
-      try {
-        result = await sendWithRotation(
-          () => chat.sendMessage([{
-            functionResponse: {
-              name: call!.name,
-              response: responseObj,
-            },
-          }]),
-          `tool-response (${call.name})`
-        );
-        call = result.response.functionCalls()?.[0];
-        console.log('[Agent] Next step:', call ? `tool: ${call.name}` : 'final text reply');
-      } catch (geminiErr: unknown) {
-        const errMsg = (geminiErr as Error)?.message ?? '';
-        console.error('[Agent] Gemini rejected function response:', errMsg);
-        result = await sendWithRotation(
-          () => chat.sendMessage(
-            `Tool "${call!.name}" returned: ${JSON.stringify(responseObj).slice(0, 2_000)}`
-          ),
-          'fallback plain text'
-        );
-        call = null;
-      }
-    }
-
-    if (loops >= MAX_TOOL_LOOPS) {
-      console.warn(`[Agent] Hit tool loop limit (${MAX_TOOL_LOOPS}).`);
-    }
-
-    // ── 7. Extract final text ────────────────────────────────────────────────
-    const text = result.response.text()?.trim();
-    if (!text) {
-      return NextResponse.json({
-        reply: "I processed your request but didn't generate a response. Please try rephrasing.",
-      });
-    }
-
-    return NextResponse.json({ reply: text });
-
+    return sseResponse(stream);
   } catch (err) {
     return classifyError(err);
   }

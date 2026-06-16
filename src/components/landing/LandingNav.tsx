@@ -3,10 +3,10 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sun, Moon, Menu, X } from "lucide-react";
+import { Menu, X, ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BrandMark } from "@/components/brand/BrandMark";
-import { landingText, primaryButton } from "./theme";
+import { primaryButton } from "./theme";
 
 const NAV_LINKS = [
   { href: "#product", label: "Product" },
@@ -19,20 +19,12 @@ const NAV_LINKS = [
 ] as const;
 
 type LandingNavProps = {
-  isDark: boolean;
-  onThemeToggle: () => void;
   session: boolean;
   ctaHref: string;
   ctaLabel: string;
 };
 
-export function LandingNav({
-  isDark,
-  onThemeToggle,
-  session,
-  ctaHref,
-  ctaLabel,
-}: LandingNavProps) {
+export function LandingNav({ session, ctaHref, ctaLabel }: LandingNavProps) {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -56,88 +48,44 @@ export function LandingNav({
         className={cn(
           "fixed inset-x-0 top-0 z-[100] transition-all duration-300",
           scrolled
-            ? isDark
-              ? "border-b border-white/[0.08] bg-[#0a0a0a]/85 shadow-[0_8px_32px_rgba(0,0,0,0.45)] backdrop-blur-xl"
-              : "border-b border-stone-300/70 bg-[#f0ebe3]/90 shadow-[0_4px_24px_rgba(28,25,23,0.08)] backdrop-blur-xl"
-            : isDark
-              ? "border-b border-transparent bg-[#0a0a0a]/40 backdrop-blur-md"
-              : "border-b border-transparent bg-[#f0ebe3]/60 backdrop-blur-md"
+            ? "border-b border-[#E8EAED] bg-white/95 shadow-sm backdrop-blur-xl"
+            : "border-b border-transparent bg-white/80 backdrop-blur-md"
         )}
       >
-        {/* Accent line */}
-        <div
-          className={cn(
-            "absolute bottom-0 left-0 h-px w-full bg-gradient-to-r from-transparent via-orange-600/50 to-transparent transition-opacity duration-300",
-            scrolled ? "opacity-100" : "opacity-40"
-          )}
-        />
-
-        <div
-          className={cn(
-            "mx-auto flex max-w-6xl items-center justify-between px-4 transition-all duration-300 sm:px-6",
-            scrolled ? "h-14" : "h-16"
-          )}
-        >
-          {/* Logo */}
-          <Link
-            href="/"
-            className="group flex shrink-0 items-center gap-2.5 rounded-xl py-1 pr-2 transition-opacity hover:opacity-90"
-          >
-            <div className="rounded-xl bg-white/90 p-1 shadow-sm ring-1 ring-stone-200/80 transition-transform group-hover:scale-105 dark:bg-white/10 dark:ring-white/10">
-              <BrandMark size={28} variant={isDark ? "dark" : "light"} />
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 transition-all duration-300 sm:px-6 h-14">
+          <Link href="/" className="group flex shrink-0 items-center gap-2.5 rounded-xl py-1 pr-2">
+            <div className="rounded-xl bg-[#F8F9FA] p-1 ring-1 ring-[#E8EAED] transition-transform group-hover:scale-105">
+              <BrandMark size={28} variant="light" />
             </div>
-            <span className={cn("text-lg font-bold tracking-tight", landingText(isDark, "primary"))}>
-              Relvion<span className="text-orange-600">.</span>
+            <span className="text-lg font-bold tracking-tight text-[#202124]">
+              Relvion
+              <span className="text-[#4285F4]">.</span>
+              <span className="text-[#34A853]">.</span>
+              <span className="text-[#FBBC04]">.</span>
+              <span className="text-[#EA4335]">.</span>
             </span>
           </Link>
 
-          {/* Desktop nav — pill container */}
           <nav
-            className={cn(
-              "hidden items-center gap-0.5 rounded-full border p-1 lg:flex",
-              isDark ? "border-white/[0.08] bg-white/[0.04]" : "border-stone-300/60 bg-white/50 shadow-sm"
-            )}
+            className="hidden items-center gap-0.5 rounded-full border border-[#E8EAED] bg-[#F8F9FA] p-1 lg:flex"
             aria-label="Main"
           >
             {NAV_LINKS.map((l) => (
               <Link
                 key={l.href}
                 href={l.href}
-                className={cn(
-                  "relative rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors",
-                  landingText(isDark, "muted"),
-                  "hover:text-orange-600",
-                  isDark ? "hover:bg-white/[0.06]" : "hover:bg-stone-900/[0.04]"
-                )}
+                className="rounded-full px-3.5 py-1.5 text-[13px] font-medium text-[#5F6368] transition-colors hover:bg-white hover:text-[#1a73e8]"
               >
                 {l.label}
               </Link>
             ))}
           </nav>
 
-          {/* Actions */}
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onThemeToggle}
-              aria-label="Toggle theme"
-              className={cn(
-                "flex h-9 w-9 items-center justify-center rounded-full border transition-all",
-                isDark
-                  ? "border-white/10 bg-white/[0.04] hover:border-orange-600/30 hover:bg-white/[0.08]"
-                  : "border-stone-300/80 bg-white/80 hover:border-orange-400 hover:bg-white shadow-sm"
-              )}
-            >
-              {isDark ? <Sun className="h-4 w-4 text-orange-500" /> : <Moon className="h-4 w-4 text-stone-600" />}
-            </button>
-
             {!session && (
               <Link
                 href="/signin"
-                className={cn(
-                  "hidden text-sm font-medium transition-colors hover:text-orange-600 sm:inline",
-                  landingText(isDark, "muted")
-                )}
+                className="hidden text-sm font-medium text-[#5F6368] transition-colors hover:text-[#1a73e8] sm:inline"
               >
                 Sign In
               </Link>
@@ -145,19 +93,19 @@ export function LandingNav({
 
             <Link
               href={ctaHref}
-              className={cn(primaryButton(isDark), "hidden rounded-full px-5 py-2.5 text-sm sm:inline-flex")}
+              className={cn(primaryButton(), "hidden rounded-full px-5 py-2.5 text-sm sm:inline-flex")}
             >
               {session ? "Dashboard" : "Get Started"}
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/25">
+                <ArrowUpRight className="h-3.5 w-3.5" />
+              </span>
             </Link>
 
             <button
               type="button"
               onClick={() => setMobileOpen(true)}
               aria-label="Open menu"
-              className={cn(
-                "flex h-9 w-9 items-center justify-center rounded-full border lg:hidden",
-                isDark ? "border-white/10 bg-white/[0.04]" : "border-stone-300 bg-white/80"
-              )}
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-[#E8EAED] bg-[#F8F9FA] text-[#202124] lg:hidden"
             >
               <Menu className="h-4 w-4" />
             </button>
@@ -165,10 +113,8 @@ export function LandingNav({
         </div>
       </header>
 
-      {/* Spacer so content isn't hidden under fixed header */}
-      <div className={cn("shrink-0 transition-all duration-300", scrolled ? "h-14" : "h-16")} aria-hidden />
+      <div className="h-14 shrink-0" aria-hidden />
 
-      {/* Mobile menu */}
       <AnimatePresence>
         {mobileOpen && (
           <>
@@ -176,7 +122,7 @@ export function LandingNav({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[110] bg-black/50 backdrop-blur-sm lg:hidden"
+              className="fixed inset-0 z-[110] bg-black/30 backdrop-blur-sm lg:hidden"
               onClick={() => setMobileOpen(false)}
             />
             <motion.div
@@ -184,19 +130,16 @@ export function LandingNav({
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", stiffness: 320, damping: 32 }}
-              className={cn(
-                "fixed inset-y-0 right-0 z-[120] flex w-[min(100%,320px)] flex-col border-l shadow-2xl lg:hidden",
-                isDark ? "border-white/[0.08] bg-[#0a0a0a]" : "border-stone-300 bg-[#f0ebe3]"
-              )}
+              className="fixed inset-y-0 right-0 z-[120] flex w-[min(100%,320px)] flex-col border-l border-[#E8EAED] bg-white shadow-2xl lg:hidden"
             >
-              <div className="flex items-center justify-between border-b border-inherit px-5 py-4">
-                <span className={cn("font-semibold", landingText(isDark, "primary"))}>Menu</span>
+              <div className="flex items-center justify-between border-b border-[#E8EAED] px-5 py-4">
+                <span className="font-semibold text-[#202124]">Menu</span>
                 <button
                   type="button"
                   onClick={() => setMobileOpen(false)}
-                  className={cn("rounded-full p-2", isDark ? "hover:bg-white/5" : "hover:bg-stone-900/5")}
+                  className="rounded-full p-2 hover:bg-[#F8F9FA]"
                 >
-                  <X className="h-5 w-5" />
+                  <X className="h-5 w-5 text-[#5F6368]" />
                 </button>
               </div>
               <nav className="flex-1 overflow-y-auto p-4">
@@ -210,27 +153,19 @@ export function LandingNav({
                     <Link
                       href={l.href}
                       onClick={() => setMobileOpen(false)}
-                      className={cn(
-                        "block rounded-xl px-4 py-3 text-base font-medium transition-colors",
-                        landingText(isDark, "muted"),
-                        isDark ? "hover:bg-white/[0.06] hover:text-orange-500" : "hover:bg-stone-900/5 hover:text-orange-600"
-                      )}
+                      className="block rounded-xl px-4 py-3 text-base font-medium text-[#5F6368] hover:bg-[#F8F9FA] hover:text-[#1a73e8]"
                     >
                       {l.label}
                     </Link>
                   </motion.div>
                 ))}
               </nav>
-              <div className="space-y-2 border-t border-inherit p-4">
+              <div className="space-y-2 border-t border-[#E8EAED] p-4">
                 {!session && (
                   <Link
                     href="/signin"
                     onClick={() => setMobileOpen(false)}
-                    className={cn(
-                      "block w-full rounded-xl border py-3 text-center text-sm font-semibold",
-                      isDark ? "border-white/10" : "border-stone-300",
-                      landingText(isDark, "primary")
-                    )}
+                    className="block w-full rounded-xl border border-[#DADCE0] py-3 text-center text-sm font-semibold text-[#1a73e8]"
                   >
                     Sign In
                   </Link>
@@ -238,7 +173,7 @@ export function LandingNav({
                 <Link
                   href={ctaHref}
                   onClick={() => setMobileOpen(false)}
-                  className={cn(primaryButton(isDark), "w-full justify-center rounded-xl")}
+                  className={cn(primaryButton(), "w-full justify-center rounded-xl")}
                 >
                   {ctaLabel}
                 </Link>

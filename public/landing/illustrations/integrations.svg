@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 320" fill="none">
+  <rect width="480" height="320" fill="#E8F0FE"/>
+  <circle cx="240" cy="160" r="50" fill="#4285F4"/>
+  <path d="M228 160h24M240 148v24" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="120" cy="100" r="36" fill="#EA4335"/>
+  <text x="108" y="106" fill="#fff" font-family="Arial,sans-serif" font-size="14" font-weight="bold">M</text>
+  <circle cx="360" cy="100" r="36" fill="#34A853"/>
+  <rect x="346" y="88" width="28" height="22" rx="4" fill="#fff"/>
+  <circle cx="360" cy="220" r="36" fill="#FBBC04"/>
+  <rect x="348" y="208" width="24" height="20" rx="3" fill="#fff"/>
+  <circle cx="120" cy="220" r="36" fill="#4285F4"/>
+  <circle cx="120" cy="214" r="10" fill="none" stroke="#fff" stroke-width="3"/>
+  <path d="M240 110v-40M240 210v40M150 160H90M330 160h60" stroke="#4285F4" stroke-width="2" stroke-dasharray="6 4" stroke-opacity="0.5"/>
+  <circle cx="240" cy="280" r="30" fill="#34A853"/>
+  <circle cx="240" cy="268" r="16" fill="#F9AB00"/>
+  <circle cx="240" cy="264" r="12" fill="#8D5524"/>
+</svg>

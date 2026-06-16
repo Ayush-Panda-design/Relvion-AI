@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 320" fill="none">
+  <rect width="480" height="320" fill="#E6F4EA"/>
+  <rect x="40" y="130" width="80" height="60" rx="14" fill="#EA4335"/>
+  <text x="58" y="168" fill="#fff" font-family="Arial,sans-serif" font-size="12" font-weight="bold">Inbox</text>
+  <path d="M130 160h50" stroke="#34A853" stroke-width="3" marker-end="url(#arr)"/>
+  <rect x="190" y="130" width="80" height="60" rx="14" fill="#FBBC04"/>
+  <text x="200" y="168" fill="#fff" font-family="Arial,sans-serif" font-size="12" font-weight="bold">Triage</text>
+  <path d="M280 160h50" stroke="#34A853" stroke-width="3"/>
+  <rect x="340" y="130" width="100" height="60" rx="14" fill="#34A853"/>
+  <text x="358" y="168" fill="#fff" font-family="Arial,sans-serif" font-size="12" font-weight="bold">Done</text>
+  <circle cx="240" cy="70" r="45" fill="#4285F4"/>
+  <circle cx="240" cy="52" r="24" fill="#F9AB00"/>
+  <circle cx="240" cy="48" r="18" fill="#8D5524"/>
+  <path d="M240 230c-30 0-55 15-55 35h110c0-20-25-35-55-35z" fill="#4285F4"/>
+  <defs><marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#34A853"/></marker></defs>
+</svg>

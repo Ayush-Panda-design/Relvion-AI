@@ -1,125 +1,138 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Bot, User, Copy, Check } from 'lucide-react';
+import { Bot, Copy, Check, ThumbsUp, ThumbsDown, RotateCcw } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import toast from 'react-hot-toast';
 import { cn } from '@/lib/utils';
 import { dash } from '@/components/dashboard/theme';
+import { MarkdownLite } from '@/lib/markdown-lite';
+import { AgentActivityTrace } from '@/components/agent/AgentActivityTrace';
+import { ContactAvatar } from '@/components/ui/ContactAvatar';
+import type { AgentStep } from '@/lib/agent-stream';
 
 export type ChatMessageData = {
   role: 'user' | 'agent';
   content: string;
+  timestamp?: string;
+  streaming?: boolean;
+  steps?: AgentStep[];
   attachments?: { name: string; type: string; preview?: string }[];
 };
 
-function CopyButton({ text, isUser }: { text: string; isUser: boolean }) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      toast.success(isUser ? 'Prompt copied' : 'Response copied');
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      toast.error('Could not copy to clipboard');
-    }
-  }, [text, isUser]);
-
-  return (
-    <button
-      type="button"
-      onClick={handleCopy}
-      title={isUser ? 'Copy prompt' : 'Copy response'}
-      className={cn(
-        'rounded-md p-1 opacity-0 shadow-sm transition-all group-hover/message:opacity-100',
-        dash.chatCopyBtn
-      )}
-    >
-      {copied ? <Check size={12} /> : <Copy size={12} />}
-    </button>
-  );
+function UserInitials() {
+  return <ContactAvatar name="You" initials="U" sizeClass="h-8 w-8 text-xs" />;
 }
 
 export function ChatMessage({
   message,
   index = 0,
+  onRegenerate,
 }: {
   message: ChatMessageData;
   index?: number;
+  onRegenerate?: () => void;
 }) {
   const isUser = message.role === 'user';
+  const [copied, setCopied] = useState(false);
+  const [reaction, setReaction] = useState<'up' | 'down' | null>(null);
+
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(message.content);
+      setCopied(true);
+      toast.success('Copied');
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error('Could not copy');
+    }
+  }, [message.content]);
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10, scale: 0.98 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{
-        delay: Math.min(index * 0.04, 0.2),
-        duration: 0.35,
-        ease: [0.21, 0.47, 0.32, 0.98],
-      }}
-      className={cn('flex gap-2.5', isUser ? 'flex-row-reverse' : 'flex-row')}
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: Math.min(index * 0.03, 0.15), duration: 0.28 }}
+      className={cn('group flex flex-col gap-1', isUser ? 'items-end' : 'items-start')}
     >
-      <div
-        className={cn(
-          'flex h-8 w-8 shrink-0 items-center justify-center rounded-full ring-1',
-          isUser ? dash.avatar : cn(dash.accentSoftBg, 'ring-[#0D9488]/15 dark:ring-[#8ab4f8]/20')
-        )}
-      >
-        {isUser ? (
-          <User size={14} className={dash.accent} />
-        ) : (
-          <Bot size={14} className={dash.accent} />
-        )}
-      </div>
-
-      <div className={cn('flex max-w-[85%] flex-col gap-1', isUser ? 'items-end' : 'items-start')}>
-        <span className={cn('px-1 text-[10px] font-medium uppercase tracking-wider', dash.textSubtle)}>
-          {isUser ? 'You' : 'Relvion'}
-        </span>
-
-        {message.attachments && message.attachments.length > 0 && (
-          <div className={cn('flex flex-wrap gap-1.5', isUser ? 'justify-end' : 'justify-start')}>
-            {message.attachments.map((att, j) => (
-              <div
-                key={j}
-                className={cn(
-                  'overflow-hidden rounded-lg border transition-transform hover:scale-[1.02]',
-                  dash.chatAttachment
-                )}
-              >
-                {att.type.startsWith('image/') && att.preview ? (
-                  <img src={att.preview} alt={att.name} className="h-16 w-16 object-cover" />
-                ) : (
-                  <div className={cn('px-2 py-1 text-[10px]', dash.text)}>{att.name}</div>
-                )}
-              </div>
-            ))}
+      <div className={cn('flex w-full gap-2.5', isUser ? 'flex-row-reverse' : 'flex-row')}>
+        {isUser ? <UserInitials /> : (
+          <div className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-full', dash.accentSoftBg)}>
+            <Bot size={14} className={dash.accent} />
           </div>
         )}
 
-        {message.content && (
-          <div className={cn('group/message relative flex items-start gap-1', isUser && 'flex-row-reverse')}>
-            <CopyButton text={message.content} isUser={isUser} />
+        <div className={cn('min-w-0 max-w-[92%]', isUser ? 'items-end' : 'items-start')}>
+          {!isUser && message.steps && message.steps.length > 0 && (
+            <AgentActivityTrace steps={message.steps} />
+          )}
+
+          {message.attachments && message.attachments.length > 0 && (
+            <div className={cn('mb-1 flex flex-wrap gap-1.5', isUser && 'justify-end')}>
+              {message.attachments.map((att, j) => (
+                <div key={j} className={cn('overflow-hidden rounded-lg border text-[10px] px-2 py-1', dash.chatAttachment)}>
+                  {att.name}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {(message.content || message.streaming) && (
             <div
               className={cn(
-                'whitespace-pre-wrap break-words rounded-2xl px-4 py-2.5 text-sm leading-relaxed [overflow-wrap:anywhere]',
-                'backdrop-blur-sm transition-shadow duration-200',
+                'rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed',
                 isUser
-                  ? cn('rounded-br-md shadow-sm', dash.chatUser)
-                  : cn(
-                      'rounded-bl-md border shadow-[0_2px_12px_rgba(0,0,0,0.06)]',
-                      dash.chatAgent,
-                      'dark:shadow-[0_2px_16px_rgba(0,0,0,0.35)]'
-                    )
+                  ? cn('rounded-br-md', dash.chatUser)
+                  : cn('rounded-bl-md border', dash.chatAgent)
               )}
             >
-              {message.content}
+              {isUser ? (
+                <p className="whitespace-pre-wrap break-words">{message.content}</p>
+              ) : (
+                <>
+                  {message.content ? <MarkdownLite content={message.content} /> : null}
+                  {message.streaming && (
+                    <span className={cn('ml-0.5 inline-block h-4 w-0.5 animate-pulse align-middle', dash.accentBg)} />
+                  )}
+                </>
+              )}
             </div>
+          )}
+
+          <div className={cn('mt-1 flex items-center gap-1', isUser ? 'justify-end' : 'justify-start')}>
+            {message.timestamp && (
+              <span className={cn('text-[10px] tabular-nums', dash.textSubtle)}>{message.timestamp}</span>
+            )}
+            {!isUser && message.content && !message.streaming && (
+              <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                <button
+                  type="button"
+                  onClick={() => setReaction('up')}
+                  className={cn('rounded p-1', dash.hover, reaction === 'up' && dash.accentSoft)}
+                  title="Good response"
+                >
+                  <ThumbsUp size={12} className={dash.textMuted} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReaction('down')}
+                  className={cn('rounded p-1', dash.hover, reaction === 'down' && dash.accentSoft)}
+                  title="Poor response"
+                >
+                  <ThumbsDown size={12} className={dash.textMuted} />
+                </button>
+                <button type="button" onClick={handleCopy} className={cn('rounded p-1', dash.hover)} title="Copy">
+                  {copied ? <Check size={12} className={dash.accent} /> : <Copy size={12} className={dash.textMuted} />}
+                </button>
+                {onRegenerate && (
+                  <button type="button" onClick={onRegenerate} className={cn('rounded p-1', dash.hover)} title="Regenerate">
+                    <RotateCcw size={12} className={dash.textMuted} />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </motion.div>
   );

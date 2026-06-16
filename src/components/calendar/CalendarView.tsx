@@ -13,6 +13,8 @@ import {
   CalendarDays,
   X,
   Sparkles,
+  AlignLeft,
+  Globe,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -113,39 +115,81 @@ function EventModal({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-0 backdrop-blur-sm sm:items-center sm:p-4"
       onClick={onClose}
     >
       <motion.div
-        initial={{ opacity: 0, y: 16, scale: 0.98 }}
+        initial={{ opacity: 0, y: 24, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: 12, scale: 0.98 }}
-        transition={{ duration: 0.2 }}
-        className={cn('w-full max-w-md overflow-hidden rounded-2xl border shadow-2xl', dash.elevated, dash.border)}
+        exit={{ opacity: 0, y: 16, scale: 0.98 }}
+        transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+        className={cn(
+          'flex w-full max-h-[92vh] max-w-lg flex-col overflow-hidden rounded-t-2xl border shadow-2xl sm:max-h-[min(88vh,720px)] sm:rounded-2xl',
+          dash.elevated,
+          dash.border
+        )}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className={cn('flex items-center justify-between border-b px-6 py-4', dash.border)}>
-          <h3 className={cn('flex items-center gap-2 font-semibold', dash.text)}>
-            {Icon && <Icon size={18} className={dash.accent} />}
-            {title}
-          </h3>
+        {/* Accent strip + header */}
+        <div className="relative shrink-0">
+          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[var(--dash-accent)] via-[var(--dash-accent)]/60 to-transparent" />
+          <div className={cn('flex items-start justify-between gap-3 border-b px-5 pb-4 pt-5', dash.border)}>
+            <div className="flex min-w-0 items-start gap-3">
+              {Icon && (
+                <div className={cn('mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl', dash.accentSoftBg)}>
+                  <Icon size={18} className={dash.accent} />
+                </div>
+              )}
+              <div className="min-w-0">
+                <h3 className={cn('text-lg font-semibold tracking-tight', dash.text)}>{title}</h3>
+                <p className={cn('mt-0.5 text-xs', dash.textMuted)}>
+                  Fill in the details below — scroll for more options
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className={cn('shrink-0 rounded-xl p-2 transition-colors', dash.hover, dash.textMuted)}
+              aria-label="Close"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+
+        {/* Scrollable form body */}
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4">
+          {children}
+        </div>
+
+        {/* Sticky footer */}
+        <div
+          className={cn(
+            'flex shrink-0 flex-col gap-2 border-t px-5 py-4 sm:flex-row sm:items-center',
+            dash.border,
+            'bg-[var(--dash-elevated-bg)]/95 backdrop-blur-sm'
+          )}
+        >
+          {extraActions}
           <button
             type="button"
             onClick={onClose}
-            className={cn('rounded-lg p-1.5 transition-colors', dash.hover, dash.textMuted)}
+            className={cn(
+              'order-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-colors sm:order-1 sm:mr-auto',
+              dash.border,
+              dash.textMuted,
+              dash.hover
+            )}
           >
-            <X size={18} />
+            Cancel
           </button>
-        </div>
-        <div className="space-y-4 p-6">{children}</div>
-        <div className={cn('flex gap-2 border-t px-6 py-4', dash.border)}>
-          {extraActions}
           <button
             type="button"
             onClick={onSubmit}
             disabled={loading}
             className={cn(
-              'flex-1 rounded-xl py-2.5 text-sm font-semibold transition-all disabled:opacity-50',
+              'order-1 rounded-xl px-5 py-2.5 text-sm font-semibold shadow-sm transition-all hover:shadow-md disabled:opacity-50 sm:order-2 sm:flex-1',
               dash.accentBg
             )}
           >
@@ -157,30 +201,56 @@ function EventModal({
   );
 }
 
+function FormSection({
+  title,
+  icon: Icon,
+  children,
+}: {
+  title: string;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className={cn('rounded-xl border p-4', dash.border, dash.surface)}>
+      <div className="mb-3 flex items-center gap-2">
+        <Icon size={14} className={dash.accent} />
+        <h4 className={cn('text-xs font-semibold uppercase tracking-wider', dash.textSubtle)}>{title}</h4>
+      </div>
+      <div className="space-y-3.5">{children}</div>
+    </section>
+  );
+}
+
 function FormField({
   label,
   children,
   hint,
+  required,
 }: {
   label: string;
   children: React.ReactNode;
   hint?: string;
+  required?: boolean;
 }) {
   return (
     <div>
-      <label className={cn('mb-1.5 block text-xs font-medium', dash.textMuted)}>{label}</label>
+      <label className={cn('mb-1.5 block text-xs font-medium', dash.text)}>
+        {label}
+        {required && <span className={cn('ml-0.5', dash.accent)}>*</span>}
+      </label>
       {children}
-      {hint && <p className={cn('mt-1 text-xs', dash.textSubtle)}>{hint}</p>}
+      {hint && <p className={cn('mt-1.5 text-[11px] leading-relaxed', dash.textSubtle)}>{hint}</p>}
     </div>
   );
 }
 
 const inputClass = cn(
-  'w-full rounded-xl border px-3 py-2.5 text-sm focus:outline-none focus:ring-2',
+  'w-full rounded-xl border px-3.5 py-2.5 text-sm transition-colors focus:outline-none focus:ring-2',
   dash.accentRing,
   dash.input,
   dash.border,
-  dash.text
+  dash.text,
+  'placeholder:text-[var(--dash-text-subtle)]'
 );
 
 export function CalendarView({ onRegisterRefresh }: { onRegisterRefresh?: (fn: () => void) => void }) {
@@ -340,86 +410,110 @@ export function CalendarView({ onRegisterRefresh }: { onRegisterRefresh?: (fn: (
   };
 
   const eventFormFields = (
-    <>
-      <FormField label="Title *">
-        <input
-          className={inputClass}
-          placeholder="Meeting title"
-          value={form.summary}
-          onChange={(e) => setForm((f) => ({ ...f, summary: e.target.value }))}
-        />
-      </FormField>
-      <label className={cn('flex cursor-pointer items-center gap-2 text-sm', dash.textMuted)}>
-        <input
-          type="checkbox"
-          checked={form.allDay}
-          onChange={(e) => setForm((f) => ({ ...f, allDay: e.target.checked }))}
-          className="rounded border-gray-400"
-        />
-        All-day event
-      </label>
-      <div className="grid grid-cols-2 gap-3">
-        <FormField label={form.allDay ? 'Start date *' : 'Start *'}>
+    <div className="space-y-4 pb-1">
+      <FormSection title="Event details" icon={CalendarDays}>
+        <FormField label="Title" required>
           <input
-            type={form.allDay ? 'date' : 'datetime-local'}
             className={inputClass}
-            value={form.startDateTime}
-            onChange={(e) => setForm((f) => ({ ...f, startDateTime: e.target.value }))}
+            placeholder="e.g. Team standup, Lunch with Alex"
+            value={form.summary}
+            onChange={(e) => setForm((f) => ({ ...f, summary: e.target.value }))}
+            autoFocus
           />
         </FormField>
-        <FormField label={form.allDay ? 'End date *' : 'End *'}>
-          <input
-            type={form.allDay ? 'date' : 'datetime-local'}
-            className={inputClass}
-            value={form.endDateTime}
-            onChange={(e) => setForm((f) => ({ ...f, endDateTime: e.target.value }))}
-          />
-        </FormField>
-      </div>
-      <FormField label="Repeat" hint="Creates a recurring series (up to 52 occurrences)">
-        <select
-          className={inputClass}
-          value={form.recurrence}
-          onChange={(e) =>
-            setForm((f) => ({
-              ...f,
-              recurrence: e.target.value as typeof f.recurrence,
-            }))
-          }
+        <label
+          className={cn(
+            'flex cursor-pointer items-center gap-3 rounded-xl border px-3.5 py-2.5 transition-colors',
+            dash.border,
+            form.allDay ? dash.accentSoft : dash.hover
+          )}
         >
-          <option value="none">Does not repeat</option>
-          <option value="daily">Daily</option>
-          <option value="weekly">Weekly</option>
-          <option value="monthly">Monthly</option>
-          <option value="yearly">Yearly</option>
-        </select>
-      </FormField>
-      <FormField label="Time zone" hint="Uses your browser timezone by default">
-        <input
-          className={inputClass}
-          value={form.timeZone}
-          onChange={(e) => setForm((f) => ({ ...f, timeZone: e.target.value }))}
-          placeholder={USER_TZ}
-        />
-      </FormField>
-      <FormField label="Attendees" hint="Comma-separated emails — invites sent via Google Calendar">
-        <input
-          className={inputClass}
-          placeholder="colleague@example.com"
-          value={form.attendees}
-          onChange={(e) => setForm((f) => ({ ...f, attendees: e.target.value }))}
-        />
-      </FormField>
-      <FormField label="Description">
-        <textarea
-          className={cn(inputClass, 'resize-none')}
-          rows={3}
-          placeholder="Optional details…"
-          value={form.description}
-          onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-        />
-      </FormField>
-    </>
+          <input
+            type="checkbox"
+            checked={form.allDay}
+            onChange={(e) => setForm((f) => ({ ...f, allDay: e.target.checked }))}
+            className="h-4 w-4 rounded border-[var(--dash-border)] accent-[var(--dash-accent)]"
+          />
+          <div>
+            <span className={cn('text-sm font-medium', dash.text)}>All-day event</span>
+            <p className={cn('text-[11px]', dash.textSubtle)}>No specific start or end time</p>
+          </div>
+        </label>
+      </FormSection>
+
+      <FormSection title="Date & time" icon={Clock}>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <FormField label={form.allDay ? 'Start date' : 'Starts'} required>
+            <input
+              type={form.allDay ? 'date' : 'datetime-local'}
+              className={inputClass}
+              value={form.startDateTime}
+              onChange={(e) => setForm((f) => ({ ...f, startDateTime: e.target.value }))}
+            />
+          </FormField>
+          <FormField label={form.allDay ? 'End date' : 'Ends'} required>
+            <input
+              type={form.allDay ? 'date' : 'datetime-local'}
+              className={inputClass}
+              value={form.endDateTime}
+              onChange={(e) => setForm((f) => ({ ...f, endDateTime: e.target.value }))}
+            />
+          </FormField>
+        </div>
+        <FormField label="Repeat" hint="Optional — creates a recurring series">
+          <select
+            className={inputClass}
+            value={form.recurrence}
+            onChange={(e) =>
+              setForm((f) => ({
+                ...f,
+                recurrence: e.target.value as typeof f.recurrence,
+              }))
+            }
+          >
+            <option value="none">Does not repeat</option>
+            <option value="daily">Every day</option>
+            <option value="weekly">Every week</option>
+            <option value="monthly">Every month</option>
+            <option value="yearly">Every year</option>
+          </select>
+        </FormField>
+        <FormField label="Time zone" hint={`Defaults to ${USER_TZ}`}>
+          <div className="relative">
+            <Globe size={14} className={cn('pointer-events-none absolute left-3 top-1/2 -translate-y-1/2', dash.textSubtle)} />
+            <input
+              className={cn(inputClass, 'pl-9')}
+              value={form.timeZone}
+              onChange={(e) => setForm((f) => ({ ...f, timeZone: e.target.value }))}
+              placeholder={USER_TZ}
+            />
+          </div>
+        </FormField>
+      </FormSection>
+
+      <FormSection title="Guests" icon={Users}>
+        <FormField label="Invite people" hint="Comma-separated emails — Google Calendar sends invites">
+          <input
+            className={inputClass}
+            placeholder="colleague@company.com, friend@email.com"
+            value={form.attendees}
+            onChange={(e) => setForm((f) => ({ ...f, attendees: e.target.value }))}
+          />
+        </FormField>
+      </FormSection>
+
+      <FormSection title="Notes" icon={AlignLeft}>
+        <FormField label="Description">
+          <textarea
+            className={cn(inputClass, 'min-h-[88px] resize-y')}
+            rows={3}
+            placeholder="Agenda, location link, or anything else…"
+            value={form.description}
+            onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+          />
+        </FormField>
+      </FormSection>
+    </div>
   );
 
   return (
@@ -763,10 +857,10 @@ export function CalendarView({ onRegisterRefresh }: { onRegisterRefresh?: (fn: (
                 type="button"
                 onClick={deleteEvent}
                 disabled={deleting}
-                className="flex items-center gap-1.5 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm font-medium text-red-400 transition-colors hover:bg-red-500/20 disabled:opacity-50"
+                className="order-3 flex w-full items-center justify-center gap-1.5 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm font-medium text-red-500 transition-colors hover:bg-red-500/15 disabled:opacity-50 sm:order-0 sm:w-auto"
               >
                 <Trash2 size={14} />
-                {deleting ? '…' : 'Delete'}
+                {deleting ? 'Deleting…' : 'Delete event'}
               </button>
             }
           >

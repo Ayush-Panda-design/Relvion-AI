@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 320" fill="none">
+  <rect width="480" height="320" fill="#F8F9FA"/>
+  <circle cx="160" cy="140" r="50" fill="#EA4335"/>
+  <circle cx="160" cy="118" r="28" fill="#F9AB00"/>
+  <circle cx="160" cy="112" r="22" fill="#8D5524"/>
+  <circle cx="320" cy="140" r="50" fill="#4285F4"/>
+  <circle cx="320" cy="118" r="28" fill="#F9AB00"/>
+  <circle cx="320" cy="112" r="22" fill="#6B4423"/>
+  <circle cx="240" cy="180" r="55" fill="#34A853"/>
+  <circle cx="240" cy="154" r="30" fill="#F9AB00"/>
+  <circle cx="240" cy="148" r="24" fill="#8D5524"/>
+  <path d="M120 230h240" stroke="#DADCE0" stroke-width="2"/>
+  <rect x="140" y="240" width="200" height="50" rx="12" fill="#E8F0FE"/>
+  <text x="175" y="272" fill="#4285F4" font-family="Arial,sans-serif" font-size="14" font-weight="bold">Team workspace</text>
+</svg>

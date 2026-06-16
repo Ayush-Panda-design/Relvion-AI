@@ -23,6 +23,7 @@ import type { EmailShortcutHandlers } from '@/hooks/useKeyboardShortcuts';
 import { DashboardIllustration, folderToIllustration } from '@/components/illustrations/DashboardIllustration';
 import { EmailListLoader } from '@/components/dashboard/loading/DashboardLoaders';
 import { GlassEmailRow } from '@/components/ui/glass-email-row';
+import { ContactAvatar } from '@/components/ui/ContactAvatar';
 import { Badge, priorityToBadgeVariant } from '@/components/ui/badge';
 
 export function EmailList({
@@ -305,15 +306,7 @@ export function EmailList({
                       onChange={() => {}}
                       className="shrink-0 rounded border-gray-400"
                     />
-                    <div
-                      className={cn(
-                        'flex shrink-0 items-center justify-center rounded-full font-medium uppercase',
-                        d.avatar,
-                        dash.avatar
-                      )}
-                    >
-                      {from.charAt(0)}
-                    </div>
+                    <ContactAvatar name={from} sizeClass={d.avatar} />
 
                     {d.singleLine ? (
                       <div className="flex min-w-0 flex-1 items-baseline gap-2 overflow-hidden pr-24">

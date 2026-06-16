@@ -20,6 +20,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { BrandMark } from '@/components/brand/BrandMark';
 import { cn } from '@/lib/utils';
 import { dash } from '@/components/dashboard/theme';
+import { ContactAvatar } from '@/components/ui/ContactAvatar';
 import { useTheme } from '@/components/dashboard/ThemeProvider';
 import { prefetchFolderEmails } from '@/hooks/useFolderEmails';
 import { prefetchCalendarEvents } from '@/hooks/useCalendarEvents';
@@ -260,9 +261,11 @@ export function Sidebar({
 
       <div className={cn('border-t p-3', dash.sidebarBorder)}>
         <div className={cn('flex items-center gap-3', collapsed && 'justify-center')}>
-          <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold uppercase', dash.avatar)}>
-            {profile?.name?.charAt(0) || 'U'}
-          </div>
+          <ContactAvatar
+            name={profile?.name || profile?.email || 'User'}
+            sizeClass="h-9 w-9 text-sm"
+            variant="theme"
+          />
           {!collapsed && (
             <div className="min-w-0 flex-1">
               <p className={cn('truncate text-sm font-medium', dash.sidebarText)}>{profile?.name || 'User'}</p>

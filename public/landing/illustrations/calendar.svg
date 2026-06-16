@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 320" fill="none">
+  <rect width="480" height="320" fill="#E8F0FE"/>
+  <ellipse cx="400" cy="290" rx="110" ry="25" fill="#C2E7FF" fill-opacity="0.5"/>
+  <rect x="100" y="40" width="280" height="240" rx="20" fill="#fff" stroke="#DADCE0" stroke-width="2"/>
+  <rect x="100" y="40" width="280" height="48" rx="20" fill="#4285F4"/>
+  <rect x="100" y="72" width="280" height="16" fill="#4285F4"/>
+  <circle cx="140" cy="64" r="6" fill="#fff"/>
+  <circle cx="340" cy="64" r="6" fill="#fff"/>
+  <text x="200" y="70" fill="#fff" font-family="Arial,sans-serif" font-size="16" font-weight="bold">March 2026</text>
+  <rect x="120" y="110" width="36" height="36" rx="8" fill="#E8F0FE"/>
+  <rect x="168" y="110" width="36" height="36" rx="8" fill="#34A853" fill-opacity="0.3"/>
+  <rect x="216" y="110" width="36" height="36" rx="8" fill="#FBBC04" fill-opacity="0.4"/>
+  <rect x="264" y="110" width="36" height="36" rx="8" fill="#E8EAED"/>
+  <rect x="312" y="110" width="36" height="36" rx="8" fill="#E8EAED"/>
+  <rect x="120" y="158" width="36" height="36" rx="8" fill="#E8EAED"/>
+  <rect x="168" y="158" width="36" height="36" rx="8" fill="#4285F4"/>
+  <text x="180" y="182" fill="#fff" font-family="Arial,sans-serif" font-size="14" font-weight="bold">15</text>
+  <circle cx="300" cy="200" r="55" fill="#34A853"/>
+  <circle cx="300" cy="180" r="30" fill="#F9AB00"/>
+  <circle cx="300" cy="172" r="24" fill="#8D5524"/>
+  <path d="M282 168c5-8 12-11 18-11s13 3 18 11" fill="#6B3E1A"/>
+  <path d="M275 210c15-20 35-28 50-28s35 8 50 28" fill="#2D8E47"/>
+</svg>
