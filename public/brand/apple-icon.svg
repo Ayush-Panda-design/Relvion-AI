@@ -1,20 +1,24 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" fill="none" role="img" aria-label="Relvion">
-  <rect width="180" height="180" rx="40" fill="#0a0a0a"/>
-  <rect width="180" height="180" rx="40" stroke="#ea580c" stroke-opacity="0.3" stroke-width="2"/>
-  <circle cx="90" cy="92" r="62" fill="url(#apple-glow)"/>
-  <path
-    d="M97 31L59 91h30l-6 58 44-66H97l6-52z"
-    fill="url(#apple-bolt)"
-  />
+  <rect width="180" height="180" rx="40" fill="#171717"/>
+  <rect width="180" height="180" rx="40" stroke="#4285F4" stroke-opacity="0.35" stroke-width="2"/>
+  <circle cx="90" cy="95" r="72" fill="url(#apple-glow)"/>
+  <rect x="34" y="56" width="84" height="96" rx="20" fill="#34A853" fill-opacity="0.22"/>
+  <rect x="45" y="45" width="84" height="96" rx="20" fill="#4285F4" fill-opacity="0.18"/>
+  <rect x="56" y="34" width="90" height="102" rx="22" fill="url(#apple-card)"/>
+  <path d="M56 59 101 86.5 146 59" stroke="#fff" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M79 99h45M79 112h34" stroke="#fff" stroke-width="6.5" stroke-linecap="round" opacity="0.9"/>
+  <circle cx="138" cy="48" r="12.5" fill="#34A853"/>
+  <circle cx="152" cy="68" r="9" fill="#FBBC04"/>
+  <circle cx="144" cy="84" r="8.5" fill="#EA4335"/>
+  <path d="M132 37 141 49 165 31" stroke="#8AB4F8" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
   <defs>
-    <radialGradient id="apple-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(90 95) scale(62)">
-      <stop stop-color="#ea580c" stop-opacity="0.25"/>
-      <stop offset="1" stop-color="#ea580c" stop-opacity="0"/>
+    <radialGradient id="apple-glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(90 95) scale(72)">
+      <stop stop-color="#4285F4" stop-opacity="0.3"/>
+      <stop offset="1" stop-color="#4285F4" stop-opacity="0"/>
     </radialGradient>
-    <linearGradient id="apple-bolt" x1="59" y1="31" x2="126" y2="149" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#fdba74"/>
-      <stop offset="0.5" stop-color="#fb923c"/>
-      <stop offset="1" stop-color="#ea580c"/>
+    <linearGradient id="apple-card" x1="56" y1="34" x2="146" y2="136" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8AB4F8"/>
+      <stop offset="1" stop-color="#4285F4"/>
     </linearGradient>
   </defs>
 </svg>

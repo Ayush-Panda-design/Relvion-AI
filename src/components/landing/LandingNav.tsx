@@ -10,7 +10,6 @@ import { primaryButton } from "./theme";
 
 const NAV_LINKS = [
   { href: "#product", label: "Product" },
-  { href: "#integrations", label: "Integrations" },
   { href: "#demo", label: "Demo" },
   { href: "#pricing", label: "Pricing" },
   { href: "#compare", label: "Compare" },

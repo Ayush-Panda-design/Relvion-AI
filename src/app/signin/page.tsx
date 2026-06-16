@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { SignInForm } from './SignInForm';
+import { BrandMark } from '@/components/brand/BrandMark';
 
 
 export const metadata: Metadata = {
@@ -28,11 +29,7 @@ export default async function SignInPage({
         {/* Logo */}
         <div className="flex items-center justify-center gap-3 mb-10">
           <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-            <div className="text-[#D32F2F] drop-shadow-lg">
-              <svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-              </svg>
-            </div>
+            <BrandMark size={40} variant="light" className="drop-shadow-md" />
             <h1 className="text-3xl font-bold text-red-900 tracking-tight">Relvion AI</h1>
           </Link>
         </div>

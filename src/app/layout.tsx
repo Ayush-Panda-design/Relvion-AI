@@ -12,18 +12,18 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       {
-        url: '/brand/icon-light.svg',
+        url: '/brand/icon-light.svg?v=2',
         type: 'image/svg+xml',
         media: '(prefers-color-scheme: light)',
       },
       {
-        url: '/brand/icon-dark.svg',
+        url: '/brand/icon-dark.svg?v=2',
         type: 'image/svg+xml',
         media: '(prefers-color-scheme: dark)',
       },
     ],
-    apple: '/brand/apple-icon.svg',
-    shortcut: '/brand/icon-dark.svg',
+    apple: '/brand/apple-icon.svg?v=2',
+    shortcut: '/brand/icon-dark.svg?v=2',
   },
 };
 

@@ -40,7 +40,6 @@ import {
 } from "./theme";
 import { LandingNav } from "./LandingNav";
 import {
-  IntegrationGrid,
   AgentSandbox,
   SecuritySection,
   ComparisonTable,
@@ -58,7 +57,6 @@ import { LandingIllustration } from "@/components/landing/illustrations/LandingI
 
 const navLinks = [
   { href: "#product", label: "Product" },
-  { href: "#integrations", label: "Integrations" },
   { href: "#demo", label: "Demo" },
   { href: "#pricing", label: "Pricing" },
   { href: "#compare", label: "Compare" },
@@ -329,10 +327,9 @@ export default function LandingPage({ session }: { session: SessionPayload | nul
           </BlurFade>
         </div>
       </section>
-      <IntegrationGrid isDark={isDark} />
 
       {/* Workflow diagrams */}
-<section id="workflow" className={cn("relative z-10 mx-auto max-w-6xl px-6 py-20", landingSectionBg("green"))}>
+      <section id="workflow" className={cn("relative z-10 mx-auto max-w-6xl px-6 py-20", landingSectionBg("green"))}>
         <BlurFade>
           <p className={sectionLabel(tone)}>Workflow</p>
           <h2 className={cn("mt-3 text-3xl font-bold tracking-tight sm:text-4xl", landingText(tone, "primary"))}>
