@@ -20,6 +20,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { BrandMark } from '@/components/brand/BrandMark';
 import { cn } from '@/lib/utils';
 import { dash } from '@/components/dashboard/theme';
+import { useTheme } from '@/components/dashboard/ThemeProvider';
 import { prefetchFolderEmails } from '@/hooks/useFolderEmails';
 import { prefetchCalendarEvents } from '@/hooks/useCalendarEvents';
 import { prefetchJson } from '@/lib/client-cache';
@@ -37,6 +38,8 @@ export function Sidebar({
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [profile, setProfile] = useState<{ email: string; name: string } | null>(null);
   const [collapsed, setCollapsed] = useState(false);
+  const { theme } = useTheme();
+  const pillNav = theme === 'ocean' || theme === 'crextio';
 
   useEffect(() => {
     fetch('/api/gmail/counts').then((r) => r.json()).then(setCounts).catch(() => {});
@@ -79,13 +82,20 @@ export function Sidebar({
   }) => {
     const content = (
       <>
-        {active && <span className={cn('absolute inset-0 rounded-lg', dash.navActive)} />}
+        {active && (
+          <span
+            className={cn(
+              'absolute inset-0',
+              pillNav ? dash.navActivePill : cn('rounded-lg', dash.navActive)
+            )}
+          />
+        )}
         <Icon
           size={20}
           strokeWidth={1.75}
           className={cn(
             'relative z-10 shrink-0 transition-colors',
-            active ? dash.accent : ''
+            active ? (pillNav ? 'dash-nav-active-icon text-white' : dash.accent) : ''
           )}
         />
         <AnimatePresence>
@@ -96,9 +106,21 @@ export function Sidebar({
               exit={{ opacity: 0, width: 0 }}
               className="relative z-10 flex flex-1 items-center justify-between overflow-hidden font-medium"
             >
-              <span className={active ? dash.text : dash.textMuted}>{label}</span>
+              <span
+                className={cn(
+                  active
+                    ? pillNav
+                      ? 'dash-nav-active-label text-white'
+                      : dash.sidebarText
+                    : dash.sidebarTextMuted
+                )}
+              >
+                {label}
+              </span>
               {count !== undefined && count > 0 && (
-                <span className={cn('text-xs font-medium tabular-nums', dash.accent)}>{count}</span>
+                <span className={cn('text-xs font-medium tabular-nums', active && pillNav ? 'text-white/90' : dash.accent)}>
+                  {count}
+                </span>
               )}
             </motion.span>
           )}
@@ -108,8 +130,8 @@ export function Sidebar({
 
     const className = cn(
       'group relative flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-150 text-left',
-      active ? dash.text : dash.textMuted,
-      !active && dash.hover
+      active ? dash.sidebarText : dash.sidebarTextMuted,
+      !active && dash.sidebarHover
     );
 
     if (href) {
@@ -161,14 +183,14 @@ export function Sidebar({
       className={cn(
         'relative z-20 flex h-screen shrink-0 flex-col border-r',
         dash.sidebar,
-        dash.border
+        dash.sidebarBorder
       )}
     >
       <div className={cn('flex items-center gap-2 p-3', collapsed ? 'justify-center' : 'px-4')}>
         <Link href="/" prefetch={false} className="flex items-center gap-2.5">
           <BrandMark size={28} variant="auto" />
           {!collapsed && (
-            <span className={cn('text-lg font-semibold tracking-tight', dash.text)}>
+            <span className={cn('text-lg font-semibold tracking-tight', dash.sidebarText)}>
               Relvion<span className={dash.accent}>.</span>
             </span>
           )}
@@ -193,7 +215,7 @@ export function Sidebar({
       <div className="flex-1 space-y-6 overflow-y-auto px-2 py-2">
         <div>
           {!collapsed && (
-            <p className={cn('mb-1 px-3 text-[11px] font-semibold uppercase tracking-wider', dash.textSubtle)}>
+            <p className={cn('mb-1 px-3 text-[11px] font-semibold uppercase tracking-wider', dash.sidebarTextMuted)}>
               Mail
             </p>
           )}
@@ -213,7 +235,7 @@ export function Sidebar({
 
         <div>
           {!collapsed && (
-            <p className={cn('mb-1 px-3 text-[11px] font-semibold uppercase tracking-wider', dash.textSubtle)}>
+            <p className={cn('mb-1 px-3 text-[11px] font-semibold uppercase tracking-wider', dash.sidebarTextMuted)}>
               Apps
             </p>
           )}
@@ -227,7 +249,7 @@ export function Sidebar({
 
         <div>
           {!collapsed && (
-            <p className={cn('mb-1 px-3 text-[11px] font-semibold uppercase tracking-wider', dash.textSubtle)}>
+            <p className={cn('mb-1 px-3 text-[11px] font-semibold uppercase tracking-wider', dash.sidebarTextMuted)}>
               More
             </p>
           )}
@@ -236,22 +258,22 @@ export function Sidebar({
         </div>
       </div>
 
-      <div className={cn('border-t p-3', dash.border)}>
+      <div className={cn('border-t p-3', dash.sidebarBorder)}>
         <div className={cn('flex items-center gap-3', collapsed && 'justify-center')}>
           <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold uppercase', dash.avatar)}>
             {profile?.name?.charAt(0) || 'U'}
           </div>
           {!collapsed && (
             <div className="min-w-0 flex-1">
-              <p className={cn('truncate text-sm font-medium', dash.text)}>{profile?.name || 'User'}</p>
-              <p className={cn('truncate text-xs', dash.textSubtle)}>{profile?.email || ''}</p>
+              <p className={cn('truncate text-sm font-medium', dash.sidebarText)}>{profile?.name || 'User'}</p>
+              <p className={cn('truncate text-xs', dash.sidebarTextMuted)}>{profile?.email || ''}</p>
             </div>
           )}
         </div>
         <button
           type="button"
           onClick={() => setCollapsed((c) => !c)}
-          className={cn('mt-3 flex w-full items-center justify-center rounded-lg p-2 transition-colors', dash.hover, dash.textMuted)}
+          className={cn('mt-3 flex w-full items-center justify-center rounded-lg p-2 transition-colors', dash.sidebarHover, dash.sidebarTextMuted)}
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}

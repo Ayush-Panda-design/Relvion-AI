@@ -69,7 +69,10 @@ export function EmailDetail({
     setBodyLoading(true);
     setThreadLoading(!!email.threadId);
 
-    const messagePromise = fetch(`/api/gmail/message/${email.id}`)
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 12_000);
+
+    const messagePromise = fetch(`/api/gmail/message/${email.id}`, { signal: controller.signal })
       .then((r) => r.json())
       .then((data) => {
         if (data.body) setFullBody(data.body);
@@ -90,21 +93,23 @@ export function EmailDetail({
       .catch(() => {})
       .finally(() => setBodyLoading(false));
 
-    const threadPromise =
-      email.threadId
-        ? fetch(`/api/gmail/thread/${email.threadId}`)
-            .then((r) => r.json())
-            .then((data) => {
-              if (data.messages?.length) {
-                setThreadMessages(data.messages);
-                setExpandedIds(new Set([data.messages[data.messages.length - 1].id]));
-              }
-            })
-            .catch(() => {})
-            .finally(() => setThreadLoading(false))
-        : Promise.resolve();
+    const threadPromise = email.threadId
+      ? fetch(`/api/gmail/thread/${email.threadId}`, { signal: controller.signal })
+          .then((r) => r.json())
+          .then((data) => {
+            if (data.messages?.length) {
+              setThreadMessages(data.messages);
+              setExpandedIds(new Set([data.messages[data.messages.length - 1].id]));
+            }
+          })
+          .catch(() => {})
+          .finally(() => setThreadLoading(false))
+      : Promise.resolve();
 
-    void Promise.all([messagePromise, threadPromise]);
+    void Promise.all([messagePromise, threadPromise]).finally(() => {
+      window.clearTimeout(timeout);
+      setThreadLoading(false);
+    });
   }, [email?.id, email?.threadId]);
 
   useEffect(() => {
@@ -276,15 +281,6 @@ export function EmailDetail({
   };
 
   const renderBody = () => {
-    if (threadLoading) {
-      return (
-        <div className={cn('flex items-center gap-2 py-4 text-sm', dash.textMuted)}>
-          <Loader2 size={16} className={cn('animate-spin', dash.accent)} />
-          Loading conversation…
-        </div>
-      );
-    }
-
     if (threadMessages.length > 1) {
       return (
         <div className="space-y-3">
@@ -346,11 +342,11 @@ export function EmailDetail({
       );
     }
 
-    if (bodyLoading) {
+    if (bodyLoading && !fullBody) {
       return (
         <div className={cn('flex items-center gap-2 py-8 text-sm', dash.textMuted)}>
           <Loader2 size={16} className={cn('animate-spin', dash.accent)} />
-          Loading full message…
+          {threadLoading ? 'Loading conversation…' : 'Loading full message…'}
         </div>
       );
     }

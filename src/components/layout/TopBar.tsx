@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { dash } from '@/components/dashboard/theme';
 import { openCommandPalette } from '@/lib/command-palette-events';
-import { ThemeToggle } from '@/components/dashboard/ThemeToggle';
+import { ThemePicker } from '@/components/dashboard/ThemePicker';
 import { DashboardIllustration } from '@/components/illustrations/DashboardIllustration';
 import { GMAIL_SEARCH_HINTS } from '@/lib/gmail-search-parser';
 
@@ -410,7 +410,7 @@ export function TopBar({
 
       {/* Right actions */}
       <div className="flex w-[120px] shrink-0 items-center justify-end gap-0.5">
-        <ThemeToggle />
+        <ThemePicker />
         <div className="relative z-40" ref={notifRef}>
           <button
             type="button"

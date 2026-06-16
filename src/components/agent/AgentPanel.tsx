@@ -232,7 +232,7 @@ export function AgentPanel() {
       style={{ width: panelWidth }}
       className={cn(
         'relative z-20 flex h-screen shrink-0 flex-col border-l',
-        dash.sidebar,
+        dash.agentPanel,
         dash.border
       )}
     >
@@ -310,7 +310,7 @@ export function AgentPanel() {
       )}
 
       <div className={cn('border-t p-4 backdrop-blur-md', dash.glassToolbar, dash.border)}>
-        <div className={cn('relative flex items-center gap-1 rounded-2xl border p-1 shadow-sm backdrop-blur-sm dark:shadow-[0_2px_16px_rgba(0,0,0,0.3)]', dash.border)}>
+        <div className={cn('relative flex items-center gap-1 rounded-2xl border p-1 shadow-sm backdrop-blur-sm', dash.border)}>
           <button
             onClick={() => fileInputRef.current?.click()}
             className={cn('relative shrink-0 rounded-lg p-1.5 transition-all duration-200 hover:scale-110', dash.textMuted, dash.hover, dash.accentHover)}
@@ -342,7 +342,7 @@ export function AgentPanel() {
               'flex-1 rounded-xl border py-2.5 pl-3 pr-8 text-sm transition-all focus:outline-none disabled:opacity-50',
               dash.input,
               dash.text,
-              'placeholder:text-[#7A7770] focus:ring-2 dark:placeholder:text-white/40',
+              'placeholder:text-[var(--dash-text-subtle)] focus:ring-2',
               dash.accentRing,
             )}
           />

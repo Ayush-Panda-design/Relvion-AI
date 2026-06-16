@@ -1,7 +1,5 @@
 @import "tailwindcss";
-
-/* Class-based dark mode (required for theme toggle) */
-@custom-variant dark (&:where(.dark, .dark *));
+@import "../styles/dashboard-themes.css";
 
 @theme {
   --color-brand-gold: #D32F2F;
@@ -29,21 +27,24 @@
   color-scheme: light;
 }
 
-.dark {
-  color-scheme: dark;
-}
-
 body {
-  background-color: #eeede8;
-  color: #2c2b28;
+  background-color: var(--dash-body-bg);
+  color: var(--dash-text);
   font-family: var(--font-sans);
   margin: 0;
   padding: 0;
+  transition: background-color 0.35s ease, color 0.35s ease;
 }
 
-.dark body {
-  background-color: #202124;
-  color: #e8eaed;
+.dashboard-workspace-shell {
+  margin: var(--dash-workspace-margin);
+  border-radius: var(--dash-workspace-radius);
+  box-shadow: var(--dash-workspace-shadow);
+  overflow: hidden;
+}
+
+.dashboard-workspace-panel {
+  border-radius: var(--dash-workspace-radius);
 }
 
 @keyframes spotlight {
@@ -146,17 +147,11 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(55, 53, 47, 0.15);
+  background: var(--dash-scrollbar-thumb);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(55, 53, 47, 0.25);
-}
-.dark ::-webkit-scrollbar-thumb {
-  background: rgba(138, 180, 248, 0.2);
-}
-.dark ::-webkit-scrollbar-thumb:hover {
-  background: rgba(138, 180, 248, 0.35);
+  background: var(--dash-scrollbar-thumb-hover);
 }
 
 /* cmdk command palette */

@@ -35,7 +35,7 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   });
 
   return (
-    <div className={cn('relative flex h-screen w-full overflow-hidden font-sans', dash.bg, dash.text)}>
+    <div className={cn('relative flex h-screen w-full overflow-hidden font-sans', dash.bodyBg, dash.text)}>
       <DashboardAmbient />
 
       <div className="relative z-10 flex h-full min-h-0 w-full">
@@ -45,12 +45,13 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
           onComposeClick={() => setShowCompose(true)}
         />
 
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <div className={cn('flex min-h-0 min-w-0 flex-1 flex-col', dash.workspaceShell)}>
           <div
             className={cn(
               'flex min-h-0 flex-1 flex-col border-l',
               dash.border,
-              dash.mainPanel
+              dash.mainPanel,
+              dash.workspacePanel
             )}
           >
             <TopBar searchInputRef={searchInputRef} />

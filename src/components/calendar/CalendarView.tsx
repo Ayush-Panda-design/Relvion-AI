@@ -433,11 +433,11 @@ export function CalendarView({ onRegisterRefresh }: { onRegisterRefresh?: (fn: (
           className={cn(
             'flex shrink-0 flex-wrap items-center justify-between gap-3 border-b px-5 py-3',
             dash.border,
-            'bg-[#F5F4F0] dark:bg-[#202124]'
+            dash.glassToolbar
           )}
         >
           <div className="flex items-center gap-2">
-            <div className={cn('flex items-center rounded-full p-0.5', 'bg-[#F1F1EF] dark:bg-[#303134]')}>
+            <div className={cn('flex items-center rounded-full p-0.5', dash.filterBar)}>
               <button
                 type="button"
                 onClick={() => setCurrentMonth(new Date(year, month - 1))}
@@ -522,7 +522,7 @@ export function CalendarView({ onRegisterRefresh }: { onRegisterRefresh?: (fn: (
             {Array.from({ length: firstDay }).map((_, i) => (
               <div
                 key={`empty-${i}`}
-                className={cn('min-h-[108px] rounded-xl', 'bg-[#EBEAE5]/70 dark:bg-[#292a2d]/40')}
+                className={cn('min-h-[108px] rounded-xl', dash.surface)}
               />
             ))}
             {Array.from({ length: daysInMonth }).map((_, i) => {
@@ -542,9 +542,9 @@ export function CalendarView({ onRegisterRefresh }: { onRegisterRefresh?: (fn: (
                   className={cn(
                     'group relative flex min-h-[108px] flex-col rounded-xl border p-2 text-left transition-all duration-150',
                     isSelected
-                      ? 'border-[#0D9488]/50 bg-[#0D9488]/8 ring-1 ring-[#0D9488]/25 dark:border-[#8ab4f8]/60 dark:bg-[#8ab4f8]/10 dark:ring-[#8ab4f8]/30'
-                      : cn('border-transparent', dash.hover, 'hover:border-[#D8D5CE] dark:hover:border-[#3c4043]'),
-                    isToday && !isSelected && 'bg-[#0D9488]/5 dark:bg-[#8ab4f8]/5'
+                      ? cn(dash.rowActive, 'ring-1 ring-[var(--dash-search-focus-ring)]')
+                      : cn('border-transparent', dash.hover, 'hover:border-[var(--dash-border)]'),
+                    isToday && !isSelected && 'bg-[var(--dash-row-hover)]'
                   )}
                 >
                   <div className="mb-1.5 flex items-center justify-between">
@@ -552,7 +552,7 @@ export function CalendarView({ onRegisterRefresh }: { onRegisterRefresh?: (fn: (
                       className={cn(
                         'flex h-7 w-7 items-center justify-center rounded-full text-sm font-medium',
                         isToday
-                          ? 'bg-[#0D9488] font-semibold text-white dark:bg-[#8ab4f8] dark:text-[#202124]'
+                          ? cn(dash.accentBg, 'font-semibold')
                           : isSelected
                             ? cn(dash.text, 'font-semibold')
                             : dash.textMuted
@@ -615,7 +615,7 @@ export function CalendarView({ onRegisterRefresh }: { onRegisterRefresh?: (fn: (
         className={cn(
           'flex w-[300px] shrink-0 flex-col overflow-hidden border-l',
           dash.border,
-          'bg-[#F5F4F0] dark:bg-[#292a2d]'
+          dash.glassToolbar
         )}
       >
         {/* Selected day */}

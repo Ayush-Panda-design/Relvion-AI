@@ -383,7 +383,7 @@ export function EmailList({
                       className={cn(
                         'absolute right-3 flex items-center gap-0.5 rounded-full border px-1 py-0.5',
                         'opacity-0 transition-opacity duration-100 group-hover:opacity-100',
-                        'border-[#D8D5CE]/80 bg-[#f6f8fc]/95 dark:border-[#5f6368]/80 dark:bg-[#303134]/95'
+                        'border-[var(--dash-border)] bg-[var(--dash-surface)]/95'
                       )}
                     >
                       {[

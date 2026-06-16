@@ -14,13 +14,13 @@ import {
   CheckCircle2,
   AlertCircle,
   ExternalLink,
+  Palette,
 } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { dash, type Density } from '@/components/dashboard/theme';
 import { useDensity } from '@/components/dashboard/DensityProvider';
-import { useTheme } from '@/components/dashboard/ThemeProvider';
-import { Sun, Moon } from 'lucide-react';
+import { useTheme, DASHBOARD_THEMES } from '@/components/dashboard/ThemeProvider';
 import { PageEnter } from '@/components/dashboard/loading/PageEnter';
 
 interface WebhookConfig {
@@ -60,7 +60,7 @@ function SettingsCard({
       <div className={cn('border-b px-6 py-4', dash.border)}>
         <div className="flex items-start gap-3">
           <div className={cn('rounded-xl p-2.5', dash.iconWell)}>
-            <Icon size={20} className="text-[#8ab4f8]" strokeWidth={1.75} />
+            <Icon size={20} className={dash.accent} strokeWidth={1.75} />
           </div>
           <div>
             <h2 className={cn('text-base font-semibold', dash.text)}>{title}</h2>
@@ -241,17 +241,17 @@ export default function SettingsPage() {
                 className={cn(
                   'mb-4 space-y-1.5 rounded-xl border p-3 text-xs',
                   dash.border,
-                  'bg-[#EBEAE5] dark:bg-[#303134]/40'
+                  dash.surface
                 )}
               >
                 <div className="flex items-center gap-2">
-                  <Mail size={12} className="text-[#8ab4f8]" />
+                  <Mail size={12} className={dash.accent} />
                   <span className={cn('truncate font-mono', dash.textSubtle)}>
                     {webhookConfig.endpoints.gmail || 'Gmail endpoint pending'}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Calendar size={12} className="text-[#8ab4f8]" />
+                  <Calendar size={12} className={dash.accent} />
                   <span className={cn('truncate font-mono', dash.textSubtle)}>
                     {webhookConfig.endpoints.calendar || 'Calendar endpoint pending'}
                   </span>
@@ -292,41 +292,44 @@ export default function SettingsPage() {
 
           {/* Appearance */}
           <SettingsCard
-            icon={Sun}
-            title="Appearance"
-            description="Notion-style light or Gmail-style dark workspace"
+            icon={Palette}
+            title="Dashboard theme"
+            description="Four polished workspaces inspired by premium SaaS dashboards"
           >
-            <div className="grid grid-cols-2 gap-3">
-              {(
-                [
-                  { id: 'light' as const, label: 'Light', desc: 'Warm & eye-safe', icon: Sun },
-                  { id: 'dark' as const, label: 'Dark', desc: 'Gmail neutrals', icon: Moon },
-                ] as const
-              ).map(({ id, label, desc, icon: Icon }) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => {
-                    setTheme(id);
-                    toast.success(`${label} mode enabled`);
-                  }}
-                  className={cn(
-                    'flex flex-col items-start gap-2 rounded-xl border p-4 text-left transition-all',
-                    theme === id
-                      ? cn('border-[#0D9488]', dash.filterActive)
-                      : cn(dash.border, dash.hover)
-                  )}
-                >
-                  <Icon
-                    size={20}
-                    className={theme === id ? dash.accent : dash.textMuted}
-                  />
-                  <div>
-                    <p className={cn('text-sm font-medium', dash.text)}>{label}</p>
-                    <p className={cn('text-xs', dash.textSubtle)}>{desc}</p>
-                  </div>
-                </button>
-              ))}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {DASHBOARD_THEMES.map((t) => {
+                const active = theme === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => {
+                      setTheme(t.id);
+                      toast.success(`${t.name} theme applied`);
+                    }}
+                    className={cn(
+                      'flex flex-col items-start gap-3 rounded-2xl border p-4 text-left transition-all',
+                      active
+                        ? cn('ring-2 ring-[var(--dash-accent)]', dash.filterActive)
+                        : cn(dash.border, dash.hover)
+                    )}
+                  >
+                    <div className="flex w-full gap-1">
+                      {t.swatches.map((c) => (
+                        <span
+                          key={c}
+                          className="h-8 flex-1 rounded-lg ring-1 ring-black/6"
+                          style={{ backgroundColor: c }}
+                        />
+                      ))}
+                    </div>
+                    <div>
+                      <p className={cn('text-sm font-semibold', dash.text)}>{t.name}</p>
+                      <p className={cn('text-xs', dash.textSubtle)}>{t.description}</p>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </SettingsCard>
 
@@ -348,7 +351,7 @@ export default function SettingsPage() {
                   className={cn(
                     'rounded-xl border px-3 py-3 text-sm capitalize transition-all',
                     density === d
-                      ? 'border-[#0D9488] bg-[#E0F2F1] text-[#0D9488] dark:border-[#8ab4f8] dark:bg-[#8ab4f8]/10 dark:text-[#8ab4f8]'
+                      ? cn(dash.filterActive, 'border-[var(--dash-accent)]')
                       : cn(dash.border, dash.textMuted, dash.hover)
                   )}
                 >
@@ -411,9 +414,7 @@ export default function SettingsPage() {
             </ul>
             <Link
               href="/dashboard"
-              className={cn(
-                'mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-[#8ab4f8] hover:underline'
-              )}
+              className={cn('mt-4 inline-flex items-center gap-1.5 text-sm font-medium', dash.accent, 'hover:underline')}
             >
               Back to inbox
               <ExternalLink size={14} />

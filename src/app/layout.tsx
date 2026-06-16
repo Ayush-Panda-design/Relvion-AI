@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   },
 };
 
-const themeScript = `(function(){try{var t=localStorage.getItem('relvion-workspace-theme');if(t==='dark'||(t!=='light'&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.add('dark');document.documentElement.style.colorScheme='dark';}else{document.documentElement.classList.remove('dark');document.documentElement.style.colorScheme='light';}}catch(e){}})();`;
+const themeScript = `(function(){try{var t=localStorage.getItem('relvion-dashboard-theme');var l=localStorage.getItem('relvion-workspace-theme');if(!t&&l==='dark')t='midnight';if(!t&&l==='light')t='pulse';if(!t)t='midnight';if(['midnight','pulse','ocean','crextio'].indexOf(t)<0)t='midnight';document.documentElement.setAttribute('data-theme',t);document.documentElement.style.colorScheme='light';}catch(e){}})();`;
 
 export default function RootLayout({
   children,
@@ -35,7 +35,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.className} antialiased`} suppressHydrationWarning>
+    <html lang="en" data-theme="midnight" className={`${inter.className} antialiased`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
