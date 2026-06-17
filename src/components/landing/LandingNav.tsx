@@ -122,19 +122,19 @@ export function LandingNav({ session, ctaHref, ctaLabel }: LandingNavProps) {
           style={{ scaleX: progressSpring }}
         />
 
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 transition-all duration-300 sm:px-6">
-          <Link href="/" className="group flex shrink-0 items-center gap-2.5 rounded-xl py-1 pr-2">
+        <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4 sm:px-6">
+          <Link href="/" className="group flex min-w-0 flex-1 items-center gap-2 rounded-xl py-1 sm:gap-2.5 sm:pr-2">
             <motion.div
               whileHover={{ rotate: [0, -4, 4, 0], scale: 1.05 }}
               transition={{ duration: 0.45 }}
-              className="rounded-xl bg-white p-1 ring-1 ring-[#E8EAED]"
+              className="shrink-0 rounded-xl bg-white p-1 ring-1 ring-[#E8EAED]"
             >
               <BrandMark size={28} variant="light" />
             </motion.div>
-            <span className="text-lg font-bold tracking-tight text-[#202124]">
+            <span className="truncate text-base font-bold tracking-tight text-[#202124] sm:text-lg">
               Relvion
               <motion.span
-                className="inline-flex gap-0.5"
+                className="hidden gap-0.5 sm:inline-flex"
                 initial="rest"
                 whileHover="hover"
               >
@@ -165,11 +165,11 @@ export function LandingNav({ session, ctaHref, ctaLabel }: LandingNavProps) {
             ))}
           </nav>
 
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             {!session && (
               <Link
                 href="/signin"
-                className="hidden text-sm font-medium text-[#5F6368] transition-colors hover:text-[#1a73e8] sm:inline"
+                className="hidden text-sm font-medium text-[#5F6368] transition-colors hover:text-[#1a73e8] lg:inline"
               >
                 Sign In
               </Link>
@@ -181,7 +181,7 @@ export function LandingNav({ session, ctaHref, ctaLabel }: LandingNavProps) {
               duration={2800}
               borderClassName="h-3 w-3 bg-gradient-to-r from-[#4285F4] to-[#34A853] opacity-70"
               containerClassName={cn(
-                "hidden rounded-full sm:inline-flex",
+                "hidden rounded-full lg:inline-flex",
                 primaryButton(),
                 "overflow-visible rounded-full px-5 py-2.5 text-sm"
               )}
@@ -197,9 +197,10 @@ export function LandingNav({ session, ctaHref, ctaLabel }: LandingNavProps) {
               type="button"
               onClick={() => setMobileOpen(true)}
               aria-label="Open menu"
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-[#E8EAED] bg-white text-[#202124] lg:hidden"
+              aria-expanded={mobileOpen}
+              className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#DADCE0] bg-white text-[#202124] shadow-sm lg:hidden"
             >
-              <Menu className="h-4 w-4" />
+              <Menu className="h-5 w-5" />
             </button>
           </div>
         </div>
