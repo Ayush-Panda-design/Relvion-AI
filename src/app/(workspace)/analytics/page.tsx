@@ -144,7 +144,7 @@ export default function AnalyticsPage() {
     : 1;
 
   return (
-      <div className={cn('relative mx-auto min-h-0 flex-1 overflow-y-auto px-6 py-8 max-w-5xl', dash.bg)}>
+      <div className={cn('relative mx-auto min-h-0 flex-1 overflow-y-auto px-4 py-6 sm:px-6 sm:py-8 max-w-5xl', dash.bg)}>
         <ContentProgress active={refreshing} />
 
         <header className="mb-8 flex items-start justify-between gap-4">

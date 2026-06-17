@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { processOAuthCallback, generateOAuthUrl } from 'corsair/oauth';
 import { setupCorsair } from 'corsair/setup';
 import { corsair } from '@/server/corsair';
+import { ensureCorsairSetup } from '@/server/ensureCorsairSetup';
 import { db } from '@/lib/db';
 import { createSessionToken, COOKIE_NAME } from '@/lib/auth/session';
 
@@ -114,6 +115,7 @@ export async function GET(req: Request) {
 
     // 4. Try to connect Google Calendar too
     try {
+      await ensureCorsairSetup(finalTenantId);
       const calResult = await generateOAuthUrl(corsair, 'googlecalendar', {
         tenantId: finalTenantId,
         redirectUri: `${APP_URL}/api/auth/calendar/callback`,

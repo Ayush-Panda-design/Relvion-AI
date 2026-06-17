@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { generateOAuthUrl } from 'corsair/oauth';
 import { corsair } from '@/server/corsair';
+import { ensureCorsairSetup } from '@/server/ensureCorsairSetup';
 import { getSession } from '@/lib/auth/getSession';
 
 
@@ -22,6 +23,8 @@ export async function GET(req: Request) {
 
 
   try {
+    await ensureCorsairSetup(tenantId);
+
     // Generate Gmail OAuth URL
     const gmailResult = await generateOAuthUrl(corsair, 'gmail', {
       tenantId: tenantId,

@@ -259,6 +259,7 @@ export function CalendarView({ onRegisterRefresh }: { onRegisterRefresh?: (fn: (
   const [today] = useState(() => new Date());
   const [currentMonth, setCurrentMonth] = useState(() => new Date());
   const [selectedDay, setSelectedDay] = useState(() => new Date().getDate());
+  const [daySheetOpen, setDaySheetOpen] = useState(false);
 
   const [form, setForm] = useState(emptyForm);
   const [creating, setCreating] = useState(false);
@@ -525,7 +526,7 @@ export function CalendarView({ onRegisterRefresh }: { onRegisterRefresh?: (fn: (
         {/* Toolbar */}
         <div
           className={cn(
-            'flex shrink-0 flex-wrap items-center justify-between gap-3 border-b px-5 py-3',
+            'flex shrink-0 flex-wrap items-center justify-between gap-2 border-b px-3 py-3 sm:gap-3 sm:px-5',
             dash.border,
             dash.glassToolbar
           )}
@@ -549,7 +550,7 @@ export function CalendarView({ onRegisterRefresh }: { onRegisterRefresh?: (fn: (
             </div>
 
             <div>
-              <h2 className={cn('text-xl font-semibold tracking-tight', dash.text)}>
+              <h2 className={cn('text-lg font-semibold tracking-tight sm:text-xl', dash.text)}>
                 {monthName}{' '}
                 <span className={dash.textMuted}>{year}</span>
               </h2>
@@ -588,12 +589,12 @@ export function CalendarView({ onRegisterRefresh }: { onRegisterRefresh?: (fn: (
                 setShowCreate(true);
               }}
               className={cn(
-                'flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold shadow-sm transition-all hover:shadow-md',
+                'flex items-center gap-2 rounded-full px-3 py-2 text-sm font-semibold shadow-sm transition-all hover:shadow-md sm:px-4',
                 dash.accentBg
               )}
             >
               <Plus size={16} />
-              New event
+              <span className="hidden sm:inline">New event</span>
             </button>
           </div>
         </div>
@@ -611,12 +612,12 @@ export function CalendarView({ onRegisterRefresh }: { onRegisterRefresh?: (fn: (
         </div>
 
         {/* Month grid */}
-        <div className="min-h-0 flex-1 overflow-auto p-3">
-          <div className="grid min-h-full grid-cols-7 gap-1.5">
+        <div className="min-h-0 flex-1 overflow-auto p-2 sm:p-3">
+          <div className="grid min-h-full grid-cols-7 gap-1 sm:gap-1.5">
             {Array.from({ length: firstDay }).map((_, i) => (
               <div
                 key={`empty-${i}`}
-                className={cn('min-h-[108px] rounded-xl', dash.surface)}
+                className={cn('min-h-[56px] rounded-xl sm:min-h-[108px]', dash.surface)}
               />
             ))}
             {Array.from({ length: daysInMonth }).map((_, i) => {
@@ -631,10 +632,15 @@ export function CalendarView({ onRegisterRefresh }: { onRegisterRefresh?: (fn: (
                   key={day}
                   type="button"
                   layout
-                  onClick={() => setSelectedDay(day)}
+                  onClick={() => {
+                    setSelectedDay(day);
+                    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches) {
+                      setDaySheetOpen(true);
+                    }
+                  }}
                   onDoubleClick={() => openCreateForDay(day)}
                   className={cn(
-                    'group relative flex min-h-[108px] flex-col rounded-xl border p-2 text-left transition-all duration-150',
+                    'group relative flex min-h-[56px] flex-col rounded-xl border p-1.5 text-left transition-all duration-150 sm:min-h-[108px] sm:p-2',
                     isSelected
                       ? cn(dash.rowActive, 'ring-1 ring-[var(--dash-search-focus-ring)]')
                       : cn('border-transparent', dash.hover, 'hover:border-[var(--dash-border)]'),
@@ -704,14 +710,28 @@ export function CalendarView({ onRegisterRefresh }: { onRegisterRefresh?: (fn: (
         </div>
       </div>
 
-      {/* Right panel */}
+      {/* Right panel — sheet on mobile, sidebar on md+ */}
       <aside
         className={cn(
-          'flex w-[300px] shrink-0 flex-col overflow-hidden border-l',
+          'flex flex-col overflow-hidden border-l',
+          daySheetOpen ? 'fixed inset-0 z-50 flex w-full' : 'hidden',
+          'md:relative md:inset-auto md:z-auto md:flex md:w-[300px] md:shrink-0',
           dash.border,
-          dash.glassToolbar
+          dash.glassToolbar,
+          dash.bg
         )}
       >
+        <div className={cn('flex items-center justify-between border-b p-3 md:hidden', dash.border)}>
+          <span className={cn('text-sm font-semibold', dash.text)}>Day schedule</span>
+          <button
+            type="button"
+            onClick={() => setDaySheetOpen(false)}
+            className={cn('rounded-full p-2', dash.hover, dash.textMuted)}
+            aria-label="Close day schedule"
+          >
+            <X size={18} />
+          </button>
+        </div>
         {/* Selected day */}
         <div className={cn('border-b p-4', dash.border)}>
           <div className="mb-3 flex items-center gap-2">

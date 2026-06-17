@@ -47,6 +47,18 @@ body {
   border-radius: var(--dash-workspace-radius);
 }
 
+@media (max-width: 1023px) {
+  .dashboard-workspace-shell {
+    margin: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .dashboard-workspace-panel {
+    border-radius: 0;
+  }
+}
+
 @keyframes spotlight {
   0% {
     opacity: 0;

@@ -14,11 +14,13 @@ import { DashboardAmbient } from '@/components/dashboard/DashboardAmbient';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { emailShortcutsRef } from '@/lib/email-shortcuts-ref';
 import { useWorkspaceNav } from '@/contexts/workspace-nav';
+import { WorkspaceShellProvider, useWorkspaceShell } from '@/contexts/workspace-shell';
 import { cn } from '@/lib/utils';
 import { dash } from '@/components/dashboard/theme';
 
 function AppShellInner({ children }: { children: React.ReactNode }) {
   const { activeFolder, navigateFolder, routerReady } = useWorkspaceNav();
+  const { openMobileNav } = useWorkspaceShell();
   const [showCompose, setShowCompose] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -48,13 +50,13 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
         <div className={cn('flex min-h-0 min-w-0 flex-1 flex-col', dash.workspaceShell)}>
           <div
             className={cn(
-              'flex min-h-0 flex-1 flex-col border-l',
+              'flex min-h-0 flex-1 flex-col lg:border-l',
               dash.border,
               dash.mainPanel,
               dash.workspacePanel
             )}
           >
-            <TopBar searchInputRef={searchInputRef} />
+            <TopBar searchInputRef={searchInputRef} onMenuClick={openMobileNav} />
             <main className="relative flex min-h-0 flex-1 flex-col overflow-hidden">{children}</main>
           </div>
         </div>
@@ -78,7 +80,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider>
       <DensityProvider>
-        <AppShellInner>{children}</AppShellInner>
+        <WorkspaceShellProvider>
+          <AppShellInner>{children}</AppShellInner>
+        </WorkspaceShellProvider>
       </DensityProvider>
     </ThemeProvider>
   );

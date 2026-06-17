@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { X, Image, FileText, Film, Music, File } from 'lucide-react';
+import { X, Image, FileText, Film, Music, File, Bot } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { getAgentSessionMessages, setAgentSessionMessages } from '@/lib/agent-session';
 import {
@@ -25,6 +26,7 @@ import {
   type AgentStreamEvent,
   type LastActionData,
 } from '@/lib/agent-stream';
+import { useWorkspaceShell } from '@/contexts/workspace-shell';
 
 const STORAGE_KEY = 'relvion_agent_history';
 const WIDTH_STORAGE_KEY = 'relvion_agent_width';
@@ -81,6 +83,7 @@ async function consumeAgentStream(
 }
 
 export function AgentPanel() {
+  const { agentOpen, openAgent, closeAgent } = useWorkspaceShell();
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<ChatMessageData[]>(
     () => getAgentSessionMessages() ?? []
@@ -487,21 +490,34 @@ export function AgentPanel() {
   const handleSend = () => sendMessage(input, attachedFiles);
   const showEmpty = !isRealChat(messages) && !sending;
 
-  return (
-    <aside
-      style={{ width: panelWidth }}
-      className={cn('relative z-20 flex h-screen shrink-0 flex-col border-l overflow-hidden', dash.agentPanel, dash.border)}
-    >
-      <div
-        role="separator"
-        aria-orientation="vertical"
-        onMouseDown={startResize}
-        onDoubleClick={() => setPanelWidth(DEFAULT_PANEL_WIDTH)}
-        className={cn(
-          'absolute left-0 top-0 z-10 h-full w-3 -translate-x-1/2 cursor-col-resize',
-          isResizing ? dash.resizeHandleActive : dash.resizeHandle
-        )}
-      />
+  const panelBody = (mobile?: boolean) => (
+    <>
+      {!mobile && (
+        <div
+          role="separator"
+          aria-orientation="vertical"
+          onMouseDown={startResize}
+          onDoubleClick={() => setPanelWidth(DEFAULT_PANEL_WIDTH)}
+          className={cn(
+            'absolute left-0 top-0 z-10 h-full w-3 -translate-x-1/2 cursor-col-resize',
+            isResizing ? dash.resizeHandleActive : dash.resizeHandle
+          )}
+        />
+      )}
+
+      {mobile && (
+        <div className={cn('flex shrink-0 items-center justify-between border-b px-3 py-2.5', dash.border)}>
+          <span className={cn('text-sm font-semibold', dash.text)}>AI Assistant</span>
+          <button
+            type="button"
+            onClick={closeAgent}
+            className={cn('rounded-full p-2', dash.hover, dash.textMuted)}
+            aria-label="Close assistant"
+          >
+            <X size={18} />
+          </button>
+        </div>
+      )}
 
       <AgentHeader
         status={agentStatus}
@@ -521,7 +537,7 @@ export function AgentPanel() {
       />
 
       <div className="relative z-0 min-h-0 flex-1 overflow-hidden">
-        <div className="h-full overflow-y-auto p-3 space-y-5">
+        <div className="h-full space-y-5 overflow-y-auto p-3">
           {showEmpty ? (
             <AgentEmptyState onQuickAction={(p) => sendMessage(p, [])} />
           ) : (
@@ -572,6 +588,62 @@ export function AgentPanel() {
         showQuickActions={!input.trim() && attachedFiles.length === 0}
         onQuickAction={(p) => sendMessage(p, [])}
       />
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={openAgent}
+        className={cn(
+          'fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-transform active:scale-95 lg:hidden',
+          dash.accentBg
+        )}
+        aria-label="Open AI assistant"
+      >
+        <Bot size={22} className="text-white" />
+      </button>
+
+      <aside
+        style={{ width: panelWidth }}
+        className={cn(
+          'relative z-20 hidden h-screen shrink-0 flex-col overflow-hidden border-l lg:flex',
+          dash.agentPanel,
+          dash.border
+        )}
+      >
+        {panelBody()}
+      </aside>
+
+      <AnimatePresence>
+        {agentOpen && (
+          <>
+            <motion.button
+              type="button"
+              aria-label="Close assistant"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-40 bg-black/45 backdrop-blur-[2px] lg:hidden"
+              onClick={closeAgent}
+            />
+            <motion.aside
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', stiffness: 420, damping: 38 }}
+              className={cn(
+                'fixed inset-0 z-50 flex flex-col overflow-hidden lg:hidden',
+                dash.agentPanel,
+                dash.border
+              )}
+            >
+              {panelBody(true)}
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
+    </>
   );
 }

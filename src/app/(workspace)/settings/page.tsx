@@ -194,7 +194,7 @@ export default function SettingsPage() {
 
   return (
     <PageEnter className="min-h-0 flex-1">
-      <div className={cn('mx-auto min-h-0 flex-1 overflow-y-auto px-6 py-8 max-w-3xl', dash.bg)}>
+      <div className={cn('mx-auto min-h-0 flex-1 overflow-y-auto px-4 py-6 sm:px-6 sm:py-8 max-w-3xl', dash.bg)}>
         <header className="mb-8">
           <h1 className={cn('text-2xl font-normal tracking-tight', dash.text)}>Settings</h1>
           <p className={cn('mt-1 text-sm', dash.textMuted)}>

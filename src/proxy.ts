@@ -11,6 +11,7 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith('/signup') ||
     pathname.startsWith('/api/auth') ||
     pathname.startsWith('/api/migrate') ||
+    pathname.startsWith('/api/corsair/setup') ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/favicon') ||
     pathname.startsWith('/brand') ||

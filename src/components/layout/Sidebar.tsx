@@ -13,6 +13,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Clock,
+  X,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
@@ -26,6 +27,7 @@ import { prefetchFolderEmails } from '@/hooks/useFolderEmails';
 import { prefetchCalendarEvents } from '@/hooks/useCalendarEvents';
 import { prefetchJson } from '@/lib/client-cache';
 import { ShimmerButton } from '@/components/ui/shimmer-button';
+import { useWorkspaceShell } from '@/contexts/workspace-shell';
 
 export function Sidebar({
   activeFolder,
@@ -41,6 +43,13 @@ export function Sidebar({
   const [collapsed, setCollapsed] = useState(false);
   const { theme } = useTheme();
   const pillNav = theme === 'ocean' || theme === 'crextio';
+  const { mobileNavOpen, closeMobileNav } = useWorkspaceShell();
+
+  const afterNavigate = () => closeMobileNav();
+
+  useEffect(() => {
+    if (mobileNavOpen) setCollapsed(false);
+  }, [mobileNavOpen]);
 
   useEffect(() => {
     fetch('/api/gmail/counts').then((r) => r.json()).then(setCounts).catch(() => {});
@@ -156,6 +165,7 @@ export function Sidebar({
           href={href}
           prefetch={false}
           className={className}
+          onClick={afterNavigate}
           onMouseEnter={() => {
             if (href === '/analytics') prefetchJson('analytics', '/api/analytics');
             else if (folderPrefetch) prefetchFolderEmails(folderPrefetch);
@@ -169,7 +179,10 @@ export function Sidebar({
     return (
       <motion.button
         type="button"
-        onClick={onClick}
+        onClick={() => {
+          onClick?.();
+          afterNavigate();
+        }}
         onMouseEnter={() => {
           if (label === 'Calendar') prefetchCalendarEvents();
           else if (['Inbox', 'Drafts', 'Sent', 'Spam', 'Trash'].includes(label)) {
@@ -192,19 +205,10 @@ export function Sidebar({
     );
   };
 
-  return (
-    <motion.aside
-      initial={false}
-      animate={{ width: collapsed ? 72 : 256 }}
-      transition={{ type: 'spring', stiffness: 400, damping: 35 }}
-      className={cn(
-        'relative z-20 flex h-screen shrink-0 flex-col border-r',
-        dash.sidebar,
-        dash.sidebarBorder
-      )}
-    >
+  const sidebarBody = (
+    <>
       <div className={cn('flex items-center gap-2 p-3', collapsed ? 'justify-center' : 'px-4')}>
-        <Link href="/" prefetch={false} className="flex items-center gap-2.5">
+        <Link href="/" prefetch={false} className="flex items-center gap-2.5" onClick={afterNavigate}>
           <BrandMark size={28} variant="auto" />
           {!collapsed && (
             <span className={cn('text-lg font-semibold tracking-tight', dash.sidebarText)}>
@@ -216,7 +220,10 @@ export function Sidebar({
 
       <div className={cn('px-3 pb-2', collapsed && 'px-2')}>
         <ShimmerButton
-          onClick={() => onComposeClick?.()}
+          onClick={() => {
+            onComposeClick?.();
+            afterNavigate();
+          }}
           title="Compose new email (C)"
           className={cn(
             'flex w-full items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-medium transition-all duration-100',
@@ -292,12 +299,72 @@ export function Sidebar({
         <button
           type="button"
           onClick={() => setCollapsed((c) => !c)}
-          className={cn('mt-3 flex w-full items-center justify-center rounded-lg p-2 transition-colors', dash.sidebarHover, dash.sidebarTextMuted)}
+          className={cn(
+            'mt-3 hidden w-full items-center justify-center rounded-lg p-2 transition-colors lg:flex',
+            dash.sidebarHover,
+            dash.sidebarTextMuted
+          )}
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
         </button>
       </div>
-    </motion.aside>
+    </>
+  );
+
+  return (
+    <>
+      <motion.aside
+        initial={false}
+        animate={{ width: collapsed ? 72 : 256 }}
+        transition={{ type: 'spring', stiffness: 400, damping: 35 }}
+        className={cn(
+          'relative z-20 hidden h-screen shrink-0 flex-col border-r lg:flex',
+          dash.sidebar,
+          dash.sidebarBorder
+        )}
+      >
+        {sidebarBody}
+      </motion.aside>
+
+      <AnimatePresence>
+        {mobileNavOpen && (
+          <>
+            <motion.button
+              type="button"
+              aria-label="Close menu"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-40 bg-black/45 backdrop-blur-[2px] lg:hidden"
+              onClick={closeMobileNav}
+            />
+            <motion.aside
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', stiffness: 420, damping: 36 }}
+              className={cn(
+                'fixed inset-y-0 left-0 z-50 flex w-[min(300px,88vw)] flex-col border-r shadow-2xl lg:hidden',
+                dash.sidebar,
+                dash.sidebarBorder
+              )}
+            >
+              <div className="flex items-center justify-end border-b p-2 lg:hidden" style={{ borderColor: 'var(--dash-border)' }}>
+                <button
+                  type="button"
+                  onClick={closeMobileNav}
+                  className={cn('rounded-full p-2.5', dash.hover, dash.textMuted)}
+                  aria-label="Close navigation"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              {sidebarBody}
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
+    </>
   );
 }

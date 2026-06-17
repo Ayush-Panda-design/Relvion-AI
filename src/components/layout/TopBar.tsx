@@ -39,9 +39,11 @@ interface Notification {
 export function TopBar({
   onSearch,
   searchInputRef,
+  onMenuClick,
 }: {
   onSearch?: (q: string) => void;
   searchInputRef?: RefObject<HTMLInputElement | null>;
+  onMenuClick?: () => void;
 }) {
   const internalSearchRef = useRef<HTMLInputElement>(null);
   const inputRef = searchInputRef ?? internalSearchRef;
@@ -171,23 +173,22 @@ export function TopBar({
   return (
     <header
       className={cn(
-        'relative z-40 flex h-[56px] shrink-0 items-center gap-3 px-4',
+        'relative z-40 flex h-[56px] shrink-0 items-center gap-2 px-3 sm:gap-3 sm:px-4',
         dash.glassToolbar
       )}
     >
-      {/* Spacer balances right icons — keeps search centered */}
-      <div className="flex w-[88px] shrink-0 items-center">
+      <div className="flex shrink-0 items-center lg:w-[88px]">
         <button
           type="button"
+          onClick={onMenuClick}
           className={cn('rounded-full p-2.5 lg:hidden', dash.hover, dash.textMuted)}
-          aria-label="Menu"
+          aria-label="Open menu"
         >
           <Menu size={20} />
         </button>
       </div>
 
-      {/* Elevated pill search — Gmail style */}
-      <div className="relative mx-auto w-full max-w-[720px] flex-1">
+      <div className="relative mx-auto w-full min-w-0 max-w-[720px] flex-1">
         <div
           className={cn(
             'relative flex h-12 items-center rounded-full transition-all duration-200',
@@ -203,9 +204,9 @@ export function TopBar({
           <input
             ref={inputRef}
             type="text"
-            placeholder="Search mail — try from:, subject:, is:unread"
+            placeholder="Search mail"
             className={cn(
-              'w-full bg-transparent py-3 pl-3 pr-20 text-sm focus:outline-none',
+              'w-full bg-transparent py-3 pl-3 pr-12 text-sm focus:outline-none sm:pr-20',
               dash.text,
               'placeholder:text-[#9B9A97] dark:placeholder:text-[#9aa0a6]'
             )}
@@ -408,9 +409,10 @@ export function TopBar({
         </AnimatePresence>
       </div>
 
-      {/* Right actions */}
-      <div className="flex w-[120px] shrink-0 items-center justify-end gap-0.5">
-        <ThemePicker />
+      <div className="flex shrink-0 items-center justify-end gap-0.5 sm:w-[120px]">
+        <div className="hidden sm:block">
+          <ThemePicker />
+        </div>
         <div className="relative z-40" ref={notifRef}>
           <button
             type="button"
@@ -430,7 +432,7 @@ export function TopBar({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 6 }}
                 className={cn(
-                  'absolute right-0 top-full z-[200] mt-2 w-80 overflow-hidden rounded-2xl border shadow-2xl',
+                  'absolute right-0 top-full z-[200] mt-2 w-[min(20rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border shadow-2xl sm:w-80',
                   dash.elevated,
                   dash.border,
                   'dark:shadow-[0_4px_16px_rgba(0,0,0,0.5)]'

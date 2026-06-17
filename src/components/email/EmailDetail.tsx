@@ -421,12 +421,12 @@ export function EmailDetail({
     >
       <div
         className={cn(
-          'flex h-14 shrink-0 items-center justify-between border-b px-4',
+          'flex h-14 shrink-0 items-center justify-between border-b px-3 sm:px-4',
           dash.elevated,
           dash.border
         )}
       >
-        <div className="flex items-center gap-0.5">
+        <div className="flex min-w-0 items-center gap-0.5 overflow-x-auto">
           <ActionBtn onClick={() => doAction('archive')} title="Archive (e)">
             <Archive size={18} />
           </ActionBtn>
@@ -484,11 +484,11 @@ export function EmailDetail({
         </motion.button>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-6">
+      <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
         <motion.h1
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className={cn('mb-5 text-xl font-bold tracking-tight', dash.text)}
+          className={cn('mb-4 text-lg font-bold tracking-tight sm:mb-5 sm:text-xl', dash.text)}
         >
           {fullMeta?.subject || email.data?.subject || '(no subject)'}
         </motion.h1>

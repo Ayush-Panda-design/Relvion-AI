@@ -147,10 +147,10 @@ export function EmailList({
       <div
         className={cn(
           'flex min-h-0 flex-1 flex-col overflow-hidden transition-[width] duration-150 ease-out',
-          selectedEmail ? 'w-[42%] min-w-[300px]' : 'w-full'
+          selectedEmail ? 'hidden w-full md:flex md:w-[42%] md:min-w-[300px]' : 'w-full'
         )}
       >
-        <div className={cn('flex shrink-0 items-center gap-3 px-4 py-2.5', dash.glassToolbar)}>
+        <div className={cn('flex shrink-0 flex-wrap items-center gap-2 px-3 py-2.5 sm:gap-3 sm:px-4', dash.glassToolbar)}>
           {selectedIds.size > 0 ? (
             <div className="flex flex-1 flex-wrap items-center gap-2">
               <span className={cn('text-sm font-medium', dash.text)}>
@@ -375,7 +375,7 @@ export function EmailList({
                     <div
                       className={cn(
                         'absolute right-3 flex items-center gap-0.5 rounded-full border px-1 py-0.5',
-                        'opacity-0 transition-opacity duration-100 group-hover:opacity-100',
+                        'opacity-100 md:opacity-0 md:transition-opacity md:duration-100 md:group-hover:opacity-100',
                         'border-[var(--dash-border)] bg-[var(--dash-surface)]/95'
                       )}
                     >
@@ -416,7 +416,11 @@ export function EmailList({
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 8 }}
             transition={{ duration: 0.12, ease: 'easeOut' }}
-            className={cn('flex min-h-0 flex-1 flex-col overflow-hidden border-l', dash.border)}
+            className={cn(
+              'fixed inset-0 z-50 flex min-h-0 flex-col overflow-hidden md:relative md:inset-auto md:z-auto md:flex-1 md:border-l',
+              dash.bg,
+              dash.border
+            )}
           >
             <EmailDetail
               email={selectedEmail}
