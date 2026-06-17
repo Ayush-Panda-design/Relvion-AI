@@ -324,6 +324,9 @@ export function AgentSandbox({ isDark }: { isDark: boolean }) {
             <p className={cn("mt-4 text-base leading-relaxed", landingText(isDark, "muted"))}>
               Type a command or pick a suggestion below. Responses are simulated to match the real Relvion Agent in your dashboard.
             </p>
+            <p className={cn("mt-3 text-sm leading-relaxed", landingText(isDark, "muted"))}>
+              Imagine finishing your inbox while your coffee is still hot — that&apos;s the feeling we designed for.
+            </p>
             <div className="mt-6 max-w-sm">
               <GradientAgentIllustration />
             </div>

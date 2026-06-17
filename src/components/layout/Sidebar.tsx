@@ -42,7 +42,7 @@ export function Sidebar({
   const [profile, setProfile] = useState<{ email: string; name: string } | null>(null);
   const [collapsed, setCollapsed] = useState(false);
   const { theme } = useTheme();
-  const pillNav = theme === 'ocean' || theme === 'crextio';
+  const pillNav = theme === 'ocean' || theme === 'crextio' || theme === 'oxfin' || theme === 'limedock';
   const { mobileNavOpen, closeMobileNav } = useWorkspaceShell();
 
   const afterNavigate = () => closeMobileNav();
@@ -56,6 +56,15 @@ export function Sidebar({
   }, []);
 
   useEffect(() => {
+    fetch('/api/auth/me')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((me) => {
+        if (me?.email) {
+          setProfile({ email: me.email, name: me.email.split('@')[0] });
+        }
+      })
+      .catch(() => {});
+
     fetch('/api/gmail/profile')
       .then((r) => r.json())
       .then((data) => {

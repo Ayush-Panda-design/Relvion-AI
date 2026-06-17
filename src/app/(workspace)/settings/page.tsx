@@ -16,6 +16,8 @@ import {
   Palette,
   Zap,
   ChevronDown,
+  Moon,
+  Sun,
 } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
@@ -152,7 +154,7 @@ export default function SettingsPage() {
   const [webhookResult, setWebhookResult] = useState<WebhookResult | null>(null);
   const [registering, setRegistering] = useState(false);
   const { density, setDensity } = useDensity();
-  const { theme, setTheme } = useTheme();
+  const { theme, appearance, setTheme, toggleAppearance } = useTheme();
 
   useEffect(() => {
     fetch('/api/gmail/profile')
@@ -364,9 +366,33 @@ export default function SettingsPage() {
           <SettingsCard
             icon={Palette}
             title="Dashboard theme"
-            description="Four polished workspaces inspired by premium SaaS dashboards"
+            description="Six polished workspaces — each with light and dark appearance"
           >
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border p-3" style={{ borderColor: 'var(--dash-border)' }}>
+              <div>
+                <p className={cn('text-sm font-medium', dash.text)}>Appearance</p>
+                <p className={cn('text-xs', dash.textSubtle)}>
+                  {appearance === 'dark' ? 'Dark mode — easier on the eyes at night' : 'Light mode — crisp daytime workspace'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  toggleAppearance();
+                  toast.success(appearance === 'dark' ? 'Light mode on' : 'Dark mode on');
+                }}
+                className={cn(
+                  'flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors',
+                  dash.border,
+                  dash.hover,
+                  dash.text
+                )}
+              >
+                {appearance === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+                {appearance === 'dark' ? 'Light' : 'Dark'}
+              </button>
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {DASHBOARD_THEMES.map((t) => {
                 const active = theme === t.id;
                 return (

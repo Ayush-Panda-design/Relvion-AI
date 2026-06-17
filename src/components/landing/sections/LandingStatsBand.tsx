@@ -5,6 +5,7 @@ import { BlurFade } from '@/components/ui/blur-fade';
 import { NumberTicker } from '@/components/ui/number-ticker';
 import { AnimatedShinyText } from '@/components/ui/animated-shiny-text';
 import { cn } from '@/lib/utils';
+import { BrandingStoryLine, FlipBrandHeadline } from '@/components/landing/motion/BrandingAnimations';
 
 const STATS = [
   { value: 3, suffix: '', label: 'Apps unified', hint: 'Inbox, calendar & agent in one tab' },
@@ -25,6 +26,10 @@ export function LandingStatsBand() {
             {' — and adds an AI layer that actually lives inside your workflow, not beside it.'}
           </p>
         </BlurFade>
+        <BrandingStoryLine variant="stats" />
+        <div className="mt-6">
+          <FlipBrandHeadline className="text-center" />
+        </div>
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {STATS.map((s, i) => (
             <BlurFade key={s.label} delay={i * 0.06}>

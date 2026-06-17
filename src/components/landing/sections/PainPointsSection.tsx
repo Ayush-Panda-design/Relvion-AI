@@ -8,6 +8,11 @@ import { BorderBeam } from '@/components/ui/border-beam';
 import { LandingSceneImage } from '@/components/landing/illustrations/LandingSceneImage';
 import { SectionFloatingOrbs } from '@/components/landing/motion/SectionFloatingOrbs';
 import { landingSectionBg, landingText, sectionLabel } from '../theme';
+import {
+  BrandingStoryLine,
+  BrandPromiseTypewriter,
+  InteractivePriorityPeek,
+} from '@/components/landing/motion/BrandingAnimations';
 
 const METRICS = [
   { icon: Layers, value: '5+', label: 'Tabs eliminated', color: '#EA4335' },
@@ -42,6 +47,10 @@ export function PainPointsSection({ items }: { items: PainPoint[] }) {
             <p className={cn('mt-4 text-base', landingText(tone, 'muted'))}>
               Scattered apps create friction. Relvion replaces the tab chaos with one intelligent workspace.
             </p>
+            <BrandingStoryLine variant="problem" />
+            <div className="mt-5">
+              <BrandPromiseTypewriter />
+            </div>
           </BlurFade>
 
           <div className="mt-10 space-y-0">
@@ -82,6 +91,10 @@ export function PainPointsSection({ items }: { items: PainPoint[] }) {
           <div className="relative overflow-hidden rounded-[2rem] border border-[#DADCE0] bg-white p-4 shadow-xl">
             <BorderBeam size={200} duration={12} colorFrom="#4285F4" colorTo="#FBBC04" />
             <LandingSceneImage id="unified-workspace" />
+
+            <div className="mt-4">
+              <InteractivePriorityPeek />
+            </div>
 
             <div className="mt-4 grid grid-cols-3 gap-3">
               {METRICS.map((m, i) => (

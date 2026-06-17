@@ -70,7 +70,7 @@ export function AgentInputBar({
         </div>
       )}
 
-      <div className={cn('flex items-end gap-1 rounded-2xl border p-1.5', dash.border)}>
+      <div className={cn('flex items-end gap-1 rounded-2xl border p-1.5', dash.border, dash.input)}>
         <button
           type="button"
           onClick={onAttach}

@@ -57,6 +57,14 @@ import { WorkflowInsightCards } from "./sections/WorkflowInsightCards";
 
 import { SectionFloatingOrbs } from "@/components/landing/motion/SectionFloatingOrbs";
 import { LandingIllustration } from "@/components/landing/illustrations/LandingIllustration";
+import {
+  BrandPromiseTypewriter,
+  BrandingStoryLine,
+  CuriosityBrandChips,
+  InteractiveDayFlow,
+  MiniAgentCuriosity,
+  FlipBrandHeadline,
+} from "@/components/landing/motion/BrandingAnimations";
 
 const navLinks = [
   { href: "#product", label: "Product" },
@@ -341,6 +349,9 @@ export default function LandingPage({ session }: { session: SessionPayload | nul
             <p className={cn("mt-4 max-w-2xl text-lg", landingText(tone, "muted"))}>
               Click through real workflow views — inbox triage, calendar sync, agent actions, and analytics.
             </p>
+            <div className="mt-5 max-w-2xl">
+              <BrandPromiseTypewriter />
+            </div>
           </BlurFade>
           <BlurFade delay={0.15} className="mt-10">
             <ImageShowcase isDark={isDark} activeIndex={showcaseIndex} onSelect={setShowcaseIndex} />
@@ -358,6 +369,13 @@ export default function LandingPage({ session }: { session: SessionPayload | nul
           <p className={cn("mt-4 max-w-2xl text-lg", landingText(tone, "muted"))}>
             See how a single email moves through Relvion, and how your day changes when everything lives in one pipeline.
           </p>
+          <div className="mt-6 max-w-2xl">
+            <FlipBrandHeadline />
+          </div>
+        </BlurFade>
+
+        <BlurFade delay={0.08} className="mt-8">
+          <CuriosityBrandChips />
         </BlurFade>
 
         <BlurFade delay={0.1} className="mt-12">
@@ -394,6 +412,9 @@ export default function LandingPage({ session }: { session: SessionPayload | nul
             <p className={cn("mt-4 max-w-2xl text-lg", landingText(tone, "muted"))}>
               Your data stays in Google. Relvion is the intelligent layer — triage, drafts, and scheduling without migrating your mail.
             </p>
+            <p className={cn("mt-4 max-w-2xl text-base leading-relaxed", landingText(tone, "muted"))}>
+              Think of Relvion as the calm layer on top of the tools you already trust — designed to feel personal, not corporate.
+            </p>
           </BlurFade>
           <div className="mt-10 grid gap-4 sm:grid-cols-3">
             {architecturePoints.map((pt, i) => (
@@ -408,6 +429,9 @@ export default function LandingPage({ session }: { session: SessionPayload | nul
               </BlurFade>
             ))}
           </div>
+          <BlurFade delay={0.12} className="mt-8 max-w-md">
+            <InteractiveDayFlow />
+          </BlurFade>
           <BlurFade delay={0.15} className="mt-12">
             <ArchitectureDiagram isDark={isDark} />
           </BlurFade>
@@ -426,6 +450,7 @@ export default function LandingPage({ session }: { session: SessionPayload | nul
           <p className={cn("mt-4 max-w-2xl text-lg", landingText(tone, "muted"))}>
             Switch between inbox, calendar, and agent without losing context. Explore each module below.
           </p>
+          <BrandingStoryLine variant="product" />
           </BlurFade>
           <BlurFade delay={0.15} className="mt-14">
             <ProductPreviewSection tone={tone} tabs={productTabs} />
@@ -448,6 +473,7 @@ export default function LandingPage({ session }: { session: SessionPayload | nul
               duration={0.35}
             />
           </div>
+          <BrandingStoryLine variant="features" />
         </BlurFade>
 
         <div className="mt-16 space-y-24">
@@ -519,6 +545,9 @@ export default function LandingPage({ session }: { session: SessionPayload | nul
         <p className={cn("mt-4 max-w-2xl text-base leading-relaxed", landingText(tone, "muted"))}>
           Whether you run a company, operate support queues, or manage brand partnerships — Relvion adapts to how you actually work, not how generic inbox apps assume you should.
         </p>
+        <div className="mt-6 max-w-2xl">
+          <CuriosityBrandChips />
+        </div>
         <div className="mt-12 flex flex-col gap-4">
           {useCases.map((uc, i) => (
             <BlurFade key={uc.role} delay={i * 0.1}>
@@ -560,6 +589,9 @@ export default function LandingPage({ session }: { session: SessionPayload | nul
             <h2 className={cn("mt-3 text-3xl font-bold tracking-tight", landingText(tone, "primary"))}>
               Live in four steps.
             </h2>
+            <p className={cn("mt-4 max-w-xl text-base leading-relaxed", landingText(tone, "muted"))}>
+              Getting started should feel effortless — connect once, set your rhythm, and let Relvion learn how you like to work.
+            </p>
           </BlurFade>
 
           <div className="mt-14 flex flex-col gap-12 lg:flex-row lg:gap-16">
@@ -608,6 +640,9 @@ export default function LandingPage({ session }: { session: SessionPayload | nul
           <p className={cn("mt-4 max-w-xl text-base leading-relaxed", landingText(tone, "muted"))}>
             Early-access teams report fewer tabs, faster triage, and drafts they actually send — here is what stood out in their first week.
           </p>
+          <div className="mt-4 max-w-xl">
+            <FlipBrandHeadline />
+          </div>
         </BlurFade>
         <BlurFade delay={0.15} className="mt-10 space-y-5">
           <InfiniteMovingCards items={testimonials} direction="left" speed="slow" isDark={isDark} />
@@ -625,6 +660,9 @@ export default function LandingPage({ session }: { session: SessionPayload | nul
           </h2>
           <p className={cn("mx-auto mt-4 max-w-md text-center text-sm leading-relaxed", landingText(tone, "muted"))}>
             Everything you need to know about connecting Google, how the agent works, and what early access includes.
+          </p>
+          <p className={cn("mx-auto mt-3 max-w-lg text-center text-sm leading-relaxed", landingText(tone, "muted"))}>
+            Relvion is built for people who love getting things done — without letting their inbox run the show.
           </p>
           <div className="mt-10">
             {faqs.map((f) => (
@@ -649,6 +687,8 @@ export default function LandingPage({ session }: { session: SessionPayload | nul
           <p className={cn("mx-auto mt-3 max-w-md text-base", landingText(tone, "muted"))}>
             Join early access. Free during beta — founding members keep preferential pricing when we launch paid plans.
           </p>
+          <BrandingStoryLine variant="cta" />
+          <MiniAgentCuriosity />
           <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.98 }} className="mt-8 inline-block">
           <Link href={ctaHref} className={primaryButton(tone)}>
             {ctaLabel}

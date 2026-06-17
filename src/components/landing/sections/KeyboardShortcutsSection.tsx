@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { PixelKeyboardIllustration } from '@/components/landing/illustrations/animated';
 import { BorderBeam } from '@/components/ui/border-beam';
 import { landingSectionBg, landingSurface, landingText, sectionLabel, type LandingTone } from '../theme';
+import { FlipBrandHeadline } from '@/components/landing/motion/BrandingAnimations';
 
 const SHORTCUT_ICONS: Record<string, string> = {
   'Command palette': '#4285F4',
@@ -88,6 +89,12 @@ export function KeyboardShortcutsSection({
             </h2>
             <p className={cn('mt-4 text-base leading-relaxed', landingText(tone, 'muted'))}>
               Click a shortcut to preview the action. Relvion is designed for people who keep their hands on the keyboard.
+            </p>
+            <div className="mt-4">
+              <FlipBrandHeadline />
+            </div>
+            <p className={cn('mt-3 text-sm leading-relaxed', landingText(tone, 'muted'))}>
+              Speed isn&apos;t about rushing — it&apos;s about staying in flow long enough to do meaningful work.
             </p>
 
             <motion.div

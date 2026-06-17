@@ -1,5 +1,6 @@
 import { setupCorsair, type SetupCredentials } from 'corsair/setup';
 import { corsair } from '@/server/corsair';
+import { syncGoogleOAuthCredentialsFromEnv } from '@/server/googleOAuth';
 
 const appUrl = () =>
   process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || 'http://localhost:3000';
@@ -34,6 +35,10 @@ export async function ensureCorsairSetup(tenantId?: string): Promise<void> {
   // Integration rows + shared OAuth credentials must run without tenantId on
   // multi-tenant instances (Corsair rejects integration-level creds with tenant).
   await setupCorsair(corsair as never, { credentials });
+
+  if (credentials) {
+    await syncGoogleOAuthCredentialsFromEnv();
+  }
 
   if (tenantId) {
     await setupCorsair(corsair as never, { tenantId });

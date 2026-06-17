@@ -1,13 +1,20 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Palette, Check } from 'lucide-react';
+import { Palette, Check, Moon, Sun } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { dash } from '@/components/dashboard/theme';
 import { useTheme, DASHBOARD_THEMES } from '@/components/dashboard/ThemeProvider';
 
-export function ThemePicker({ className }: { className?: string }) {
-  const { theme, setTheme, mounted } = useTheme();
+export function ThemePicker({
+  className,
+  compact = false,
+}: {
+  className?: string;
+  /** Compact toolbar style for TopBar — icons only, no swatch chips */
+  compact?: boolean;
+}) {
+  const { theme, appearance, setTheme, toggleAppearance, mounted } = useTheme();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -21,9 +28,41 @@ export function ThemePicker({ className }: { className?: string }) {
   }, [open]);
 
   const current = DASHBOARD_THEMES.find((t) => t.id === theme);
+  const isDark = appearance === 'dark';
 
   return (
-    <div ref={ref} className={cn('relative', className)}>
+    <div
+      ref={ref}
+      className={cn(
+        'relative flex shrink-0 items-center',
+        compact
+          ? cn('rounded-full border p-0.5', dash.border, dash.surface)
+          : 'gap-0.5',
+        className
+      )}
+    >
+      <button
+        type="button"
+        onClick={toggleAppearance}
+        aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+        title={isDark ? 'Light mode' : 'Dark mode'}
+        className={cn(
+          'flex items-center justify-center transition-colors',
+          compact ? 'h-8 w-8 rounded-full' : 'h-9 w-9 rounded-lg',
+          dash.hover,
+          dash.textMuted,
+          isDark && dash.accentSoft
+        )}
+      >
+        {mounted ? (
+          isDark ? <Sun size={16} strokeWidth={1.75} /> : <Moon size={16} strokeWidth={1.75} />
+        ) : (
+          <span className="h-4 w-4" />
+        )}
+      </button>
+
+      {compact && <span className={cn('h-4 w-px shrink-0', dash.divider)} aria-hidden />}
+
       <button
         type="button"
         onClick={(e) => {
@@ -33,7 +72,8 @@ export function ThemePicker({ className }: { className?: string }) {
         aria-label="Change theme"
         title={current ? `Theme: ${current.name}` : 'Change theme'}
         className={cn(
-          'relative flex h-9 items-center gap-1.5 rounded-lg px-2.5 transition-colors',
+          'relative flex items-center justify-center transition-colors',
+          compact ? 'h-8 w-8 rounded-full' : 'h-9 gap-1.5 rounded-lg px-2.5',
           dash.hover,
           dash.textMuted,
           dash.accentHover
@@ -41,19 +81,21 @@ export function ThemePicker({ className }: { className?: string }) {
       >
         {mounted ? (
           <>
-            <Palette size={17} strokeWidth={1.75} />
-            <span className="flex gap-0.5">
-              {current?.swatches.map((c) => (
-                <span
-                  key={c}
-                  className="h-2.5 w-2.5 rounded-full ring-1 ring-black/10"
-                  style={{ backgroundColor: c }}
-                />
-              ))}
-            </span>
+            <Palette size={16} strokeWidth={1.75} />
+            {!compact && (
+              <span className="hidden gap-0.5 lg:flex">
+                {current?.swatches.map((c) => (
+                  <span
+                    key={c}
+                    className="h-2.5 w-2.5 rounded-full ring-1 ring-black/10"
+                    style={{ backgroundColor: c }}
+                  />
+                ))}
+              </span>
+            )}
           </>
         ) : (
-          <span className="h-4 w-10" />
+          <span className="h-4 w-4" />
         )}
       </button>
 
@@ -65,9 +107,9 @@ export function ThemePicker({ className }: { className?: string }) {
           )}
         >
           <p className={cn('px-2 py-1.5 text-xs font-semibold uppercase tracking-wider', dash.textSubtle)}>
-            Dashboard theme
+            Dashboard theme · {isDark ? 'Dark' : 'Light'}
           </p>
-          <div className="space-y-1">
+          <div className="max-h-[min(360px,60vh)] space-y-1 overflow-y-auto">
             {DASHBOARD_THEMES.map((t) => {
               const active = theme === t.id;
               return (

@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   },
 };
 
-const themeScript = `(function(){try{var t=localStorage.getItem('relvion-dashboard-theme');var l=localStorage.getItem('relvion-workspace-theme');if(!t&&l==='dark')t='midnight';if(!t&&l==='light')t='pulse';if(!t)t='midnight';if(['midnight','pulse','ocean','crextio'].indexOf(t)<0)t='midnight';document.documentElement.setAttribute('data-theme',t);document.documentElement.style.colorScheme='light';}catch(e){}})();`;
+const themeScript = `(function(){try{var t=localStorage.getItem('relvion-dashboard-theme');var a=localStorage.getItem('relvion-dashboard-appearance');var l=localStorage.getItem('relvion-workspace-theme');if(!t&&l==='dark')t='midnight';if(!t&&l==='light')t='pulse';if(!t)t='midnight';var themes=['midnight','pulse','ocean','crextio','oxfin','limedock'];if(themes.indexOf(t)<0)t='midnight';var ap=a==='dark'?'dark':'light';document.documentElement.setAttribute('data-theme',t);document.documentElement.setAttribute('data-appearance',ap);document.documentElement.classList.toggle('dark',ap==='dark');document.documentElement.style.colorScheme=ap;}catch(e){}})();`;
 
 export default function RootLayout({
   children,
@@ -35,7 +35,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" data-theme="midnight" className={`${inter.className} antialiased`} suppressHydrationWarning>
+    <html lang="en" data-theme="midnight" data-appearance="light" className={`${inter.className} antialiased`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>

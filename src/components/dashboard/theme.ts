@@ -2,10 +2,19 @@
 
 export type Density = 'compact' | 'default' | 'comfortable';
 
-export type DashboardThemeId = 'midnight' | 'pulse' | 'ocean' | 'crextio';
+export type DashboardThemeId =
+  | 'midnight'
+  | 'pulse'
+  | 'ocean'
+  | 'crextio'
+  | 'oxfin'
+  | 'limedock';
+
+export type DashboardAppearance = 'light' | 'dark';
 
 export const DENSITY_STORAGE_KEY = 'relvion-density';
 export const THEME_STORAGE_KEY = 'relvion-dashboard-theme';
+export const APPEARANCE_STORAGE_KEY = 'relvion-dashboard-appearance';
 
 export const DASHBOARD_THEMES: {
   id: DashboardThemeId;
@@ -36,6 +45,18 @@ export const DASHBOARD_THEMES: {
     name: 'Crextio',
     description: 'Warm gold · soft glass UI',
     swatches: ['#F59E0B', '#FFF8E7', '#1C1C1E'],
+  },
+  {
+    id: 'oxfin',
+    name: 'Oxfin',
+    description: 'Charcoal admin · vivid ticket accents',
+    swatches: ['#12141C', '#E91E63', '#1E222D'],
+  },
+  {
+    id: 'limedock',
+    name: 'LimeDock',
+    description: 'SaaS lime · clean metric cards',
+    swatches: ['#84CC16', '#F4F6F8', '#0C0E12'],
   },
 ];
 
@@ -88,7 +109,7 @@ export const dash = {
   chatUser:
     'bg-gradient-to-br from-[var(--dash-chat-user-from)] to-[var(--dash-chat-user-to)] text-[var(--dash-chat-user-text)] shadow-sm',
   chatAgent:
-    'border border-[var(--dash-chat-agent-border)] bg-[var(--dash-chat-agent-bg)] text-[var(--dash-text)]',
+    'border border-[var(--dash-chat-agent-border)] bg-[var(--dash-chat-agent-bg)] text-[var(--dash-text)] [&_strong]:text-[var(--dash-text)] [&_em]:text-[var(--dash-text-muted)]',
   chatAttachment:
     'border border-[var(--dash-border)] bg-[var(--dash-surface)] hover:border-[var(--dash-input-focus-border)]',
   chatCopyBtn:

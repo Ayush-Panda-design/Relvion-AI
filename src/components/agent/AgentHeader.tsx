@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Clock, Share2, MoreHorizontal, ChevronDown, Plus, Trash2, Copy, MessageSquare } from 'lucide-react';
+import { Clock, Share2, MoreHorizontal, ChevronDown, Plus, Trash2, Copy, MessageSquare, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { cn } from '@/lib/utils';
 import { dash } from '@/components/dashboard/theme';
@@ -248,15 +248,80 @@ export function AgentHeader({
 
   return (
     <>
-      <div className={cn('relative z-30 shrink-0 border-b px-3 py-2.5', dash.glassToolbar, dash.border)}>
-        <div className="flex items-center gap-0.5">
+      <div
+        className={cn(
+          'relative z-30 shrink-0 overflow-hidden border-b px-3 py-3',
+          dash.glassToolbar,
+          dash.border
+        )}
+      >
+        <div
+          className="pointer-events-none absolute inset-0 opacity-90"
+          style={{
+            background:
+              'linear-gradient(135deg, var(--dash-accent-soft-bg) 0%, transparent 55%, transparent 100%)',
+          }}
+          aria-hidden
+        />
+
+        <div className="relative mb-2.5 flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <div
+              className={cn(
+                'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl shadow-sm',
+                dash.compose
+              )}
+            >
+              <Sparkles size={17} strokeWidth={2} className="text-[var(--dash-compose-text)]" />
+            </div>
+            <div className="min-w-0">
+              <p className={cn('text-sm font-bold tracking-tight', dash.text)}>Relvion AI</p>
+              <p className={cn('truncate text-[10px] font-medium uppercase tracking-wider', dash.accent)}>
+                Workspace assistant
+              </p>
+            </div>
+          </div>
+
+          <div
+            className={cn(
+              'flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1',
+              dash.border,
+              dash.surface
+            )}
+          >
+            <span
+              className={cn(
+                'relative flex h-2 w-2',
+                status !== 'idle' && status !== 'done' && 'animate-pulse'
+              )}
+            >
+              <span
+                className={cn(
+                  'absolute inline-flex h-full w-full rounded-full opacity-50',
+                  status === 'done' ? 'bg-emerald-500' : 'bg-[var(--dash-accent)]'
+                )}
+              />
+              <span
+                className={cn(
+                  'relative inline-flex h-2 w-2 rounded-full',
+                  status === 'done' ? 'bg-emerald-500' : 'bg-[var(--dash-accent)]'
+                )}
+              />
+            </span>
+            <span className={cn('text-[11px] font-semibold', dash.textMuted)}>{STATUS_LABEL[status]}</span>
+          </div>
+        </div>
+
+        <div className="relative flex items-center gap-0.5">
           <div className="min-w-0 flex-1">
             <button
               ref={conversationRef}
               type="button"
               onClick={() => toggle('conversation')}
               className={cn(
-                'flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-sm font-semibold',
+                'flex w-full items-center gap-1.5 rounded-xl border px-2.5 py-2 text-left text-sm font-medium',
+                dash.border,
+                dash.surface,
                 dash.hover,
                 dash.text,
                 openMenu === 'conversation' && dash.accentSoft
@@ -265,7 +330,11 @@ export function AgentHeader({
               <span className="truncate">{sessionLabel}</span>
               <ChevronDown
                 size={14}
-                className={cn('shrink-0 transition-transform', dash.textMuted, openMenu === 'conversation' && 'rotate-180')}
+                className={cn(
+                  'ml-auto shrink-0 transition-transform',
+                  dash.textMuted,
+                  openMenu === 'conversation' && 'rotate-180'
+                )}
               />
             </button>
           </div>
@@ -276,7 +345,9 @@ export function AgentHeader({
             title="Prompt history"
             onClick={() => toggle('history')}
             className={cn(
-              'rounded-lg p-2 transition-colors',
+              'rounded-xl border p-2 transition-colors',
+              dash.border,
+              dash.surface,
               dash.hover,
               dash.textMuted,
               openMenu === 'history' && dash.accentSoft
@@ -289,7 +360,13 @@ export function AgentHeader({
             type="button"
             title="Share transcript"
             onClick={handleShare}
-            className={cn('rounded-lg p-2 transition-colors', dash.hover, dash.textMuted)}
+            className={cn(
+              'rounded-xl border p-2 transition-colors',
+              dash.border,
+              dash.surface,
+              dash.hover,
+              dash.textMuted
+            )}
           >
             <Share2 size={16} />
           </button>
@@ -300,7 +377,9 @@ export function AgentHeader({
             title="More options"
             onClick={() => toggle('more')}
             className={cn(
-              'rounded-lg p-2 transition-colors',
+              'rounded-xl border p-2 transition-colors',
+              dash.border,
+              dash.surface,
               dash.hover,
               dash.textMuted,
               openMenu === 'more' && dash.accentSoft
@@ -308,24 +387,6 @@ export function AgentHeader({
           >
             <MoreHorizontal size={16} />
           </button>
-        </div>
-
-        <div className="mt-1.5 flex items-center gap-2 px-2">
-          <span className={cn('relative flex h-2 w-2', status !== 'idle' && status !== 'done' && 'animate-pulse')}>
-            <span
-              className={cn(
-                'absolute inline-flex h-full w-full rounded-full opacity-60',
-                status === 'done' ? 'bg-emerald-500' : 'bg-[var(--dash-accent)]'
-              )}
-            />
-            <span
-              className={cn(
-                'relative inline-flex h-2 w-2 rounded-full',
-                status === 'done' ? 'bg-emerald-500' : 'bg-[var(--dash-accent)]'
-              )}
-            />
-          </span>
-          <span className={cn('text-[11px] font-medium', dash.textMuted)}>{STATUS_LABEL[status]}</span>
         </div>
       </div>
 

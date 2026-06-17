@@ -101,6 +101,27 @@ export function AgentPanel() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const liveStepsRef = useRef<AgentStep[]>([]);
+  const streamRafRef = useRef<number | null>(null);
+  const streamedTextRef = useRef('');
+
+  const flushStreamingUi = useCallback(() => {
+    if (streamRafRef.current != null) return;
+    streamRafRef.current = requestAnimationFrame(() => {
+      streamRafRef.current = null;
+      setMessages((prev) => {
+        const next = [...prev];
+        const last = next[next.length - 1];
+        if (last?.role !== 'agent') return prev;
+        next[next.length - 1] = {
+          ...last,
+          content: streamedTextRef.current,
+          streaming: true,
+          steps: [...liveStepsRef.current],
+        };
+        return next;
+      });
+    });
+  }, []);
 
   useEffect(() => {
     try {
@@ -158,6 +179,7 @@ export function AgentPanel() {
 
   useEffect(() => {
     if (!loaded) return;
+    if (messages.some((m) => m.streaming)) return;
     setAgentSessionMessages(messages);
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
@@ -168,27 +190,6 @@ export function AgentPanel() {
     if (!loaded) return;
     setSessions(loadAgentSessions());
   }, [loaded]);
-
-  useEffect(() => {
-    if (!loaded || !isRealChat(messages)) return;
-    const label = sessionLabelFromMessages(messages);
-    const snapshot = messages.filter((m) => !m.streaming);
-    setSessions((prev) => {
-      const next = [...prev];
-      const idx = next.findIndex((s) => s.id === currentSessionId);
-      const entry: StoredAgentSession = {
-        id: currentSessionId,
-        label,
-        updatedAt: Date.now(),
-        messages: snapshot,
-      };
-      if (idx >= 0) next[idx] = entry;
-      else next.unshift(entry);
-      next.sort((a, b) => b.updatedAt - a.updatedAt);
-      saveAgentSessions(next);
-      return next;
-    });
-  }, [messages, loaded, currentSessionId]);
 
   const sessionLabel = useMemo(
     () => (isRealChat(messages) ? sessionLabelFromMessages(messages) : 'New conversation'),
@@ -226,6 +227,12 @@ export function AgentPanel() {
       return next;
     });
   }, [messages, currentSessionId]);
+
+  useEffect(() => {
+    if (!loaded || !isRealChat(messages)) return;
+    if (messages.some((m) => m.streaming)) return;
+    persistCurrentSession();
+  }, [messages, loaded, persistCurrentSession]);
 
   const startNewConversation = useCallback(() => {
     persistCurrentSession();
@@ -336,6 +343,7 @@ export function AgentPanel() {
     };
 
     liveStepsRef.current = [];
+    streamedTextRef.current = '';
     setMessages((prev) => [...prev, userMsg, agentPlaceholder]);
     setInput('');
     setAttachedFiles([]);
@@ -386,7 +394,7 @@ export function AgentPanel() {
         return;
       }
 
-      let streamedText = '';
+      streamedTextRef.current = '';
 
       await consumeAgentStream(res, (event) => {
         if (event.type === 'step') {
@@ -409,14 +417,7 @@ export function AgentPanel() {
             setAgentStatus('thinking');
           }
 
-          setMessages((prev) => {
-            const next = [...prev];
-            const last = next[next.length - 1];
-            if (last?.role === 'agent') {
-              next[next.length - 1] = { ...last, steps: [...liveStepsRef.current] };
-            }
-            return next;
-          });
+          flushStreamingUi();
         }
 
         if (event.type === 'tool_result') {
@@ -431,37 +432,34 @@ export function AgentPanel() {
           liveStepsRef.current = liveStepsRef.current.map((s) =>
             s.toolName ? s : { ...s, toolName: event.name, detail: event.label }
           );
+          flushStreamingUi();
         }
 
         if (event.type === 'token') {
-          streamedText += event.text;
-          setMessages((prev) => {
-            const next = [...prev];
-            const last = next[next.length - 1];
-            if (last?.role === 'agent') {
-              next[next.length - 1] = {
-                ...last,
-                content: streamedText,
-                streaming: true,
-                steps: [...liveStepsRef.current],
-              };
-            }
-            return next;
-          });
+          streamedTextRef.current += event.text;
+          flushStreamingUi();
         }
 
         if (event.type === 'error') {
-          streamedText += event.message;
+          streamedTextRef.current += event.message;
+          flushStreamingUi();
         }
 
         if (event.type === 'done') {
+          if (streamRafRef.current != null) {
+            cancelAnimationFrame(streamRafRef.current);
+            streamRafRef.current = null;
+          }
           setMessages((prev) => {
             const next = [...prev];
             next[next.length - 1] = {
               role: 'agent',
-              content: streamedText || 'Done.',
+              content: streamedTextRef.current || 'Done.',
               streaming: false,
-              steps: liveStepsRef.current.map((s) => ({ ...s, status: s.status === 'active' ? 'done' : s.status })),
+              steps: liveStepsRef.current.map((s) => ({
+                ...s,
+                status: s.status === 'active' ? 'done' : s.status,
+              })),
               timestamp: formatAgentTime(),
             };
             return next;
@@ -471,6 +469,10 @@ export function AgentPanel() {
         }
       });
     } catch {
+      if (streamRafRef.current != null) {
+        cancelAnimationFrame(streamRafRef.current);
+        streamRafRef.current = null;
+      }
       setMessages((prev) => {
         const next = [...prev];
         next[next.length - 1] = {

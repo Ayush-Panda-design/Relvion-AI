@@ -106,11 +106,33 @@ export async function GET(req: Request) {
       const existing = await db.query('SELECT id FROM users WHERE email = $1', [email]);
       if (existing.rows.length > 0) {
         userId = String(existing.rows[0].id);
+        finalTenantId = tenantId;
         await db.query('UPDATE users SET last_login = NOW() WHERE id = $1', [userId]);
       } else {
-        throw new Error('User not found in database despite having an active session.');
+        // Linking Google to an existing password account, or first-time connect from dashboard
+        userId = crypto.randomUUID();
+        finalTenantId = email;
+
+        await setupCorsair(corsair as any, { tenantId: finalTenantId });
+
+        const sourceClient = (corsair as any).withTenant(tenantId);
+        const stableClient = (corsair as any).withTenant(finalTenantId);
+        try {
+          const accessToken = await sourceClient.gmail.keys.get_access_token?.();
+          const refreshToken = await sourceClient.gmail.keys.get_refresh_token?.();
+          if (accessToken) await stableClient.gmail.keys.set_access_token(accessToken);
+          if (refreshToken) await stableClient.gmail.keys.set_refresh_token(refreshToken);
+        } catch (e: any) {
+          console.warn('[callback] token transfer warning:', e?.message);
+        }
+
+        await db.query(
+          `INSERT INTO users (id, tenant_id, email, name, avatar_url, created_at, last_login)
+           VALUES ($1, $2, $3, $4, $5, NOW(), NOW())`,
+          [userId, finalTenantId, email, email.split('@')[0], null],
+        );
       }
-      await setupCorsair(corsair as any, { tenantId });
+      await setupCorsair(corsair as any, { tenantId: finalTenantId });
     }
 
     // 4. Try to connect Google Calendar too
@@ -122,6 +144,13 @@ export async function GET(req: Request) {
       });
       const res = NextResponse.redirect(calResult.url);
       const token = await createSessionToken({ userId, tenantId: finalTenantId, email });
+      res.cookies.set(COOKIE_NAME, token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 60 * 60 * 24 * 30,
+        sameSite: 'lax',
+        path: '/',
+      });
       res.cookies.set('pending_session', token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',

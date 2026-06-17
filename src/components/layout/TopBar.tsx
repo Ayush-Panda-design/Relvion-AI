@@ -173,11 +173,11 @@ export function TopBar({
   return (
     <header
       className={cn(
-        'relative z-40 flex h-[56px] shrink-0 items-center gap-2 px-3 sm:gap-3 sm:px-4',
+        'relative z-40 grid h-[56px] shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 sm:gap-3 sm:px-4',
         dash.glassToolbar
       )}
     >
-      <div className="flex shrink-0 items-center lg:w-[88px]">
+      <div className="flex w-10 shrink-0 items-center lg:w-12">
         <button
           type="button"
           onClick={onMenuClick}
@@ -188,17 +188,17 @@ export function TopBar({
         </button>
       </div>
 
-      <div className="relative mx-auto w-full min-w-0 max-w-[720px] flex-1">
+      <div className="relative min-w-0 px-0 sm:px-2">
         <div
           className={cn(
-            'relative flex h-12 items-center rounded-full transition-all duration-200',
+            'relative mx-auto flex h-10 w-full max-w-xl items-center rounded-full transition-all duration-200 sm:h-11',
             dash.search,
             focused && dash.searchFocus
           )}
         >
           <Search
-            size={20}
-            className={cn('ml-4 shrink-0', searching ? cn('animate-pulse', dash.accent) : dash.textMuted)}
+            size={18}
+            className={cn('ml-3.5 shrink-0 sm:ml-4', searching ? cn('animate-pulse', dash.accent) : dash.textMuted)}
             strokeWidth={1.75}
           />
           <input
@@ -206,9 +206,9 @@ export function TopBar({
             type="text"
             placeholder="Search mail"
             className={cn(
-              'w-full bg-transparent py-3 pl-3 pr-12 text-sm focus:outline-none sm:pr-20',
+              'min-w-0 flex-1 bg-transparent py-2.5 pl-2.5 pr-9 text-sm focus:outline-none sm:pl-3 sm:pr-16',
               dash.text,
-              'placeholder:text-[#9B9A97] dark:placeholder:text-[#9aa0a6]'
+              'placeholder:text-[var(--dash-text-subtle)]'
             )}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -233,7 +233,7 @@ export function TopBar({
                 setResults([]);
                 setShowResults(false);
               }}
-              className={cn('absolute right-11 rounded-full p-1.5 transition-colors', dash.hover, dash.textMuted)}
+              className={cn('absolute right-9 rounded-full p-1 transition-colors sm:right-11', dash.hover, dash.textMuted)}
             >
               <X size={16} />
             </button>
@@ -242,7 +242,7 @@ export function TopBar({
             type="button"
             onClick={() => openCommandPalette()}
             className={cn(
-              'absolute right-3 hidden rounded border px-1.5 py-0.5 text-[10px] font-medium transition-colors sm:inline-block',
+              'absolute right-2.5 hidden rounded-md border px-1.5 py-0.5 text-[10px] font-medium transition-colors md:inline-block',
               cn(dash.border, dash.textMuted, dash.hover)
             )}
             title="Open command palette"
@@ -409,15 +409,13 @@ export function TopBar({
         </AnimatePresence>
       </div>
 
-      <div className="flex shrink-0 items-center justify-end gap-0.5 sm:w-[120px]">
-        <div className="hidden sm:block">
-          <ThemePicker />
-        </div>
+      <div className="flex shrink-0 items-center gap-0.5 sm:gap-1">
+        <ThemePicker compact />
         <div className="relative z-40" ref={notifRef}>
           <button
             type="button"
             onClick={handleBellClick}
-            className={cn('relative rounded-full p-2.5 transition-colors', dash.hover, dash.textMuted)}
+            className={cn('relative rounded-full p-2 transition-colors', dash.hover, dash.textMuted)}
           >
             <Bell size={20} strokeWidth={1.75} />
             {unreadCount > 0 && (
@@ -467,7 +465,7 @@ export function TopBar({
 
         <Link
           href="/settings"
-          className={cn('rounded-full p-2.5 transition-colors', dash.hover, dash.textMuted)}
+          className={cn('rounded-full p-2 transition-colors', dash.hover, dash.textMuted)}
         >
           <Settings size={20} strokeWidth={1.75} />
         </Link>
