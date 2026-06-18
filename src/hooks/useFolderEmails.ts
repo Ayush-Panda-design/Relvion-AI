@@ -23,7 +23,7 @@ type ListResponse = { emails?: EmailItem[] };
 
 const TRIAGE_CACHE_PREFIX = 'relvion:triage:';
 const TRIAGE_MAX = 8;
-const FOLDER_TTL = 3 * 60 * 1000;
+const FOLDER_TTL = 5 * 60 * 1000;
 
 function cacheKeyFor(folder: string) {
   return `emails:v5:${folder}`;
@@ -188,7 +188,9 @@ export function useFolderEmails(folder: string) {
 
       try {
         if (folder === 'inbox') {
-          fetch('/api/gmail/snooze/release', { method: 'POST' }).catch(() => {});
+          runWhenIdle(() => {
+            fetch('/api/gmail/snooze/release', { method: 'POST' }).catch(() => {});
+          });
         }
 
         const res = await fetch(`/api/gmail/list?folder=${folder}`);

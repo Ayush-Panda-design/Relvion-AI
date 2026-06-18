@@ -80,11 +80,11 @@ const USER_TZ =
   typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC';
 
 const emptyForm = {
-  summary: '',
-  description: '',
-  startDateTime: '',
-  endDateTime: '',
-  attendees: '',
+    summary: '',
+    description: '',
+    startDateTime: '',
+    endDateTime: '',
+    attendees: '',
   allDay: false,
   recurrence: 'none' as 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly',
   timeZone: USER_TZ,
@@ -533,20 +533,20 @@ export function CalendarView({ onRegisterRefresh }: { onRegisterRefresh?: (fn: (
         >
           <div className="flex items-center gap-2">
             <div className={cn('flex items-center rounded-full p-0.5', dash.filterBar)}>
-              <button
+            <button
                 type="button"
-                onClick={() => setCurrentMonth(new Date(year, month - 1))}
+              onClick={() => setCurrentMonth(new Date(year, month - 1))}
                 className={cn('rounded-full p-2 transition-colors', dash.hover, dash.textMuted)}
-              >
-                <ChevronLeft size={18} />
-              </button>
-              <button
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <button
                 type="button"
-                onClick={() => setCurrentMonth(new Date(year, month + 1))}
+              onClick={() => setCurrentMonth(new Date(year, month + 1))}
                 className={cn('rounded-full p-2 transition-colors', dash.hover, dash.textMuted)}
-              >
-                <ChevronRight size={18} />
-              </button>
+            >
+              <ChevronRight size={18} />
+            </button>
             </div>
 
             <div>
@@ -657,8 +657,8 @@ export function CalendarView({ onRegisterRefresh }: { onRegisterRefresh?: (fn: (
                             ? cn(dash.text, 'font-semibold')
                             : dash.textMuted
                       )}
-                    >
-                      {day}
+                  >
+                    {day}
                     </span>
                     {dayEvents.length > 0 && (
                       <span className={cn('text-[10px] font-medium', dash.textSubtle)}>
@@ -671,8 +671,8 @@ export function CalendarView({ onRegisterRefresh }: { onRegisterRefresh?: (fn: (
                     {dayEvents.slice(0, 3).map((e) => {
                       const palette = eventPalette(e.id);
                       return (
-                        <div
-                          key={e.id}
+                    <div
+                      key={e.id}
                           onClick={(ev) => {
                             ev.stopPropagation();
                             openEdit(e);
@@ -684,15 +684,15 @@ export function CalendarView({ onRegisterRefresh }: { onRegisterRefresh?: (fn: (
                         >
                           <span className={cn('h-1.5 w-1.5 shrink-0 rounded-full', palette.bar)} />
                           <span className="truncate">{e.summary || '(no title)'}</span>
-                        </div>
+                    </div>
                       );
                     })}
-                    {dayEvents.length > 3 && (
+                  {dayEvents.length > 3 && (
                       <span className={cn('px-1 text-[10px]', dash.textSubtle)}>
                         +{dayEvents.length - 3} more
                       </span>
-                    )}
-                  </div>
+                  )}
+                </div>
 
                   <div
                     className={cn(
@@ -756,16 +756,16 @@ export function CalendarView({ onRegisterRefresh }: { onRegisterRefresh?: (fn: (
                 )}
               >
                 No events — double-click a day to add one
-              </div>
-            ) : (
+            </div>
+          ) : (
               selectedDayEvents.map((e) => {
                 const start = parseEventStart(e);
                 const palette = eventPalette(e.id);
-                return (
+              return (
                   <button
-                    key={e.id}
+                  key={e.id}
                     type="button"
-                    onClick={() => openEdit(e)}
+                  onClick={() => openEdit(e)}
                     className={cn(
                       'w-full rounded-xl border-l-[3px] border border-transparent p-3 text-left transition-all',
                       palette.card,
@@ -775,21 +775,21 @@ export function CalendarView({ onRegisterRefresh }: { onRegisterRefresh?: (fn: (
                     )}
                   >
                     <p className={cn('truncate text-sm font-medium', dash.text)}>
-                      {e.summary || '(no title)'}
+                    {e.summary || '(no title)'}
                     </p>
-                    {start && (
+                  {start && (
                       <p className={cn('mt-1 flex items-center gap-1 text-xs', dash.textMuted)}>
                         <Clock size={11} />
                         {formatEventTime(e, start)}
                       </p>
                     )}
                   </button>
-                );
-              })
-            )}
-          </div>
+              );
+            })
+          )}
+      </div>
 
-          <button
+              <button
             type="button"
             onClick={() => openCreateForDay(selectedDay)}
             className={cn(
@@ -801,15 +801,15 @@ export function CalendarView({ onRegisterRefresh }: { onRegisterRefresh?: (fn: (
           >
             <Plus size={14} />
             Add on this day
-          </button>
-        </div>
+              </button>
+            </div>
 
         {/* Upcoming */}
         <div className="flex min-h-0 flex-1 flex-col">
           <div className={cn('flex items-center gap-2 border-b px-4 py-3', dash.border)}>
             <Sparkles size={14} className={dash.accent} />
             <span className={cn('text-sm font-semibold', dash.text)}>Coming up</span>
-          </div>
+              </div>
 
           <div className="flex-1 space-y-2 overflow-y-auto p-3">
             {loading && events.length === 0 ? (
@@ -847,13 +847,13 @@ export function CalendarView({ onRegisterRefresh }: { onRegisterRefresh?: (fn: (
                         {start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                         {' · '}
                         {formatEventTime(e, start)}
-                      </div>
+              </div>
                     )}
                     {e.attendees && e.attendees.length > 0 && (
                       <div className={cn('mt-1 flex items-center gap-1 text-xs', dash.textSubtle)}>
                         <Users size={11} />
                         {e.attendees.length} guest{e.attendees.length > 1 ? 's' : ''}
-                      </div>
+            </div>
                     )}
                   </motion.button>
                 );

@@ -1,5 +1,11 @@
 import type { corsairForTenant } from '@/lib/auth/corsairForTenant';
-import { parseGmailMessage, toEmailListItem, unwrapGmailMessage } from '@/lib/gmail/parseMessage';
+import {
+  parseDisplayName,
+  parseEmailAddress,
+  parseGmailMessage,
+  toEmailListItem,
+  unwrapGmailMessage,
+} from '@/lib/gmail/parseMessage';
 import { clearTenantCache } from '@/lib/tenant-cache';
 
 /** Lightweight headers for list/thread views — avoids downloading MIME bodies. */
@@ -7,11 +13,10 @@ export const GMAIL_METADATA_HEADERS = ['From', 'To', 'Subject', 'Date'] as const
 
 export const GMAIL_LIST_FORMAT = 'metadata' as const;
 
-/** Corsair's Gmail plugin joins metadataHeaders with commas (Gmail needs repeated params). */
+/** Request all list headers in a single messages.get when possible. */
 export const METADATA_HEADER_FETCHES = ['From', 'Subject', 'Date', 'To'] as const;
 
-const FETCH_CONCURRENCY = 6;
-const BATCH_PAUSE_MS = 80;
+const FETCH_CONCURRENCY = 12;
 
 export const INBOX_MAX_RESULTS = 20;
 export const FOLDER_MAX_RESULTS = 20;
@@ -21,74 +26,92 @@ type Corsair = ReturnType<typeof corsairForTenant>;
 type HeaderLike = { name?: string; value?: string };
 type ListItem = ReturnType<typeof toEmailListItem>;
 
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+type DbMessageEntity = {
+  entity_id: string;
+  data: {
+    id?: string;
+    subject?: string;
+    snippet?: string;
+    body?: string;
+    from?: string;
+    to?: string;
+    date?: string;
+    labelIds?: string[];
+  };
+};
+
+function collectHeaders(msg: Record<string, unknown>): HeaderLike[] {
+  const payload = msg.payload as { headers?: HeaderLike[] } | undefined;
+  if (Array.isArray(payload?.headers) && payload.headers.length > 0) {
+    return payload.headers;
+  }
+  if (Array.isArray(msg.headers)) {
+    return msg.headers as HeaderLike[];
+  }
+  return [];
 }
 
-function headerFromMessage(msg: unknown, headerName: string): HeaderLike | null {
-  const m = unwrapGmailMessage(msg);
-  if (!m?.payload || typeof m.payload !== 'object') return null;
-  const headers = (m.payload as { headers?: HeaderLike[] }).headers;
-  if (!Array.isArray(headers)) return null;
-  const hit = headers.find((h) => (h.name ?? '').toLowerCase() === headerName.toLowerCase());
-  if (!hit?.value) return null;
-  return { name: headerName, value: hit.value };
+function hasHeader(headers: HeaderLike[], name: string): boolean {
+  const key = name.toLowerCase();
+  return headers.some((h) => (h.name ?? '').toLowerCase() === key && Boolean(h.value));
 }
 
 async function fetchMetadataHeader(
   corsair: Corsair,
   id: string,
-  header: string,
-  attempts = 2
+  header: string
 ): Promise<HeaderLike | null> {
-  for (let i = 0; i < attempts; i++) {
-    try {
-      const res = await corsair.gmail.api.messages.get({
-        id,
-        format: GMAIL_LIST_FORMAT,
-        metadataHeaders: [header],
-      });
-      const h = headerFromMessage(res, header);
-      if (h) return h;
-    } catch {
-      /* retry */
-    }
-    if (i < attempts - 1) await sleep(120 * (i + 1));
+  try {
+    const res = await corsair.gmail.api.messages.get({
+      id,
+      format: GMAIL_LIST_FORMAT,
+      metadataHeaders: [header],
+    });
+    const m = unwrapGmailMessage(res);
+    if (!m) return null;
+    const headers = collectHeaders(m);
+    const hit = headers.find((h) => (h.name ?? '').toLowerCase() === header.toLowerCase());
+    if (hit?.value) return { name: header, value: hit.value };
+  } catch {
+    /* retry via batch below */
   }
   return null;
 }
 
-async function fetchMessageBase(corsair: Corsair, id: string) {
+async function fetchMessageMetadata(corsair: Corsair, id: string) {
   try {
-    return await corsair.gmail.api.messages.get({ id, format: GMAIL_LIST_FORMAT });
+    return await corsair.gmail.api.messages.get({
+      id,
+      format: GMAIL_LIST_FORMAT,
+      metadataHeaders: [...METADATA_HEADER_FETCHES],
+    });
   } catch {
     try {
-      return await corsair.gmail.api.messages.get({ id, format: 'minimal' });
+      return await corsair.gmail.api.messages.get({ id, format: GMAIL_LIST_FORMAT });
     } catch {
-      return null;
+      try {
+        return await corsair.gmail.api.messages.get({ id, format: 'minimal' });
+      } catch {
+        return null;
+      }
     }
   }
 }
 
-/** Fetch list-row fields using one metadataHeader per request (Corsair/Gmail quirk). */
+/** One primary Gmail call per row; at most two extra calls if headers are missing. */
 async function fetchOneListMessage(corsair: Corsair, id: string): Promise<ListItem | null> {
-  const base = await fetchMessageBase(corsair, id);
-  const m = unwrapGmailMessage(base);
+  const raw = await fetchMessageMetadata(corsair, id);
+  const m = unwrapGmailMessage(raw);
   if (!m) return null;
 
-  const headerResults = await Promise.allSettled(
-    METADATA_HEADER_FETCHES.map((header) => fetchMetadataHeader(corsair, id, header))
-  );
+  let headers = collectHeaders(m);
 
-  const headers: HeaderLike[] = [];
-  for (let i = 0; i < METADATA_HEADER_FETCHES.length; i++) {
-    const r = headerResults[i];
-    if (r.status === 'fulfilled' && r.value) headers.push(r.value);
-  }
-
-  for (const name of ['From', 'Subject'] as const) {
-    if (!headers.some((h) => h.name?.toLowerCase() === name.toLowerCase())) {
-      const h = await fetchMetadataHeader(corsair, id, name, 3);
+  const missingCritical = (['From', 'Subject'] as const).filter((name) => !hasHeader(headers, name));
+  if (missingCritical.length > 0) {
+    const extras = await Promise.all(
+      missingCritical.map((name) => fetchMetadataHeader(corsair, id, name))
+    );
+    for (const h of extras) {
       if (h) headers.push(h);
     }
   }
@@ -99,6 +122,52 @@ async function fetchOneListMessage(corsair: Corsair, id: string): Promise<ListIt
   });
   if (!parsed) return null;
   return toEmailListItem(parsed);
+}
+
+function dbEntityToListItem(entity: DbMessageEntity): ListItem | null {
+  const d = entity.data;
+  const id = d.id || entity.entity_id;
+  if (!id) return null;
+
+  const rawFrom = d.from || '';
+  const labelIds = Array.isArray(d.labelIds) ? d.labelIds : [];
+  const snippet = d.snippet || d.body || '';
+
+  return {
+    id,
+    threadId: undefined,
+    labelIds,
+    data: {
+      subject: d.subject || '(no subject)',
+      from: rawFrom ? parseDisplayName(rawFrom) : 'Unknown Sender',
+      fromEmail: rawFrom ? parseEmailAddress(rawFrom) : '',
+      to: d.to || '',
+      date: d.date || '',
+      body: snippet,
+      unread: labelIds.includes('UNREAD'),
+    },
+  };
+}
+
+/** Build a fast lookup from Corsair's cached Gmail DB (single query). */
+export async function buildDbMessageIndex(corsair: Corsair): Promise<Map<string, ListItem>> {
+  const index = new Map<string, ListItem>();
+  const db = (corsair as { gmail?: { db?: { messages?: { search: (q: { limit?: number }) => Promise<DbMessageEntity[]> } } } })
+    .gmail?.db?.messages;
+
+  if (!db?.search) return index;
+
+  try {
+    const entities = await db.search({ limit: 120 });
+    for (const entity of entities) {
+      const item = dbEntityToListItem(entity);
+      if (item) index.set(item.id, item);
+    }
+  } catch {
+    /* DB cache optional */
+  }
+
+  return index;
 }
 
 export function isListItemComplete(item: ListItem): boolean {
@@ -121,19 +190,63 @@ export function messageToListItem(msg: unknown) {
   return null;
 }
 
-export async function fetchMessagesByIds(corsair: Corsair, ids: string[]) {
-  if (ids.length === 0) return [];
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  fn: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let next = 0;
 
-  const emails: ListItem[] = [];
-  for (let i = 0; i < ids.length; i += FETCH_CONCURRENCY) {
-    if (i > 0) await sleep(BATCH_PAUSE_MS);
-    const batch = ids.slice(i, i + FETCH_CONCURRENCY);
-    const results = await Promise.allSettled(batch.map((id) => fetchOneListMessage(corsair, id)));
-    for (const result of results) {
-      if (result.status === 'fulfilled' && result.value) emails.push(result.value);
+  async function worker() {
+    while (next < items.length) {
+      const i = next++;
+      results[i] = await fn(items[i]);
     }
   }
-  return emails;
+
+  const workers = Array.from({ length: Math.min(concurrency, items.length) }, () => worker());
+  await Promise.all(workers);
+  return results;
+}
+
+export async function fetchMessagesByIds(
+  corsair: Corsair,
+  ids: string[],
+  dbIndex?: Map<string, ListItem>
+) {
+  if (ids.length === 0) return [];
+
+  const index = dbIndex ?? (await buildDbMessageIndex(corsair));
+  const needApi: string[] = [];
+  const prefilled = new Map<string, ListItem>();
+
+  for (const id of ids) {
+    const cached = index.get(id);
+    if (cached && isListItemComplete(cached)) {
+      prefilled.set(id, cached);
+    } else {
+      needApi.push(id);
+    }
+  }
+
+  const apiResults = await mapWithConcurrency(needApi, FETCH_CONCURRENCY, async (id) => {
+    try {
+      return await fetchOneListMessage(corsair, id);
+    } catch {
+      return null;
+    }
+  });
+
+  const apiById = new Map<string, ListItem>();
+  for (let i = 0; i < needApi.length; i++) {
+    const item = apiResults[i];
+    if (item) apiById.set(needApi[i], item);
+  }
+
+  return ids
+    .map((id) => prefilled.get(id) ?? apiById.get(id))
+    .filter((item): item is ListItem => Boolean(item));
 }
 
 export function listCacheKey(folder: string) {

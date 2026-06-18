@@ -10,34 +10,62 @@ import { cn } from '@/lib/utils';
 import { dash } from '@/components/dashboard/theme';
 import { prefetchFolderEmails, prefetchAllMailFolders } from '@/hooks/useFolderEmails';
 import { prefetchCalendarEvents } from '@/hooks/useCalendarEvents';
-import { runWhenIdle } from '@/lib/client-cache';
+import { getCached, prefetchJson } from '@/lib/client-cache';
 import { subscribeAppEvents } from '@/lib/app-events';
 import { formatGmailConnectError } from '@/lib/gmail-connect-error';
 import { emailShortcutsRef } from '@/lib/email-shortcuts-ref';
 import { useWorkspaceNav } from '@/contexts/workspace-nav';
 
+const BOOTSTRAP_CACHE_KEY = 'workspace:bootstrap';
+const BOOTSTRAP_TTL_MS = 45_000;
+
+type BootstrapPayload = {
+  me?: { email?: string };
+  profile?: {
+    email?: string;
+    connected?: boolean;
+    needsGoogle?: boolean;
+    reason?: string;
+  };
+};
+
+function readBootstrapCache(): BootstrapPayload | null {
+  return getCached<BootstrapPayload>(BOOTSTRAP_CACHE_KEY, BOOTSTRAP_TTL_MS);
+}
+
 function DashboardContent() {
   const { activeFolder } = useWorkspaceNav();
-  const [needsGoogle, setNeedsGoogle] = useState(false);
-  const [connectReason, setConnectReason] = useState<string | null>(null);
-  const [sessionEmail, setSessionEmail] = useState<string | null>(null);
-  const [authChecked, setAuthChecked] = useState(false);
+  const [needsGoogle, setNeedsGoogle] = useState(() => {
+    const cached = readBootstrapCache();
+    return cached?.profile?.connected === false;
+  });
+  const [connectReason, setConnectReason] = useState<string | null>(() => {
+    const cached = readBootstrapCache();
+    return typeof cached?.profile?.reason === 'string' ? formatGmailConnectError(cached.profile.reason) : null;
+  });
+  const [sessionEmail, setSessionEmail] = useState<string | null>(() => {
+    const cached = readBootstrapCache();
+    return cached?.profile?.email || cached?.me?.email || null;
+  });
+  const [authChecked, setAuthChecked] = useState(() => Boolean(readBootstrapCache()?.profile));
   const refreshHandlers = useRef<{ email?: () => void; calendar?: () => void }>({});
 
   useEffect(() => {
-    Promise.all([
-      fetch('/api/auth/me').then((res) => (res.ok ? res.json() : null)),
-      fetch('/api/gmail/profile').then((res) => res.json()),
-    ])
-      .then(([me, profile]) => {
-        if (me?.email) setSessionEmail(me.email);
-        if (profile?.connected && profile?.email) {
+    prefetchJson<BootstrapPayload>(BOOTSTRAP_CACHE_KEY, '/api/workspace/bootstrap', BOOTSTRAP_TTL_MS)
+      .then((data) => {
+        if (!data?.profile) return;
+        const profile = data.profile;
+        if (data.me?.email || profile.email) {
+          setSessionEmail(profile.email || data.me?.email || null);
+        }
+        if (profile.connected && profile.email) {
           setNeedsGoogle(false);
+          setConnectReason(null);
           return;
         }
         setNeedsGoogle(true);
         setConnectReason(
-          typeof profile?.reason === 'string'
+          typeof profile.reason === 'string'
             ? formatGmailConnectError(profile.reason)
             : 'Gmail access is missing or expired for this account.'
         );
@@ -47,13 +75,10 @@ function DashboardContent() {
         setConnectReason('Could not verify Gmail connection.');
       })
       .finally(() => setAuthChecked(true));
-  }, []);
 
-  useEffect(() => {
-    runWhenIdle(() => {
-      prefetchAllMailFolders();
-      prefetchCalendarEvents();
-    });
+    prefetchFolderEmails('inbox');
+    prefetchAllMailFolders();
+    prefetchCalendarEvents();
   }, []);
 
   useEffect(() => {

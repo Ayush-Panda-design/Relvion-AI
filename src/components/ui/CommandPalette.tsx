@@ -227,7 +227,7 @@ export function CommandPalette({ onFolderChange, onComposeClick }: CommandPalett
                   )}
                 />
                 <kbd className={kbdClass}>esc</kbd>
-              </div>
+        </div>
 
               <Command.List className="max-h-96 overflow-y-auto p-2">
                 <Command.Empty>
@@ -249,7 +249,7 @@ export function CommandPalette({ onFolderChange, onComposeClick }: CommandPalett
                     const Icon = action.icon;
                     return (
                       <Command.Item
-                        key={action.id}
+                key={action.id}
                         value={`${action.title} ${action.subtitle ?? ''} ${action.keywords ?? ''}`}
                         onSelect={action.action}
                         className={cn(
@@ -294,11 +294,11 @@ export function CommandPalette({ onFolderChange, onComposeClick }: CommandPalett
                 </span>
                 <span>
                   <kbd className={kbdClass}>/</kbd> Open
-                </span>
+                    </span>
                 <span className="ml-auto">
                   <kbd className={kbdClass}>⌘K</kbd> Toggle
-                </span>
-              </div>
+                  </span>
+                </div>
             </Command>
           </motion.div>
         </motion.div>

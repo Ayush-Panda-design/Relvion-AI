@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
@@ -13,6 +13,8 @@ import { KeyboardShortcutsDialog } from '@/components/dashboard/KeyboardShortcut
 import { DashboardAmbient } from '@/components/dashboard/DashboardAmbient';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { emailShortcutsRef } from '@/lib/email-shortcuts-ref';
+import { prefetchFolderEmails } from '@/hooks/useFolderEmails';
+import { prefetchJson } from '@/lib/client-cache';
 import { useWorkspaceNav } from '@/contexts/workspace-nav';
 import { WorkspaceShellProvider, useWorkspaceShell } from '@/contexts/workspace-shell';
 import { cn } from '@/lib/utils';
@@ -24,6 +26,11 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
   const [showCompose, setShowCompose] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    prefetchJson('workspace:bootstrap', '/api/workspace/bootstrap', 45_000);
+    prefetchFolderEmails('inbox');
+  }, []);
 
   useKeyboardShortcuts({
     enabled: routerReady && !showCompose && !showShortcuts,

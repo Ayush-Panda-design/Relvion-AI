@@ -3,6 +3,7 @@ import { getSession } from '@/lib/auth/getSession';
 import { corsairForTenant } from '@/lib/auth/corsairForTenant';
 import {
   fetchMessagesByIds,
+  buildDbMessageIndex,
   listCacheKey,
   INBOX_MAX_RESULTS,
   FOLDER_MAX_RESULTS,
@@ -14,7 +15,7 @@ import {
   listSnoozedForTenant,
 } from '@/server/services/snooze';
 
-const LIST_CACHE_TTL_MS = 45_000;
+const LIST_CACHE_TTL_MS = 90_000;
 
 export async function GET(req: Request) {
   const session = await getSession();
@@ -83,7 +84,8 @@ export async function GET(req: Request) {
       return NextResponse.json({ emails: [] });
     }
 
-    const fetched = await fetchMessagesByIds(corsair, messageIds);
+    const dbIndex = await buildDbMessageIndex(corsair);
+    const fetched = await fetchMessagesByIds(corsair, messageIds, dbIndex);
     const emails = fetched.filter((item) => !snoozedIds.has(item.id));
 
     const payload = { emails };

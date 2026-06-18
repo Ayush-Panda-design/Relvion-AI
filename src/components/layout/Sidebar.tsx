@@ -25,9 +25,22 @@ import { ContactAvatar } from '@/components/ui/ContactAvatar';
 import { useTheme } from '@/components/dashboard/ThemeProvider';
 import { prefetchFolderEmails } from '@/hooks/useFolderEmails';
 import { prefetchCalendarEvents } from '@/hooks/useCalendarEvents';
-import { prefetchJson } from '@/lib/client-cache';
+import { getCached, prefetchJson, setCached } from '@/lib/client-cache';
 import { ShimmerButton } from '@/components/ui/shimmer-button';
 import { useWorkspaceShell } from '@/contexts/workspace-shell';
+
+const BOOTSTRAP_CACHE_KEY = 'workspace:bootstrap';
+const BOOTSTRAP_TTL_MS = 45_000;
+
+type BootstrapPayload = {
+  me?: { email?: string };
+  profile?: { email?: string };
+  counts?: Record<string, number>;
+};
+
+function readBootstrapCache(): BootstrapPayload | null {
+  return getCached<BootstrapPayload>(BOOTSTRAP_CACHE_KEY, BOOTSTRAP_TTL_MS);
+}
 
 export function Sidebar({
   activeFolder,
@@ -38,8 +51,12 @@ export function Sidebar({
   onFolderChange: (f: string) => void;
   onComposeClick?: () => void;
 }) {
-  const [counts, setCounts] = useState<Record<string, number>>({});
-  const [profile, setProfile] = useState<{ email: string; name: string } | null>(null);
+  const [counts, setCounts] = useState<Record<string, number>>(() => readBootstrapCache()?.counts ?? {});
+  const [profile, setProfile] = useState<{ email: string; name: string } | null>(() => {
+    const cached = readBootstrapCache();
+    const email = cached?.profile?.email || cached?.me?.email;
+    return email ? { email, name: email.split('@')[0] } : null;
+  });
   const [collapsed, setCollapsed] = useState(false);
   const { theme } = useTheme();
   const pillNav = theme === 'ocean' || theme === 'crextio' || theme === 'oxfin' || theme === 'limedock';
@@ -52,25 +69,21 @@ export function Sidebar({
   }, [mobileNavOpen]);
 
   useEffect(() => {
-    fetch('/api/gmail/counts').then((r) => r.json()).then(setCounts).catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    fetch('/api/auth/me')
-      .then((r) => (r.ok ? r.json() : null))
-      .then((me) => {
-        if (me?.email) {
-          setProfile({ email: me.email, name: me.email.split('@')[0] });
-        }
+    prefetchJson<BootstrapPayload>(BOOTSTRAP_CACHE_KEY, '/api/workspace/bootstrap', BOOTSTRAP_TTL_MS)
+      .then((data) => {
+        if (!data) return;
+        if (data.counts) setCounts(data.counts);
+        const email = data.profile?.email || data.me?.email;
+        if (email) setProfile({ email, name: email.split('@')[0] });
+        setCached(BOOTSTRAP_CACHE_KEY, data);
       })
       .catch(() => {});
 
-    fetch('/api/gmail/profile')
+    // Legacy endpoints as fallback if bootstrap is slow
+    fetch('/api/gmail/counts')
       .then((r) => r.json())
-      .then((data) => {
-        if (data.email) {
-          setProfile({ email: data.email, name: data.email.split('@')[0] });
-        }
+      .then((c) => {
+        if (c && typeof c === 'object') setCounts((prev) => ({ ...prev, ...c }));
       })
       .catch(() => {});
   }, []);
