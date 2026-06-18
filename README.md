@@ -1,4 +1,3 @@
-<div align="center">
 
 # ⚡ Relvion AI
 
@@ -14,15 +13,14 @@ Live Gmail and Google Calendar — wired through Corsair, triaged by Gemini, sea
 [![Gemini](https://img.shields.io/badge/AI-Gemini%202.5%20Flash-4285F4?logo=google)](https://ai.google.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-[**🔗 Live Demo**](#) ·
-Demo-> [**https://youtu.be/wXLZzgy3WjE?si=VM7eEKIRq94Ju0t-**](#) ·
-[**🐦 X/Twitter Post**](#) · [**💼 LinkedIn Post**](#)
+[**🔗 Live Demo**](YOUR_VERCEL_LIVE_DEMO_URL) ·
+[**🎬 Demo Video**](https://youtu.be/wXLZzgy3WjE?si=VM7eEKIRq94Ju0t-) ·
+[**🐦 X/Twitter Post**](YOUR_TWITTER_POST_URL) ·
+[**💼 LinkedIn Post**](YOUR_LINKEDIN_POST_URL)
 
 </div>
 
 <br/>
-
-> 🚧 **Note for reviewers:** the links above are placeholders and will be filled in before final submission.
 
 ---
 
@@ -329,7 +327,7 @@ Relvion-AI/
 
 - [x] Code open source on GitHub
 - [ ] Deployed live link — *add before submitting*
-- [ ] Demo video (YC-style: problem → solution → demo → tech stack → Corsair/Gmail/Calendar usage) — *add before submitting*
+- [ ] Demo video — [https://youtu.be/wXLZzgy3WjE?si=VM7eEKIRq94Ju0t-](https://youtu.be/wXLZzgy3WjE?si=VM7eEKIRq94Ju0t-)
 - [ ] X/Twitter post (tagged `@ChaiCodeHQ`, `@Hiteshdotcom`, `@piyushgarg_dev`, `@corsairdotdev`) — *add before submitting*
 - [ ] LinkedIn post — *add before submitting*
 - [x] Short README (this file)
