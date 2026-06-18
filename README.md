@@ -14,7 +14,9 @@ Live Gmail and Google Calendar — wired through Corsair, triaged by Gemini, sea
 [![Gemini](https://img.shields.io/badge/AI-Gemini%202.5%20Flash-4285F4?logo=google)](https://ai.google.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-[**🔗 Live Demo**](#) · [**https://youtu.be/wXLZzgy3WjE?si=VM7eEKIRq94Ju0t-**](#) · [**🐦 X/Twitter Post**](#) · [**💼 LinkedIn Post**](#)
+[**🔗 Live Demo**](#) ·
+Demo-> [**https://youtu.be/wXLZzgy3WjE?si=VM7eEKIRq94Ju0t-**](#) ·
+[**🐦 X/Twitter Post**](#) · [**💼 LinkedIn Post**](#)
 
 </div>
 
